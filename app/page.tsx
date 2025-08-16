@@ -1,103 +1,155 @@
-import Image from "next/image";
+'use client';
+
+import React, { useState } from 'react';
+import dynamic from 'next/dynamic';
+import db from '../lib/db';
+import AddOrganizationForm from '../components/AddOrganizationForm';
+import CircularAddButton from '../components/CircularAddButton';
+import type { Organization } from '../types/organization';
+
+const OKCMap = dynamic(() => import('../components/OKCMap'), {
+  ssr: false,
+  loading: () => <div className="w-full h-full bg-gray-100 flex items-center justify-center">Loading map...</div>
+});
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const { data, isLoading, error } = db.useQuery({
+    organizations: {
+      locations: {},
+      logo: {},
+      photos: {}
+    }
+  });
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-lg">Loading organizations...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-red-500">Error loading data: {error.message}</div>
+      </div>
+    );
+  }
+
+  const organizations = data?.organizations || [];
+
+  return (
+    <div className="min-h-screen bg-gray-100">
+      <header className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">OKC Non-Profit Map</h1>
+            <p className="text-gray-600">Discover local organizations making a difference</p>
+          </div>
+          <CircularAddButton onClick={() => setShowAddForm(true)} />
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+      </header>
+
+      <div className="flex">
+        <div className="flex-1 h-screen relative">
+          <OKCMap 
+            organizations={organizations}
+            onOrganizationClick={setSelectedOrg}
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        </div>
+
+        {selectedOrg && (
+          <div className="w-96 bg-white shadow-lg overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-4">
+                <h2 className="text-xl font-bold text-gray-900">{selectedOrg.name}</h2>
+                <button
+                  onClick={() => setSelectedOrg(null)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  ×
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                    {selectedOrg.category}
+                  </span>
+                </div>
+                
+                <p className="text-gray-700">{selectedOrg.description}</p>
+                
+                {selectedOrg.statistics && (
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-1">Impact & Statistics</h3>
+                    <p className="text-gray-700 text-sm">{selectedOrg.statistics}</p>
+                  </div>
+                )}
+                
+                <div className="space-y-2 text-sm">
+                  {selectedOrg.website && (
+                    <div>
+                      <span className="font-medium">Website: </span>
+                      <a href={selectedOrg.website} target="_blank" rel="noopener noreferrer" 
+                         className="text-blue-600 hover:underline">
+                        {selectedOrg.website}
+                      </a>
+                    </div>
+                  )}
+                  
+                  {selectedOrg.phone && (
+                    <div>
+                      <span className="font-medium">Phone: </span>
+                      <a href={`tel:${selectedOrg.phone}`} className="text-blue-600">
+                        {selectedOrg.phone}
+                      </a>
+                    </div>
+                  )}
+                  
+                  {selectedOrg.email && (
+                    <div>
+                      <span className="font-medium">Email: </span>
+                      <a href={`mailto:${selectedOrg.email}`} className="text-blue-600">
+                        {selectedOrg.email}
+                      </a>
+                    </div>
+                  )}
+                </div>
+                
+                <div>
+                  <h3 className="font-semibold text-gray-900 mb-2">Locations</h3>
+                  {selectedOrg.locations.map(location => (
+                    <div key={location.id} className="text-sm text-gray-700 mb-1">
+                      <div className="flex items-start">
+                        {location.isPrimary && (
+                          <span className="text-blue-600 text-xs mr-1">●</span>
+                        )}
+                        {location.address}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {showAddForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <AddOrganizationForm
+              onSuccess={() => setShowAddForm(false)}
+              onCancel={() => setShowAddForm(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
