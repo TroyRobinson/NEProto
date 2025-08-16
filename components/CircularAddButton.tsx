@@ -33,11 +33,11 @@ export default function CircularAddButton({
       disabled={disabled}
       className={`
         ${sizeClasses[size]}
-        bg-gray-900 text-white 
+        bg-foreground text-background 
         rounded-full 
         flex items-center justify-center
-        hover:bg-gray-800 
-        active:bg-gray-700
+        hover:bg-foreground/80 
+        active:bg-foreground/70
         transition-colors
         disabled:opacity-50 
         disabled:cursor-not-allowed
