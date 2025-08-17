@@ -126,11 +126,14 @@ export default function CensusStatExplorer() {
           <h2 className="text-xl font-semibold mb-2">
             {selectedDataset.title}
           </h2>
+          <p className="mb-2 text-sm text-gray-700">
+            Search by variable code or description, e.g., &quot;B01001&quot; or &quot;population&quot;.
+          </p>
           <input
             type="text"
             value={varQuery}
             onChange={(e) => setVarQuery(e.target.value)}
-            placeholder="Search variables..."
+            placeholder="Search variables by code or keyword..."
             className="border px-2 py-1 mb-4 w-full max-w-md"
           />
           {loadingVars ? (
