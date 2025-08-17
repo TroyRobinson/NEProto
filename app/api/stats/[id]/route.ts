@@ -1,11 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'crypto';
 import adminDb from '../../../../lib/admin';
 import { fetchOKCData } from '../../../../lib/census';
 
-export async function POST(request: Request, context: { params: { id: string } }) {
-  const id = context.params.id;
+export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+  const id = params.id;
   const statRes: any = await adminDb.query({
     stats: { $: { where: { id }, limit: 1 } }
   });
@@ -28,8 +28,8 @@ export async function POST(request: Request, context: { params: { id: string } }
   return NextResponse.json({ ok: true });
 }
 
-export async function DELETE(request: Request, context: { params: { id: string } }) {
-  const id = context.params.id;
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+  const id = params.id;
   const existing: any = await adminDb.query({
     statValues: { $: { where: { 'stat.id': id } } }
   });
