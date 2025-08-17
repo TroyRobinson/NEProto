@@ -1,9 +1,9 @@
 'use client';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Map from 'react-map-gl/maplibre';
-import { ScatterplotLayer } from '@deck.gl/layers';
+import { ScatterplotLayer, GeoJsonLayer } from '@deck.gl/layers';
 import DeckGL from '@deck.gl/react';
 import type { Organization } from '../types/organization';
 
@@ -25,9 +25,55 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
     pitch: 0,
     bearing: 0
   });
+  const [countyFeature, setCountyFeature] = useState<any>(null);
+  const [zipFeatures, setZipFeatures] = useState<any[]>([]);
+  const [selectedStat, setSelectedStat] = useState<string>('stat1');
+
+  const STAT_OPTIONS = [
+    { key: 'stat1', label: 'Sample Stat A' },
+    { key: 'stat2', label: 'Sample Stat B' }
+  ];
+
+  useEffect(() => {
+    fetch(
+      'https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/oklahoma-counties.geojson'
+    )
+      .then(res => res.json())
+      .then(json => {
+        const feature = json.features.find((f: any) => f.properties.name === 'Oklahoma');
+        setCountyFeature(feature);
+      })
+      .catch(() => setCountyFeature(null));
+  }, []);
+
+  useEffect(() => {
+    fetch(
+      'https://raw.githubusercontent.com/OpenDataDE/State-zip-code-GeoJSON/master/ok_oklahoma_zip_codes_geo.min.json'
+    )
+      .then(res => res.json())
+      .then(json => {
+        const features = json.features
+          .filter((f: any) => f.properties.ZCTA5CE10.startsWith('731'))
+          .map((f: any) => {
+            const zip = f.properties.ZCTA5CE10;
+            const base = parseInt(zip, 10);
+            const baseVal = base % 100;
+            return {
+              ...f,
+              properties: {
+                ...f.properties,
+                stat1: baseVal / 100,
+                stat2: (100 - baseVal) / 100
+              }
+            };
+          });
+        setZipFeatures(features);
+      })
+      .catch(() => setZipFeatures([]));
+  }, []);
 
   const layers = useMemo(() => {
-    const data = organizations.flatMap(org => 
+    const data = organizations.flatMap(org =>
       org.locations.map(location => ({
         coordinates: [location.longitude, location.latitude] as [number, number],
         organization: org,
@@ -35,7 +81,7 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
       }))
     );
 
-    return [
+    const layersList: any[] = [
       new ScatterplotLayer({
         id: 'organizations',
         data: data,
@@ -55,20 +101,67 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
         }
       })
     ];
-  }, [organizations, onOrganizationClick]);
+
+    if (countyFeature) {
+      layersList.push(
+        new GeoJsonLayer({
+          id: 'okc-county',
+          data: countyFeature,
+          stroked: true,
+          filled: true,
+          getLineColor: [13, 110, 253, 255],
+          getFillColor: [13, 110, 253, 40],
+          lineWidthMinPixels: 2
+        })
+      );
+    }
+
+    if (zipFeatures.length > 0) {
+      layersList.push(
+        new GeoJsonLayer({
+          id: 'okc-zips',
+          data: zipFeatures,
+          stroked: true,
+          filled: true,
+          getLineColor: [0, 0, 0, 120],
+          lineWidthMinPixels: 1,
+          getFillColor: (f: any) => {
+            const val = f.properties[selectedStat] as number | undefined;
+            const v = Math.round((val ?? 0) * 255);
+            return [255, 255 - v, 0, 120];
+          }
+        })
+      );
+    }
+
+    return layersList;
+  }, [organizations, onOrganizationClick, countyFeature, zipFeatures, selectedStat]);
 
   return (
     <div className="w-full h-full relative">
+      <div className="absolute left-2 top-2 z-10 bg-white rounded shadow p-1">
+        <select
+          className="border rounded px-2 py-1 text-sm"
+          value={selectedStat}
+          onChange={(e) => setSelectedStat(e.target.value)}
+        >
+          {STAT_OPTIONS.map((opt) => (
+            <option key={opt.key} value={opt.key}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </div>
       <DeckGL
         viewState={viewState}
         onViewStateChange={(e: any) => setViewState(e.viewState)}
         controller={true}
         layers={layers}
-        style={{width: '100%', height: '100%'}}
+        style={{ width: '100%', height: '100%' }}
       >
         <Map
           mapStyle="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
-          style={{width: '100%', height: '100%'}}
+          style={{ width: '100%', height: '100%' }}
         />
       </DeckGL>
     </div>
