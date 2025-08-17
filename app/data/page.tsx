@@ -40,7 +40,6 @@ export default function DataPage() {
         const [, ...data] = json as string[][];
         const unique = Array.from(new Set(data.map((r) => r[0])));
         setCodes(unique);
-        if (unique.length) setSelected(unique[0]);
       })
       .catch(() => setCodes([]));
   }, []);
@@ -106,85 +105,99 @@ export default function DataPage() {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto p-4 space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Data Type
-          </label>
-          <select
-            className="border rounded px-3 py-2 w-64"
-            value={selected}
-            onChange={(e) => setSelected(e.target.value)}
-          >
-            {codes.map((code) => (
-              <option key={code} value={code}>
-                {code}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="overflow-x-auto bg-white rounded shadow">
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="bg-gray-50">
-                <th className="p-2 border">Time</th>
-                <th className="p-2 border">Category</th>
-                <th className="p-2 border">Seasonally Adj</th>
-                <th className="p-2 border">Value</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, idx) => (
-                <tr key={idx} className="odd:bg-white even:bg-gray-50">
-                  <td className="p-2 border">{row.time}</td>
-                  <td className="p-2 border">{row.category}</td>
-                  <td className="p-2 border">{row.seasonally}</td>
-                  <td className="p-2 border text-right">{row.value}</td>
-                </tr>
-              ))}
-              {rows.length === 0 && !loading && (
-                <tr>
-                  <td className="p-2 border text-center" colSpan={4}>
-                    No data
-                  </td>
-                </tr>
-              )}
-              {loading && (
-                <tr>
-                  <td className="p-2 border text-center" colSpan={4}>
-                    Loading...
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
+      <main className="max-w-5xl mx-auto p-4 space-y-8">
         {geoRows.length > 0 && (
-          <div className="overflow-x-auto bg-white rounded shadow">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50">
-                  <th className="p-2 border">ZIP Code</th>
-                  <th className="p-2 border">Polygon (sample)</th>
-                  <th className="p-2 border">Intensity</th>
-                </tr>
-              </thead>
-              <tbody>
-                {geoRows.map((row, idx) => (
-                  <tr key={idx} className="odd:bg-white even:bg-gray-50">
-                    <td className="p-2 border">{row.name}</td>
-                    <td className="p-2 border font-mono truncate max-w-xs">
-                      {row.polygon}
-                    </td>
-                    <td className="p-2 border text-right">{row.intensity}</td>
+          <div>
+            <h2 className="text-lg font-semibold mb-2">
+              Oklahoma City ZIP Intensities
+            </h2>
+            <div className="overflow-x-auto bg-white rounded shadow">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50">
+                    <th className="p-2 border">ZIP Code</th>
+                    <th className="p-2 border">Polygon (sample)</th>
+                    <th className="p-2 border">Intensity</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {geoRows.map((row, idx) => (
+                    <tr key={idx} className="odd:bg-white even:bg-gray-50">
+                      <td className="p-2 border">{row.name}</td>
+                      <td className="p-2 border font-mono truncate max-w-xs">
+                        {row.polygon}
+                      </td>
+                      <td className="p-2 border text-right">{row.intensity}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
+
+        <div className="space-y-2">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Business Formation Statistic
+            </label>
+            <select
+              className="border rounded px-3 py-2 w-64"
+              value={selected}
+              onChange={(e) => setSelected(e.target.value)}
+            >
+              <option value="">Select a data type</option>
+              {codes.map((code) => (
+                <option key={code} value={code}>
+                  {code}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {selected ? (
+            <div className="overflow-x-auto bg-white rounded shadow">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50">
+                    <th className="p-2 border">Time</th>
+                    <th className="p-2 border">Category</th>
+                    <th className="p-2 border">Seasonally Adj</th>
+                    <th className="p-2 border">Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row, idx) => (
+                    <tr key={idx} className="odd:bg-white even:bg-gray-50">
+                      <td className="p-2 border">{row.time}</td>
+                      <td className="p-2 border">{row.category}</td>
+                      <td className="p-2 border">{row.seasonally}</td>
+                      <td className="p-2 border text-right">{row.value}</td>
+                    </tr>
+                  ))}
+                  {rows.length === 0 && !loading && (
+                    <tr>
+                      <td className="p-2 border text-center" colSpan={4}>
+                        No data
+                      </td>
+                    </tr>
+                  )}
+                  {loading && (
+                    <tr>
+                      <td className="p-2 border text-center" colSpan={4}>
+                        Loading...
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500">
+              Select a data type above to load statistics.
+            </p>
+          )}
+        </div>
       </main>
     </div>
   );
