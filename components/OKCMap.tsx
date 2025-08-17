@@ -43,7 +43,7 @@ export default function OKCMap({ organizations, onOrganizationClick, selectedSta
       }))
     );
 
-    const base = [
+    const base: any[] = [
       new ScatterplotLayer({
         id: 'organizations',
         data: data,

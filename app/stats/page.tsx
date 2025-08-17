@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import db from '../../lib/db';
-import type { Stat } from '../../types/stat';
+import { id as newId } from '@instantdb/react';
 
 interface CensusSearchResult {
   name: string;
@@ -21,13 +21,14 @@ export default function StatsPage() {
   };
 
   const handleAdd = async (name: string, label: string) => {
-    const id = await db.transact([
-      db.tx.stats.insert({ title: label, variable: name, geography: 'tract', lastUpdated: 0 })
+    const statId = newId();
+    await db.transact([
+      db.tx.stats[statId].update({ title: label, variable: name, geography: 'tract', lastUpdated: 0 })
     ]);
     await fetch('/api/stats/refresh', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id })
+      body: JSON.stringify({ id: statId })
     });
   };
 
@@ -61,7 +62,7 @@ export default function StatsPage() {
       <div>
         <h2 className="font-semibold mb-2">Existing Stats</h2>
         <ul className="space-y-2">
-          {stats.map((stat: Stat) => (
+          {stats.map((stat) => (
             <li key={stat.id} className="border p-2 rounded flex justify-between items-center">
               <div>
                 <div className="font-medium">{stat.title}</div>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import adminDb from '../../../../lib/admin';
 import { fetchCensusStat } from '../../../../lib/census';
+import { id as newId } from '@instantdb/admin';
 
 export async function POST(req: NextRequest) {
   const { id } = await req.json();
@@ -15,7 +16,11 @@ export async function POST(req: NextRequest) {
   const values = await fetchCensusStat(stat.variable, stat.geography);
   const tx = [
     adminDb.tx.stats[id].update({ lastUpdated: Date.now() }),
-    ...values.map(v => adminDb.tx.statValues.insert({ geoid: v.geoid, value: v.value, stat: id }))
+    ...values.map((v) =>
+      adminDb.tx.statValues[newId()]
+        .update({ geoid: v.geoid, value: v.value })
+        .link({ stat: id })
+    ),
   ];
   await adminDb.transact(tx);
   return NextResponse.json({ ok: true });
