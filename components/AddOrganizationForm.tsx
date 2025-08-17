@@ -25,6 +25,15 @@ export default function AddOrganizationForm({ onSuccess, onCancel }: AddOrganiza
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  if (!db) {
+    return (
+      <div className="bg-white p-6 rounded-lg shadow-lg max-w-2xl mx-auto">
+        <p className="text-red-500">Database not configured.</p>
+      </div>
+    );
+  }
+  const database = db;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
@@ -43,8 +52,8 @@ export default function AddOrganizationForm({ onSuccess, onCancel }: AddOrganiza
       const orgId = id();
       const locationId = id();
       
-      await db.transact([
-        db.tx.organizations[orgId].update({
+      await database.transact([
+        database.tx.organizations[orgId].update({
           name: formData.name,
           description: formData.description,
           category: formData.category,
@@ -54,7 +63,7 @@ export default function AddOrganizationForm({ onSuccess, onCancel }: AddOrganiza
           statistics: formData.statistics || undefined,
           createdAt: Date.now()
         }),
-        db.tx.locations[locationId].update({
+        database.tx.locations[locationId].update({
           address: formData.address,
           latitude: lat,
           longitude: lng,
