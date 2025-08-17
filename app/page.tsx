@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import db from '../lib/db';
 import AddOrganizationForm from '../components/AddOrganizationForm';
 import CircularAddButton from '../components/CircularAddButton';
@@ -50,7 +51,12 @@ export default function Home() {
             <h1 className="text-2xl font-bold text-gray-900">OKC Non-Profit Map</h1>
             <p className="text-gray-600">Discover local organizations making a difference</p>
           </div>
-          <CircularAddButton onClick={() => setShowAddForm(true)} />
+          <div className="flex items-center space-x-4">
+            <Link href="/data" className="text-blue-600 hover:underline">
+              Data
+            </Link>
+            <CircularAddButton onClick={() => setShowAddForm(true)} />
+          </div>
         </div>
       </header>
 
