@@ -3,7 +3,12 @@ import { init } from '@instantdb/admin';
 import crypto from 'crypto';
 import sampleDatasets from './sample-datasets.json';
 
-type CensusDataset = { identifier: string; title: string };
+type CensusDataset = {
+  identifier: string;
+  title: string;
+  distribution?: { accessURL?: string }[];
+  path?: string;
+};
 
 const APP_ID = process.env.NEXT_PUBLIC_INSTANT_APP_ID;
 const ADMIN_TOKEN = process.env.INSTANT_ADMIN_TOKEN;
@@ -19,7 +24,14 @@ export async function GET() {
       throw new Error(`Census API responded with ${res.status}`);
     }
     const json = await res.json();
-    const datasets = (json.dataset || []) as CensusDataset[];
+    const datasets = (json.dataset || []).map((ds: CensusDataset) => ({
+      identifier: ds.identifier,
+      title: ds.title,
+      path: ds.distribution?.[0]?.accessURL?.replace(
+        'https://api.census.gov/data/',
+        ''
+      ),
+    }));
 
     if (APP_ID && ADMIN_TOKEN) {
       const db = init({ appId: APP_ID, adminToken: ADMIN_TOKEN });
@@ -32,6 +44,7 @@ export async function GET() {
         return db.tx.censusDatasets[id].update({
           identifier: ds.identifier,
           title: ds.title,
+          path: ds.path,
         });
       });
 

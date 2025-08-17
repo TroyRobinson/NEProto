@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import TopNav from '../../components/TopNav';
 import db from '../../lib/db';
-type CensusDataset = { id?: string; identifier: string; title: string };
+type CensusDataset = { id?: string; identifier: string; title: string; path?: string };
 
 export default function DatasetSearchPage() {
   const [term, setTerm] = useState('');
@@ -87,8 +88,17 @@ export default function DatasetSearchPage() {
         <ul className="space-y-1">
           {display.map((d) => (
             <li key={d.id || d.identifier} className="border-b py-1">
-              <div className="font-medium">{d.title}</div>
-              <div className="text-xs text-gray-600">{d.identifier}</div>
+              {d.path ? (
+                <Link href={`/datasets/${d.path}`} className="block">
+                  <div className="font-medium">{d.title}</div>
+                  <div className="text-xs text-gray-600">{d.identifier}</div>
+                </Link>
+              ) : (
+                <>
+                  <div className="font-medium">{d.title}</div>
+                  <div className="text-xs text-gray-600">{d.identifier}</div>
+                </>
+              )}
             </li>
           ))}
           {display.length === 0 && (
