@@ -26,13 +26,15 @@ export default function DatasetDetailPage() {
         );
         if (!res.ok) throw new Error(`Request failed with ${res.status}`);
         const json = await res.json();
-        const vars: Variable[] = Object.entries(json.variables || {}).map(
-          ([name, meta]: any) => ({
-            name,
-            label: meta.label,
-            concept: meta.concept,
-          })
+        type RawVariable = { label: string; concept: string };
+        const entries = Object.entries(
+          (json.variables as Record<string, RawVariable>) || {}
         );
+        const vars: Variable[] = entries.map(([name, meta]) => ({
+          name,
+          label: meta.label,
+          concept: meta.concept,
+        }));
         setVariables(vars);
       } catch (e) {
         console.error('Failed to load variables', e);

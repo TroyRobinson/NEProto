@@ -10,6 +10,8 @@ type CensusDataset = {
   path?: string;
 };
 
+type DatasetEntry = { identifier: string; title: string; path?: string };
+
 const APP_ID = process.env.NEXT_PUBLIC_INSTANT_APP_ID;
 const ADMIN_TOKEN = process.env.INSTANT_ADMIN_TOKEN;
 
@@ -24,7 +26,9 @@ export async function GET() {
       throw new Error(`Census API responded with ${res.status}`);
     }
     const json = await res.json();
-    const datasets = (json.dataset || []).map((ds: CensusDataset) => ({
+    const datasets: DatasetEntry[] = (
+      (json.dataset as CensusDataset[]) || []
+    ).map((ds) => ({
       identifier: ds.identifier,
       title: ds.title,
       path: ds.distribution?.[0]?.accessURL?.replace(
