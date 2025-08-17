@@ -1,15 +1,25 @@
 'use client';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Map from 'react-map-gl/maplibre';
-import { ScatterplotLayer } from '@deck.gl/layers';
+import { ScatterplotLayer, GeoJsonLayer } from '@deck.gl/layers';
 import DeckGL from '@deck.gl/react';
+import type { FeatureCollection } from 'geojson';
 import type { Organization } from '../types/organization';
+import type { GeoType } from '../lib/census';
+import { fetchCensusChoropleth } from '../lib/census';
+
+interface ChoroplethConfig {
+  variable: string;
+  geoType: GeoType;
+  year?: number;
+}
 
 interface OKCMapProps {
   organizations: Organization[];
   onOrganizationClick?: (org: Organization) => void;
+  choropleth?: ChoroplethConfig;
 }
 
 const OKC_CENTER = {
@@ -17,7 +27,7 @@ const OKC_CENTER = {
   latitude: 35.4676
 };
 
-export default function OKCMap({ organizations, onOrganizationClick }: OKCMapProps) {
+export default function OKCMap({ organizations, onOrganizationClick, choropleth }: OKCMapProps) {
   const [viewState, setViewState] = useState({
     longitude: OKC_CENTER.longitude,
     latitude: OKC_CENTER.latitude,
@@ -25,17 +35,51 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
     pitch: 0,
     bearing: 0
   });
+  const [choroplethData, setChoroplethData] = useState<FeatureCollection | null>(null);
+
+  useEffect(() => {
+    if (!choropleth) {
+      setChoroplethData(null);
+      return;
+    }
+    fetchCensusChoropleth(choropleth)
+      .then(setChoroplethData)
+      .catch((e) => console.error(e));
+  }, [choropleth]);
 
   const layers = useMemo(() => {
-    const data = organizations.flatMap(org => 
-      org.locations.map(location => ({
+    const layersArr: any[] = [];
+
+    if (choroplethData) {
+      const values = choroplethData.features
+        .map((f: any) => f.properties?.value)
+        .filter((v: any) => typeof v === 'number');
+      const min = Math.min(...values);
+      const max = Math.max(...values);
+      layersArr.push(
+        new GeoJsonLayer({
+          id: 'census-choropleth',
+          data: choroplethData,
+          filled: true,
+          stroked: true,
+          pickable: true,
+          getFillColor: (f: any) => getChoroplethColor(f.properties.value, min, max),
+          getLineColor: [255, 255, 255],
+          lineWidthMinPixels: 0.5,
+          opacity: 0.6
+        })
+      );
+    }
+
+    const data = organizations.flatMap((org) =>
+      org.locations.map((location) => ({
         coordinates: [location.longitude, location.latitude] as [number, number],
         organization: org,
         color: getCategoryColor(org.category)
       }))
     );
 
-    return [
+    layersArr.push(
       new ScatterplotLayer({
         id: 'organizations',
         data: data,
@@ -54,8 +98,10 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
           }
         }
       })
-    ];
-  }, [organizations, onOrganizationClick]);
+    );
+
+    return layersArr;
+  }, [organizations, onOrganizationClick, choroplethData]);
 
   return (
     <div className="w-full h-full relative">
@@ -90,4 +136,18 @@ function getCategoryColor(category: string): [number, number, number, number] {
   };
   
   return colors[category] || colors['Other'];
+}
+
+function getChoroplethColor(
+  value: number,
+  min: number,
+  max: number
+): [number, number, number, number] {
+  if (!Number.isFinite(value) || min === max) {
+    return [200, 200, 200, 80];
+  }
+  const t = (value - min) / (max - min);
+  const r = Math.round(255 * t);
+  const g = Math.round(255 * (1 - t));
+  return [r, g, 0, 180];
 }
