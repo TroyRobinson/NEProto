@@ -63,6 +63,19 @@ export default function DataPage() {
     const m = customMetrics.find((cm) => cm.key === metric);
     if (!m) return;
     async function loadCustom(metricInfo: CustomMetric) {
+      const storageKey = `customMetricData_${metricInfo.key}`;
+      if (typeof window !== 'undefined') {
+        const cached = localStorage.getItem(storageKey);
+        if (cached) {
+          try {
+            const map = new Map<string, number>(JSON.parse(cached));
+            setCustomData((prev) => ({ ...prev, [metricInfo.key]: map }));
+            return;
+          } catch {
+            /* ignore */
+          }
+        }
+      }
       try {
         const zipCodes = rows.map((r) => r.zip);
         const res = await fetch(
@@ -73,6 +86,9 @@ export default function DataPage() {
           json.slice(1).map((row: string[]) => [row[row.length - 1], Number(row[0])])
         );
         setCustomData((prev) => ({ ...prev, [metricInfo.key]: map }));
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(storageKey, JSON.stringify(Array.from(map.entries())));
+        }
       } catch (err) {
         console.error('Failed to fetch custom metric', err);
       }
@@ -85,6 +101,7 @@ export default function DataPage() {
       const updated = prev.filter((m) => m.key !== key);
       if (typeof window !== 'undefined') {
         localStorage.setItem('customMetrics', JSON.stringify(updated));
+        localStorage.removeItem(`customMetricData_${key}`);
       }
       return updated;
     });

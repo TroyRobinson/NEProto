@@ -66,17 +66,36 @@ export default function OKCMap({ organizations, onOrganizationClick, metric, cus
     const m = customMetrics.find((cm) => cm.key === metric);
     if (!m) return;
     async function loadCustom(metricInfo: CustomMetric) {
+      const storageKey = `customMetricData_${metricInfo.key}`;
+      if (typeof window !== 'undefined') {
+        const cached = localStorage.getItem(storageKey);
+        if (cached) {
+          try {
+            const entries: [string, number][] = JSON.parse(cached);
+            const map = new Map<string, number>(entries);
+            setCustomData((prev) => ({ ...prev, [metricInfo.key]: map }));
+            setCustomMax((prev) => ({ ...prev, [metricInfo.key]: Math.max(...entries.map((e) => e[1])) }));
+            return;
+          } catch {
+            /* ignore */
+          }
+        }
+      }
       try {
         const zipCodes = zipStats.map((z) => z.zip);
         const res = await fetch(
           `${metricInfo.dataset}?get=${metricInfo.variable}&for=zip%20code%20tabulation%20area:${zipCodes.join(',')}`
         );
         const json = await res.json();
-        const map = new Map<string, number>(
-          json.slice(1).map((row: string[]) => [row[row.length - 1], Number(row[0])])
-        );
+        const entries: [string, number][] = json
+          .slice(1)
+          .map((row: string[]) => [row[row.length - 1], Number(row[0])]);
+        const map = new Map<string, number>(entries);
         setCustomData((prev) => ({ ...prev, [metricInfo.key]: map }));
-        setCustomMax((prev) => ({ ...prev, [metricInfo.key]: Math.max(...Array.from(map.values())) }));
+        setCustomMax((prev) => ({ ...prev, [metricInfo.key]: Math.max(...entries.map((e) => e[1])) }));
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(storageKey, JSON.stringify(entries));
+        }
       } catch (err) {
         console.error('Failed to load custom metric', err);
       }
