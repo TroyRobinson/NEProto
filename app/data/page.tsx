@@ -4,11 +4,20 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { fetchZipStats, type ZipStats } from '../../lib/zipStats';
 
+interface CustomMetric {
+  key: string;
+  label: string;
+  dataset: string;
+  variable: string;
+}
+
 export default function DataPage() {
   const [rows, setRows] = useState<ZipStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [metric, setMetric] = useState<'population' | 'applications'>('population');
+  const [metric, setMetric] = useState<string>('population');
+  const [customMetrics, setCustomMetrics] = useState<CustomMetric[]>([]);
+  const [customData, setCustomData] = useState<Record<string, Map<string, number>>>({});
 
   useEffect(() => {
     async function load() {
@@ -22,7 +31,37 @@ export default function DataPage() {
       }
     }
     load();
+    const stored = JSON.parse(
+      typeof window !== 'undefined'
+        ? localStorage.getItem('customMetrics') || '[]'
+        : '[]'
+    );
+    setCustomMetrics(stored);
   }, []);
+
+  useEffect(() => {
+    if (metric === 'population' || metric === 'applications') return;
+    if (rows.length === 0) return;
+    if (customData[metric]) return;
+    const m = customMetrics.find((cm) => cm.key === metric);
+    if (!m) return;
+    async function loadCustom(metricInfo: CustomMetric) {
+      try {
+        const zipCodes = rows.map((r) => r.zip);
+        const res = await fetch(
+          `${metricInfo.dataset}?get=${metricInfo.variable}&for=zip%20code%20tabulation%20area:${zipCodes.join(',')}`
+        );
+        const json = await res.json();
+        const map = new Map<string, number>(
+          json.slice(1).map((row: string[]) => [row[row.length - 1], Number(row[0])])
+        );
+        setCustomData((prev) => ({ ...prev, [metricInfo.key]: map }));
+      } catch (err) {
+        console.error('Failed to fetch custom metric', err);
+      }
+    }
+    loadCustom(m);
+  }, [metric, rows, customMetrics, customData]);
 
   return (
     <div className="min-h-screen p-4 bg-gray-100 text-black">
@@ -32,11 +71,16 @@ export default function DataPage() {
           <label className="mr-2">Metric:</label>
           <select
             value={metric}
-            onChange={(e) => setMetric(e.target.value as 'population' | 'applications')}
+            onChange={(e) => setMetric(e.target.value)}
             className="border px-1 py-0.5"
           >
             <option value="population">Population</option>
             <option value="applications">Business Applications</option>
+            {customMetrics.map((m) => (
+              <option key={m.key} value={m.key}>
+                {m.label}
+              </option>
+            ))}
           </select>
         </div>
         <Link href="/stats" className="text-blue-600 hover:underline text-sm">
@@ -52,7 +96,11 @@ export default function DataPage() {
               <tr>
                 <th className="px-4 py-2 text-left text-sm font-semibold text-black">ZIP</th>
                 <th className="px-4 py-2 text-left text-sm font-semibold text-black">
-                  {metric === 'population' ? 'Population' : 'Business Applications'}
+                  {metric === 'population'
+                    ? 'Population'
+                    : metric === 'applications'
+                      ? 'Business Applications'
+                      : customMetrics.find((m) => m.key === metric)?.label || 'Value'}
                 </th>
               </tr>
             </thead>
@@ -63,7 +111,9 @@ export default function DataPage() {
                   <td className="px-4 py-2 text-sm text-black">
                     {metric === 'population'
                       ? row.population.toLocaleString()
-                      : Math.round(row.applications).toLocaleString()}
+                      : metric === 'applications'
+                        ? Math.round(row.applications).toLocaleString()
+                        : customData[metric]?.get(row.zip)?.toLocaleString() ?? 'N/A'}
                   </td>
                 </tr>
               ))}

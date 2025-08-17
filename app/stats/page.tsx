@@ -40,7 +40,9 @@ export default function CensusStatExplorer() {
           .filter((d) => d.c_variablesLink)
           .map((d) => ({
             title: d.title || 'Untitled dataset',
-            variablesLink: d.c_variablesLink as string,
+            variablesLink: (d.c_variablesLink as string)
+              .replace(/^http:/, 'https:')
+              .replace(/\.html$/, '.json'),
           }));
         setDatasets(ds);
       } catch (err) {
@@ -84,6 +86,34 @@ export default function CensusStatExplorer() {
       .toLowerCase()
       .includes(varQuery.toLowerCase())
   );
+
+  function addMetric(v: Variable) {
+    if (!selectedDataset) return;
+    const datasetPath = selectedDataset.variablesLink.replace(/\/variables\.json.*/, '');
+    const metric: { key: string; dataset: string; variable: string; label: string } = {
+      key: `${datasetPath}|${v.name}`,
+      dataset: datasetPath,
+      variable: v.name,
+      label: v.label,
+    };
+    const existing: {
+      key: string;
+      dataset: string;
+      variable: string;
+      label: string;
+    }[] = JSON.parse(
+      typeof window !== 'undefined'
+        ? localStorage.getItem('customMetrics') || '[]'
+        : '[]'
+    );
+    if (!existing.find((m) => m.key === metric.key)) {
+      existing.push(metric);
+      localStorage.setItem('customMetrics', JSON.stringify(existing));
+      alert('Added metric');
+    } else {
+      alert('Metric already saved');
+    }
+  }
 
   return (
     <div className="min-h-screen p-4 bg-gray-100 text-black">
@@ -147,6 +177,12 @@ export default function CensusStatExplorer() {
                   {v.concept && (
                     <div className="text-xs text-gray-500">{v.concept}</div>
                   )}
+                  <button
+                    onClick={() => addMetric(v)}
+                    className="mt-1 text-xs text-blue-600 underline"
+                  >
+                    Add to metrics
+                  </button>
                 </li>
               ))}
             </ul>
