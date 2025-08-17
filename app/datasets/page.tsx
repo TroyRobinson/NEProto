@@ -8,33 +8,63 @@ type CensusDataset = { id?: string; identifier: string; title: string };
 export default function DatasetSearchPage() {
   const [term, setTerm] = useState('');
   const [requested, setRequested] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [fallback, setFallback] = useState<CensusDataset[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  const where = term
+    ? {
+        or: [
+          { title: { $ilike: `%${term}%` } },
+          { identifier: { $ilike: `%${term}%` } },
+        ],
+      }
+    : undefined;
+
   const query = db?.useQuery({
     censusDatasets: {
       $: {
-        where: term ? { title: { $ilike: `%${term}%` } } : undefined,
+        where,
         order: { title: 'asc' },
         limit: 50,
       },
     },
   });
   const results = query?.data?.censusDatasets || [];
-  const display = results.length > 0 ? results : fallback;
+
+  const filteredFallback = term
+    ? fallback.filter((d) => {
+        const t = term.toLowerCase();
+        return (
+          d.title.toLowerCase().includes(t) ||
+          d.identifier.toLowerCase().includes(t)
+        );
+      })
+    : fallback;
+
+  const display = results.length > 0 ? results : filteredFallback;
 
   useEffect(() => {
     if (!requested && results.length === 0 && fallback.length === 0) {
       setRequested(true);
+      setLoading(true);
       fetch('/api/refresh-datasets')
         .then((r) => {
           if (!r.ok) throw new Error(`Request failed with ${r.status}`);
           return r.json();
         })
-        .then((d) => setFallback(d.datasets || []))
+        .then((d) =>
+          setFallback(
+            (d.datasets || []).sort((a: CensusDataset, b: CensusDataset) =>
+              a.title.localeCompare(b.title)
+            )
+          )
+        )
         .catch((err) => {
           console.error('Dataset refresh failed', err);
           setError('Failed to load dataset index.');
-        });
+        })
+        .finally(() => setLoading(false));
     }
   }, [requested, results.length, fallback.length]);
 
@@ -65,7 +95,7 @@ export default function DatasetSearchPage() {
             <li className="text-sm text-gray-500">
               {error
                 ? error
-                : requested
+                : loading
                 ? 'Loading dataset index...'
                 : 'No datasets found.'}
             </li>

@@ -1,5 +1,12 @@
 [
   { "identifier": "ACSST5Y2021.ACSST5Y2021", "title": "ACS 5-Year Data (2021)" },
   { "identifier": "DECENNIAL2020.P1", "title": "Decennial Census P1 (Race)" },
-  { "identifier": "PEP2023.POP", "title": "Annual Estimates of the Resident Population" }
+  { "identifier": "PEP2023.POP", "title": "Annual Estimates of the Resident Population" },
+  { "identifier": "https://api.census.gov/data/id/CPSBASIC199406", "title": "Jun 1994 Current Population Survey: Basic Monthly" },
+  { "identifier": "http://api.census.gov/data/id/CBP1986", "title": "1986 County Business Patterns: Business Patterns" },
+  { "identifier": "http://api.census.gov/data/id/ZBPTotal1994", "title": "1994 County Business Patterns - Zip Code Business Patterns: Total For Zip Code" },
+  { "identifier": "http://api.census.gov/data/id/CBP1987", "title": "1987 County Business Patterns: Business Patterns" },
+  { "identifier": "http://api.census.gov/data/id/CBP1995", "title": "1995 County Business Patterns: Business Patterns" },
+  { "identifier": "http://api.census.gov/data/id/CBP1988", "title": "1988 County Business Patterns: Business Patterns" },
+  { "identifier": "http://api.census.gov/data/id/CBP1989", "title": "1989 County Business Patterns: Business Patterns" }
 ]
