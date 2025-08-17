@@ -1,0 +1,12 @@
+[
+  {
+    "name": "B01003_001E",
+    "label": "Population",
+    "datasetPath": "2022/acs/acs5"
+  },
+  {
+    "name": "B19013_001E",
+    "label": "Median Income",
+    "datasetPath": "2022/acs/acs5"
+  }
+]

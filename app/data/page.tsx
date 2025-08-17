@@ -2,47 +2,47 @@
 
 import React, { useEffect, useState } from 'react';
 import TopNav from '../../components/TopNav';
-
-interface CensusRow {
-  geoid: string;
-  name: string;
-  value: number;
-  year: string;
-}
-
-const VAR_LABELS: Record<string, string> = {
-  B01003_001E: 'Population',
-  B19013_001E: 'Median Income',
-};
+import type { CensusVariable, CensusRecord } from '../../types/census';
 
 export default function DataPage() {
-  const [censusVar, setCensusVar] = useState('B01003_001E');
-  const [rows, setRows] = useState<CensusRow[]>([]);
+  const [variables, setVariables] = useState<CensusVariable[]>([]);
+  const [censusVar, setCensusVar] = useState('');
+  const [rows, setRows] = useState<CensusRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadVars() {
+      try {
+        const res = await fetch('/api/selected-variables');
+        if (!res.ok) throw new Error('Request failed');
+        const vars: CensusVariable[] = await res.json();
+        setVariables(vars);
+        setCensusVar(vars[0]?.name || '');
+      } catch {
+        const fallback: CensusVariable[] = [
+          { name: 'B01003_001E', label: 'Population', datasetPath: '2022/acs/acs5' },
+          { name: 'B19013_001E', label: 'Median Income', datasetPath: '2022/acs/acs5' },
+        ];
+        setVariables(fallback);
+        setCensusVar(fallback[0].name);
+      }
+    }
+    loadVars();
+  }, []);
 
   useEffect(() => {
     async function load() {
       setLoading(true);
       setError(null);
       try {
+        const selected = variables.find((v) => v.name === censusVar);
+        if (!selected) throw new Error('Unknown variable');
         const res = await fetch(
-          `https://api.census.gov/data/2022/acs/acs5?get=NAME,${censusVar}&for=tract:*&in=state:40+county:109`
+          `/api/census-variable?dataset=${selected.datasetPath}&variable=${censusVar}`
         );
-        const json = await res.json();
-        const headers = json[0];
-        const nameIdx = headers.indexOf('NAME');
-        const varIdx = headers.indexOf(censusVar);
-        const stateIdx = headers.indexOf('state');
-        const countyIdx = headers.indexOf('county');
-        const tractIdx = headers.indexOf('tract');
-        const year = '2022';
-        const data: CensusRow[] = json.slice(1).map((row: string[]) => ({
-          geoid: `${row[stateIdx]}${row[countyIdx]}${row[tractIdx]}`,
-          name: row[nameIdx],
-          value: Number(row[varIdx]),
-          year,
-        }));
+        if (!res.ok) throw new Error('Request failed');
+        const data: CensusRecord[] = await res.json();
         setRows(data);
       } catch (e) {
         const msg = e instanceof Error ? e.message : 'Failed to load census data';
@@ -50,8 +50,8 @@ export default function DataPage() {
       }
       setLoading(false);
     }
-    load();
-  }, [censusVar]);
+    if (censusVar) load();
+  }, [censusVar, variables]);
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -69,13 +69,16 @@ export default function DataPage() {
             onChange={(e) => setCensusVar(e.target.value)}
             className="border rounded p-1"
           >
-            <option value="B01003_001E">Population</option>
-            <option value="B19013_001E">Median Income</option>
+            {variables.map((v) => (
+              <option key={v.name} value={v.name}>
+                {v.label}
+              </option>
+            ))}
           </select>
         </div>
         {loading && <div>Loading...</div>}
         {error && <div className="text-red-500">{error}</div>}
-        {!loading && !error && (
+        {!loading && !error && rows.length > 0 && (
           <div className="overflow-x-auto">
             <table className="min-w-full bg-white border">
               <thead className="bg-gray-50">
@@ -83,7 +86,9 @@ export default function DataPage() {
                   <th className="px-3 py-2 border">Year</th>
                   <th className="px-3 py-2 border">GEOID</th>
                   <th className="px-3 py-2 border text-left">Location</th>
-                  <th className="px-3 py-2 border text-right">{VAR_LABELS[censusVar]}</th>
+                  <th className="px-3 py-2 border text-right">
+                    {variables.find((v) => v.name === censusVar)?.label}
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -100,6 +105,9 @@ export default function DataPage() {
               </tbody>
             </table>
           </div>
+        )}
+        {!loading && !error && rows.length === 0 && (
+          <div>No data available.</div>
         )}
       </main>
     </div>

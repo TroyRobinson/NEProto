@@ -28,6 +28,7 @@ const _schema = i.schema({
     censusDatasets: i.entity({
       identifier: i.string().unique().indexed(),
       title: i.string().indexed(),
+      path: i.string().optional(),
     }),
     settings: i.entity({
       datasetRefreshHours: i.number(),
