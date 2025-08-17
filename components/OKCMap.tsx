@@ -7,12 +7,20 @@ import { ScatterplotLayer, GeoJsonLayer } from '@deck.gl/layers';
 import DeckGL from '@deck.gl/react';
 import type { Layer } from '@deck.gl/core';
 import type { Organization } from '../types/organization';
-import { fetchZipStats } from '../lib/zipStats';
+import { fetchZipStats, type ZipStats } from '../lib/zipStats';
+
+interface CustomMetric {
+  key: string;
+  label: string;
+  dataset: string;
+  variable: string;
+}
 
 interface OKCMapProps {
   organizations: Organization[];
   onOrganizationClick?: (org: Organization) => void;
-  metric: 'population' | 'applications';
+  metric: string;
+  customMetrics: CustomMetric[];
 }
 
 const OKC_CENTER = {
@@ -20,7 +28,7 @@ const OKC_CENTER = {
   latitude: 35.4676
 };
 
-export default function OKCMap({ organizations, onOrganizationClick, metric }: OKCMapProps) {
+export default function OKCMap({ organizations, onOrganizationClick, metric, customMetrics }: OKCMapProps) {
   const [viewState, setViewState] = useState({
     longitude: OKC_CENTER.longitude,
     latitude: OKC_CENTER.latitude,
@@ -30,14 +38,18 @@ export default function OKCMap({ organizations, onOrganizationClick, metric }: O
   });
 
   const [zipData, setZipData] = useState<any>(null);
+  const [zipStats, setZipStats] = useState<ZipStats[]>([]);
   const [maxPopulation, setMaxPopulation] = useState(0);
   const [maxApplications, setMaxApplications] = useState(0);
+  const [customData, setCustomData] = useState<Record<string, Map<string, number>>>({});
+  const [customMax, setCustomMax] = useState<Record<string, number>>({});
 
   useEffect(() => {
     async function load() {
       try {
         const { featureCollection, stats } = await fetchZipStats();
         setZipData(featureCollection);
+        setZipStats(stats);
         setMaxPopulation(Math.max(...stats.map((s) => s.population)));
         setMaxApplications(Math.max(...stats.map((s) => s.applications)));
       } catch {
@@ -46,6 +58,31 @@ export default function OKCMap({ organizations, onOrganizationClick, metric }: O
     }
     load();
   }, []);
+
+  useEffect(() => {
+    if (metric === 'population' || metric === 'applications') return;
+    if (!zipStats.length) return;
+    if (customData[metric]) return;
+    const m = customMetrics.find((cm) => cm.key === metric);
+    if (!m) return;
+    async function loadCustom(metricInfo: CustomMetric) {
+      try {
+        const zipCodes = zipStats.map((z) => z.zip);
+        const res = await fetch(
+          `${metricInfo.dataset}?get=${metricInfo.variable}&for=zip%20code%20tabulation%20area:${zipCodes.join(',')}`
+        );
+        const json = await res.json();
+        const map = new Map<string, number>(
+          json.slice(1).map((row: string[]) => [row[row.length - 1], Number(row[0])])
+        );
+        setCustomData((prev) => ({ ...prev, [metricInfo.key]: map }));
+        setCustomMax((prev) => ({ ...prev, [metricInfo.key]: Math.max(...Array.from(map.values())) }));
+      } catch (err) {
+        console.error('Failed to load custom metric', err);
+      }
+    }
+    loadCustom(m);
+  }, [metric, zipStats, customMetrics, customData]);
 
   const layers = useMemo(() => {
     const data = organizations.flatMap((org) =>
@@ -88,22 +125,29 @@ export default function OKCMap({ organizations, onOrganizationClick, metric }: O
             const value =
               metric === 'population'
                 ? f.properties.population
-                : f.properties.applications;
-            const max = metric === 'population' ? maxPopulation : maxApplications;
+                : metric === 'applications'
+                  ? f.properties.applications
+                  : customData[metric]?.get(f.properties.ZCTA5CE10) || 0;
+            const max =
+              metric === 'population'
+                ? maxPopulation
+                : metric === 'applications'
+                  ? maxApplications
+                  : customMax[metric] || 0;
             return getChoroplethColor(value, max, metric);
           },
           getLineColor: [0, 123, 255, 200],
           lineWidthMinPixels: 1,
           pickable: true,
           updateTriggers: {
-            getFillColor: [metric, maxPopulation, maxApplications]
+            getFillColor: [metric, maxPopulation, maxApplications, customData, customMax]
           }
         })
       );
     }
 
     return baseLayers;
-  }, [organizations, onOrganizationClick, zipData, metric, maxPopulation, maxApplications]);
+  }, [organizations, onOrganizationClick, zipData, metric, maxPopulation, maxApplications, customData, customMax]);
 
   return (
     <div className="w-full h-full relative">
@@ -112,17 +156,24 @@ export default function OKCMap({ organizations, onOrganizationClick, metric }: O
         onViewStateChange={(e: any) => setViewState(e.viewState)}
         controller={true}
         layers={layers}
-        getTooltip={({ object }) =>
-          object?.properties?.ZCTA5CE10
-            ? `ZIP: ${object.properties.ZCTA5CE10}\n${
-                metric === 'population' ? 'Population' : 'Business Applications'
-              }: ${Math.round(
-                metric === 'population'
-                  ? object.properties.population
-                  : object.properties.applications
-              ).toLocaleString()}`
-            : null
-        }
+        getTooltip={({ object }) => {
+          const zip = object?.properties?.ZCTA5CE10;
+          if (!zip) return null;
+          const value =
+            metric === 'population'
+              ? object.properties.population
+              : metric === 'applications'
+                ? object.properties.applications
+                : customData[metric]?.get(zip);
+          if (value == null) return `ZIP: ${zip}`;
+          const label =
+            metric === 'population'
+              ? 'Population'
+              : metric === 'applications'
+                ? 'Business Applications'
+                : customMetrics.find((m) => m.key === metric)?.label || 'Value';
+          return `ZIP: ${zip}\n${label}: ${Math.round(value).toLocaleString()}`;
+        }}
         style={{ width: '100%', height: '100%' }}
       >
         <MapGL
@@ -154,17 +205,26 @@ function getCategoryColor(category: string): [number, number, number, number] {
 function getChoroplethColor(
   value: number,
   max: number,
-  metric: 'population' | 'applications'
+  metric: string
 ): [number, number, number, number] {
   if (!max) {
-    return metric === 'population'
-      ? [198, 219, 239, 180]
-      : [254, 224, 144, 180];
+    return metric === 'applications'
+      ? [254, 224, 144, 180]
+      : [198, 219, 239, 180];
+  }
+  let start: [number, number, number];
+  let end: [number, number, number];
+  if (metric === 'applications') {
+    start = [254, 224, 144];
+    end = [217, 72, 1];
+  } else if (metric === 'population') {
+    start = [198, 219, 239];
+    end = [8, 81, 156];
+  } else {
+    start = [206, 238, 249];
+    end = [11, 105, 151];
   }
   const t = value / max;
-  const start =
-    metric === 'population' ? [198, 219, 239] : [254, 224, 144];
-  const end = metric === 'population' ? [8, 81, 156] : [217, 72, 1];
   const r = Math.round(start[0] + (end[0] - start[0]) * t);
   const g = Math.round(start[1] + (end[1] - start[1]) * t);
   const b = Math.round(start[2] + (end[2] - start[2]) * t);
