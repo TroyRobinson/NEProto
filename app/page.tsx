@@ -6,6 +6,7 @@ import db from '../lib/db';
 import AddOrganizationForm from '../components/AddOrganizationForm';
 import CircularAddButton from '../components/CircularAddButton';
 import type { Organization } from '../types/organization';
+import type { GeoType } from '../lib/census';
 
 const OKCMap = dynamic(() => import('../components/OKCMap'), {
   ssr: false,
@@ -15,6 +16,8 @@ const OKCMap = dynamic(() => import('../components/OKCMap'), {
 export default function Home() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
+  const [geoType, setGeoType] = useState<GeoType>('zip');
+  const [censusVar, setCensusVar] = useState('B01003_001E');
 
   const { data, isLoading, error } = db.useQuery({
     organizations: {
@@ -49,6 +52,22 @@ export default function Home() {
           <div>
             <h1 className="text-2xl font-bold text-gray-900">OKC Non-Profit Map</h1>
             <p className="text-gray-600">Discover local organizations making a difference</p>
+            <div className="mt-2 flex gap-2 text-sm">
+              <select
+                className="border rounded px-2 py-1"
+                value={geoType}
+                onChange={(e) => setGeoType(e.target.value as GeoType)}
+              >
+                <option value="zip">ZIP</option>
+                <option value="tract">Tract</option>
+              </select>
+              <input
+                className="border rounded px-2 py-1"
+                value={censusVar}
+                onChange={(e) => setCensusVar(e.target.value)}
+                placeholder="Census var"
+              />
+            </div>
           </div>
           <CircularAddButton onClick={() => setShowAddForm(true)} />
         </div>
@@ -56,9 +75,10 @@ export default function Home() {
 
       <div className="flex">
         <div className="flex-1 h-screen relative">
-          <OKCMap 
+          <OKCMap
             organizations={organizations}
             onOrganizationClick={setSelectedOrg}
+            choropleth={{ geoType, variable: censusVar }}
           />
         </div>
 
