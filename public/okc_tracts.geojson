@@ -1,0 +1,9 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {"type": "Feature", "properties": {"GEOID": "000100"}, "geometry": {"type": "Polygon", "coordinates": [[[-97.7,35.7],[-97.5,35.7],[-97.5,35.5],[-97.7,35.5],[-97.7,35.7]]]}},
+    {"type": "Feature", "properties": {"GEOID": "000200"}, "geometry": {"type": "Polygon", "coordinates": [[[-97.5,35.7],[-97.3,35.7],[-97.3,35.5],[-97.5,35.5],[-97.5,35.7]]]}},
+    {"type": "Feature", "properties": {"GEOID": "000300"}, "geometry": {"type": "Polygon", "coordinates": [[[-97.7,35.5],[-97.5,35.5],[-97.5,35.3],[-97.7,35.3],[-97.7,35.5]]]}},
+    {"type": "Feature", "properties": {"GEOID": "000400"}, "geometry": {"type": "Polygon", "coordinates": [[[-97.5,35.5],[-97.3,35.5],[-97.3,35.3],[-97.5,35.3],[-97.5,35.5]]]} }
+  ]
+}

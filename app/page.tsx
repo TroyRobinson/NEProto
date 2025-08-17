@@ -6,6 +6,8 @@ import db from '../lib/db';
 import AddOrganizationForm from '../components/AddOrganizationForm';
 import CircularAddButton from '../components/CircularAddButton';
 import type { Organization } from '../types/organization';
+import type { Stat } from '../types/stat';
+import Link from 'next/link';
 
 const OKCMap = dynamic(() => import('../components/OKCMap'), {
   ssr: false,
@@ -15,13 +17,15 @@ const OKCMap = dynamic(() => import('../components/OKCMap'), {
 export default function Home() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
+  const [selectedStat, setSelectedStat] = useState<Stat | null>(null);
 
   const { data, isLoading, error } = db.useQuery({
     organizations: {
       locations: {},
       logo: {},
       photos: {}
-    }
+    },
+    stats: { values: {} }
   });
 
   if (isLoading) {
@@ -41,6 +45,7 @@ export default function Home() {
   }
 
   const organizations = data?.organizations || [];
+  const stats = data?.stats || [];
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -50,15 +55,36 @@ export default function Home() {
             <h1 className="text-2xl font-bold text-gray-900">OKC Non-Profit Map</h1>
             <p className="text-gray-600">Discover local organizations making a difference</p>
           </div>
-          <CircularAddButton onClick={() => setShowAddForm(true)} />
+          <div className="flex items-center gap-4">
+            <Link href="/stats" className="text-sm text-blue-600">Manage Stats</Link>
+            <CircularAddButton onClick={() => setShowAddForm(true)} />
+          </div>
         </div>
       </header>
 
       <div className="flex">
+        <div className="w-64 bg-white border-r h-screen overflow-y-auto">
+          <div className="p-4">
+            <h2 className="font-semibold mb-2">Stats</h2>
+            <ul className="space-y-1">
+              {stats.map((stat: Stat) => (
+                <li key={stat.id}>
+                  <button
+                    onClick={() => setSelectedStat(selectedStat?.id === stat.id ? null : stat)}
+                    className={`w-full text-left px-2 py-1 rounded ${selectedStat?.id === stat.id ? 'bg-blue-100' : 'hover:bg-gray-100'}`}
+                  >
+                    {stat.title}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
         <div className="flex-1 h-screen relative">
-          <OKCMap 
+          <OKCMap
             organizations={organizations}
             onOrganizationClick={setSelectedOrg}
+            selectedStat={selectedStat}
           />
         </div>
 
