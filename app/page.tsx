@@ -15,6 +15,8 @@ const OKCMap = dynamic(() => import('../components/OKCMap'), {
 export default function Home() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
+  const [geoType, setGeoType] = useState<'zip' | 'tract' | 'county'>('zip');
+  const [censusVariable, setCensusVariable] = useState('B01003_001E');
 
   const { data, isLoading, error } = db.useQuery({
     organizations: {
@@ -54,11 +56,34 @@ export default function Home() {
         </div>
       </header>
 
+      <div className="bg-white border-b">
+        <div className="max-w-7xl mx-auto px-4 py-2 flex gap-4 items-center">
+          <select
+            className="border border-gray-300 rounded px-2 py-1 text-sm"
+            value={geoType}
+            onChange={(e) => setGeoType(e.target.value as 'zip' | 'tract' | 'county')}
+          >
+            <option value="zip">ZIP</option>
+            <option value="tract">Tract</option>
+            <option value="county">County</option>
+          </select>
+          <select
+            className="border border-gray-300 rounded px-2 py-1 text-sm"
+            value={censusVariable}
+            onChange={(e) => setCensusVariable(e.target.value)}
+          >
+            <option value="B01003_001E">Total Population</option>
+            <option value="B19013_001E">Median Household Income</option>
+          </select>
+        </div>
+      </div>
+
       <div className="flex">
         <div className="flex-1 h-screen relative">
-          <OKCMap 
+          <OKCMap
             organizations={organizations}
             onOrganizationClick={setSelectedOrg}
+            censusConfig={{ geoType, variable: censusVariable }}
           />
         </div>
 
