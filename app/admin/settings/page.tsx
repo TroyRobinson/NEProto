@@ -27,10 +27,10 @@ export default function AdminSettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <header className="bg-white shadow-sm border-b">
+    <div className="min-h-screen bg-background">
+      <header className="bg-background shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900">Admin Settings</h1>
+          <h1 className="text-2xl font-bold text-foreground">Admin Settings</h1>
           <TopNav />
         </div>
       </header>

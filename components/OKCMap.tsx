@@ -40,13 +40,8 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
         const vars: CensusVariable[] = await res.json();
         setVariables(vars);
         setCensusVar(vars[0]?.name || '');
-      } catch {
-        const fallback: CensusVariable[] = [
-          { name: 'B01003_001E', label: 'Population', datasetPath: '2022/acs/acs5' },
-          { name: 'B19013_001E', label: 'Median Income', datasetPath: '2022/acs/acs5' },
-        ];
-        setVariables(fallback);
-        setCensusVar(fallback[0].name);
+      } catch (e) {
+        console.error('Failed to load variables', e);
       }
     }
     loadVars();
@@ -136,12 +131,12 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
           style={{width: '100%', height: '100%'}}
         />
       </DeckGL>
-      <div className="absolute top-2 left-2 z-10 bg-white bg-opacity-90 p-2 rounded shadow text-sm">
+      <div className="absolute top-2 left-2 z-10 bg-background/90 p-2 rounded shadow text-sm">
         <label className="mr-2">Statistic</label>
         <select
           value={censusVar}
           onChange={e => setCensusVar(e.target.value)}
-          className="border rounded p-1"
+          className="border border-foreground/20 rounded p-1"
         >
           {variables.map((v) => (
             <option key={v.name} value={v.name}>

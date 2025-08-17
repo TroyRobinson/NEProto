@@ -20,12 +20,7 @@ export default function DataPage() {
         setVariables(vars);
         setCensusVar(vars[0]?.name || '');
       } catch {
-        const fallback: CensusVariable[] = [
-          { name: 'B01003_001E', label: 'Population', datasetPath: '2022/acs/acs5' },
-          { name: 'B19013_001E', label: 'Median Income', datasetPath: '2022/acs/acs5' },
-        ];
-        setVariables(fallback);
-        setCensusVar(fallback[0].name);
+        setError('Failed to load variables.');
       }
     }
     loadVars();
@@ -54,10 +49,10 @@ export default function DataPage() {
   }, [censusVar, variables]);
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <header className="bg-white shadow-sm border-b">
+    <div className="min-h-screen bg-background">
+      <header className="bg-background shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900">Census Data</h1>
+          <h1 className="text-2xl font-bold text-foreground">Census Data</h1>
           <TopNav />
         </div>
       </header>
@@ -67,7 +62,7 @@ export default function DataPage() {
           <select
             value={censusVar}
             onChange={(e) => setCensusVar(e.target.value)}
-            className="border rounded p-1"
+            className="border border-foreground/20 rounded p-1"
           >
             {variables.map((v) => (
               <option key={v.name} value={v.name}>
@@ -80,8 +75,8 @@ export default function DataPage() {
         {error && <div className="text-red-500">{error}</div>}
         {!loading && !error && rows.length > 0 && (
           <div className="overflow-x-auto">
-            <table className="min-w-full bg-white border">
-              <thead className="bg-gray-50">
+            <table className="min-w-full bg-background border">
+              <thead className="bg-background">
                 <tr>
                   <th className="px-3 py-2 border">Year</th>
                   <th className="px-3 py-2 border">GEOID</th>
@@ -93,7 +88,7 @@ export default function DataPage() {
               </thead>
               <tbody>
                 {rows.map((row) => (
-                  <tr key={row.geoid} className="odd:bg-gray-100">
+                  <tr key={row.geoid} className="odd:bg-foreground/5">
                     <td className="px-3 py-2 border text-center">{row.year}</td>
                     <td className="px-3 py-2 border text-center">{row.geoid}</td>
                     <td className="px-3 py-2 border">{row.name}</td>

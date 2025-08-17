@@ -10,7 +10,7 @@ import type { Organization } from '../types/organization';
 
 const OKCMap = dynamic(() => import('../components/OKCMap'), {
   ssr: false,
-  loading: () => <div className="w-full h-full bg-gray-100 flex items-center justify-center">Loading map...</div>
+  loading: () => <div className="w-full h-full bg-background flex items-center justify-center">Loading map...</div>
 });
 
 export default function Home() {
@@ -30,7 +30,7 @@ export default function Home() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-lg">Loading organizations...</div>
       </div>
     );
@@ -38,7 +38,7 @@ export default function Home() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-red-500">Error loading data: {error.message}</div>
       </div>
     );
@@ -47,12 +47,12 @@ export default function Home() {
   const organizations = data?.organizations || [];
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <header className="bg-white shadow-sm border-b">
+    <div className="min-h-screen bg-background">
+      <header className="bg-background shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">OKC Non-Profit Map</h1>
-            <p className="text-gray-600">Discover local organizations making a difference</p>
+            <h1 className="text-2xl font-bold text-foreground">OKC Non-Profit Map</h1>
+            <p className="text-foreground/70">Discover local organizations making a difference</p>
           </div>
           <div className="flex items-center gap-4">
             <TopNav />
@@ -70,31 +70,31 @@ export default function Home() {
         </div>
 
         {selectedOrg && (
-          <div className="w-96 bg-white shadow-lg overflow-y-auto">
+          <div className="w-96 bg-background shadow-lg overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-between items-start mb-4">
-                <h2 className="text-xl font-bold text-gray-900">{selectedOrg.name}</h2>
+                <h2 className="text-xl font-bold text-foreground">{selectedOrg.name}</h2>
                 <button
                   onClick={() => setSelectedOrg(null)}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-foreground/60 hover:text-foreground"
                 >
                   ×
                 </button>
               </div>
-              
+
               <div className="space-y-4">
                 <div>
-                  <span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                  <span className="inline-block bg-foreground/20 text-foreground text-xs px-2 py-1 rounded-full">
                     {selectedOrg.category}
                   </span>
                 </div>
-                
-                <p className="text-gray-700">{selectedOrg.description}</p>
-                
+
+                <p className="text-foreground">{selectedOrg.description}</p>
+
                 {selectedOrg.statistics && (
                   <div>
-                    <h3 className="font-semibold text-gray-900 mb-1">Impact & Statistics</h3>
-                    <p className="text-gray-700 text-sm">{selectedOrg.statistics}</p>
+                    <h3 className="font-semibold text-foreground mb-1">Impact & Statistics</h3>
+                    <p className="text-foreground text-sm">{selectedOrg.statistics}</p>
                   </div>
                 )}
                 
@@ -129,9 +129,9 @@ export default function Home() {
                 </div>
                 
                 <div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Locations</h3>
+                  <h3 className="font-semibold text-foreground mb-2">Locations</h3>
                   {selectedOrg.locations.map(location => (
-                    <div key={location.id} className="text-sm text-gray-700 mb-1">
+                    <div key={location.id} className="text-sm text-foreground mb-1">
                       <div className="flex items-start">
                         {location.isPrimary && (
                           <span className="text-blue-600 text-xs mr-1">●</span>
