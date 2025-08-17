@@ -46,9 +46,20 @@ export async function fetchZipStats(): Promise<ZipStatsResult> {
   const totalPopulation = populations.reduce((a, b) => a + b, 0);
 
   // Fetch national Business Applications total (Dec 2023)
+  const bfsParams = new URLSearchParams({
+    get: 'cell_value,time_slot_id',
+    for: 'us:1',
+    time: '2023-12',
+    data_type_code: 'BA_BA',
+    category_code: 'TOTAL',
+    seasonally_adj: 'no'
+  });
   const bfsRes = await fetch(
-    'https://api.census.gov/data/timeseries/eits/bfs?get=cell_value,time_slot_id,time,data_type_code,category_code,seasonally_adj,us&for=us:1&time=2023-12&data_type_code=BA_BA&category_code=TOTAL&seasonally_adj=no'
+    `https://api.census.gov/data/timeseries/eits/bfs?${bfsParams.toString()}`
   );
+  if (!bfsRes.ok) {
+    throw new Error('Failed to fetch Business Applications');
+  }
   const bfsJson = await bfsRes.json();
   const bfsTotal = Number(bfsJson?.[1]?.[0]) || 0;
 
