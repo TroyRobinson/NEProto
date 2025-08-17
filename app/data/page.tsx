@@ -12,11 +12,22 @@ interface Row {
   value: string;
 }
 
+interface GeoRow {
+  name: string;
+  polygon: string;
+}
+
+interface Feature {
+  properties: { name: string };
+  geometry: { coordinates: number[][][] };
+}
+
 export default function DataPage() {
   const [codes, setCodes] = useState<string[]>([]);
   const [selected, setSelected] = useState<string>("");
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
+  const [geoRows, setGeoRows] = useState<GeoRow[]>([]);
 
   useEffect(() => {
     fetch(
@@ -30,6 +41,23 @@ export default function DataPage() {
         if (unique.length) setSelected(unique[0]);
       })
       .catch(() => setCodes([]));
+  }, []);
+
+  useEffect(() => {
+    fetch(
+      "https://raw.githubusercontent.com/PublicaMundi/MappingAPI/master/data/geojson/us-states.json"
+    )
+      .then((res) => res.json())
+      .then((json) => {
+        const features = (json.features as Feature[]).slice(0, 5);
+        setGeoRows(
+          features.map((f) => ({
+            name: f.properties.name,
+            polygon: JSON.stringify(f.geometry.coordinates[0][0].slice(0, 2)),
+          }))
+        );
+      })
+      .catch(() => setGeoRows([]));
   }, []);
 
   useEffect(() => {
@@ -123,6 +151,29 @@ export default function DataPage() {
             </tbody>
           </table>
         </div>
+
+        {geoRows.length > 0 && (
+          <div className="overflow-x-auto bg-white rounded shadow">
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50">
+                  <th className="p-2 border">State</th>
+                  <th className="p-2 border">Polygon (sample)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {geoRows.map((row, idx) => (
+                  <tr key={idx} className="odd:bg-white even:bg-gray-50">
+                    <td className="p-2 border">{row.name}</td>
+                    <td className="p-2 border font-mono truncate max-w-xs">
+                      {row.polygon}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </main>
     </div>
   );
