@@ -4,6 +4,9 @@ import React from 'react';
 import db from '../../lib/db';
 
 export default function DebugPage() {
+  if (!db) {
+    return <div className="p-8 text-red-500">Database not configured.</div>;
+  }
   const { data, isLoading, error } = db.useQuery({
     organizations: {
       locations: {},

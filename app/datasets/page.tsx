@@ -3,11 +3,13 @@
 import { useState, useEffect } from 'react';
 import TopNav from '../../components/TopNav';
 import db from '../../lib/db';
+type CensusDataset = { id?: string; identifier: string; title: string };
 
 export default function DatasetSearchPage() {
   const [term, setTerm] = useState('');
   const [requested, setRequested] = useState(false);
-  const { data } = db.useQuery({
+  const [fallback, setFallback] = useState<CensusDataset[]>([]);
+  const query = db?.useQuery({
     censusDatasets: {
       $: {
         where: term ? { title: { $ilike: `%${term}%` } } : undefined,
@@ -16,14 +18,18 @@ export default function DatasetSearchPage() {
       },
     },
   });
-  const results = data?.censusDatasets || [];
+  const results = query?.data?.censusDatasets || [];
+  const display = results.length > 0 ? results : fallback;
 
   useEffect(() => {
-    if (!requested && results.length === 0) {
+    if (!requested && results.length === 0 && fallback.length === 0) {
       setRequested(true);
-      fetch('/api/refresh-datasets');
+      fetch('/api/refresh-datasets')
+        .then((r) => r.json())
+        .then((d) => setFallback(d.datasets || []))
+        .catch((err) => console.error('Dataset refresh failed', err));
     }
-  }, [requested, results.length]);
+  }, [requested, results.length, fallback.length]);
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -42,13 +48,13 @@ export default function DatasetSearchPage() {
           className="w-full border px-3 py-2 rounded"
         />
         <ul className="space-y-1">
-          {results.map((d) => (
-            <li key={d.id} className="border-b py-1">
+          {display.map((d) => (
+            <li key={d.id || d.identifier} className="border-b py-1">
               <div className="font-medium">{d.title}</div>
               <div className="text-xs text-gray-600">{d.identifier}</div>
             </li>
           ))}
-          {results.length === 0 && (
+          {display.length === 0 && (
             <li className="text-sm text-gray-500">
               {requested ? 'Loading dataset index...' : 'No datasets found.'}
             </li>

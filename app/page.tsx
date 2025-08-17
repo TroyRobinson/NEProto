@@ -17,13 +17,16 @@ export default function Home() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
 
-  const { data, isLoading, error } = db.useQuery({
+  const query = db?.useQuery({
     organizations: {
       locations: {},
       logo: {},
       photos: {}
     }
   });
+  const data = query?.data;
+  const isLoading = query?.isLoading;
+  const error = query?.error;
 
   if (isLoading) {
     return (

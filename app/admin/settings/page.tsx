@@ -6,15 +6,20 @@ import TopNav from '../../../components/TopNav';
 import db from '../../../lib/db';
 
 export default function AdminSettingsPage() {
-  const { data } = db.useQuery({ settings: { $: { limit: 1 } } });
-  const existing = data?.settings?.[0];
+  const query = db?.useQuery({ settings: { $: { limit: 1 } } });
+  const existing = query?.data?.settings?.[0];
   const [freq, setFreq] = useState<number>(existing?.datasetRefreshHours || 24);
 
   useEffect(() => {
     if (existing) setFreq(existing.datasetRefreshHours);
   }, [existing]);
 
+  if (!db) {
+    return <div className="p-4 text-red-500">Database not configured.</div>;
+  }
+
   async function save() {
+    if (!db) return;
     const settingId = existing?.id || id();
     await db.transact([
       db.tx.settings[settingId].update({ datasetRefreshHours: freq })
