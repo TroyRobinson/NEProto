@@ -15,6 +15,7 @@ const OKCMap = dynamic(() => import('../components/OKCMap'), {
 export default function Home() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
+  const [geoType, setGeoType] = useState<'none' | 'zip' | 'county'>('none');
 
   const { data, isLoading, error } = db.useQuery({
     organizations: {
@@ -56,9 +57,22 @@ export default function Home() {
 
       <div className="flex">
         <div className="flex-1 h-screen relative">
-          <OKCMap 
+          <div className="absolute top-4 left-4 z-10 bg-white bg-opacity-90 p-2 rounded shadow">
+            <label className="text-xs font-medium mr-2">Choropleth</label>
+            <select
+              value={geoType}
+              onChange={(e) => setGeoType(e.target.value as 'none' | 'zip' | 'county')}
+              className="border rounded p-1 text-xs"
+            >
+              <option value="none">None</option>
+              <option value="zip">ZIP Code</option>
+              <option value="county">County</option>
+            </select>
+          </div>
+          <OKCMap
             organizations={organizations}
             onOrganizationClick={setSelectedOrg}
+            choropleth={geoType === 'none' ? undefined : { geography: geoType, variable: 'B19013_001E' }}
           />
         </div>
 
