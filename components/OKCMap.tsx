@@ -1,11 +1,13 @@
 'use client';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Map from 'react-map-gl/maplibre';
-import { ScatterplotLayer } from '@deck.gl/layers';
+import { ScatterplotLayer, GeoJsonLayer } from '@deck.gl/layers';
 import DeckGL from '@deck.gl/react';
 import type { Organization } from '../types/organization';
+import type { FeatureCollection } from 'geojson';
+import { fetchChoroplethData, type Geography } from '../lib/census';
 
 interface OKCMapProps {
   organizations: Organization[];
@@ -25,9 +27,32 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
     pitch: 0,
     bearing: 0
   });
+  const [geoType, setGeoType] = useState<Geography>('county');
+  const [choropleth, setChoropleth] = useState<FeatureCollection | null>(null);
+
+  useEffect(() => {
+    fetchChoroplethData(geoType).then(setChoropleth).catch(() => setChoropleth(null));
+  }, [geoType]);
+
+  const colorDomain = useMemo(() => {
+    if (!choropleth) return [0, 0];
+    const values = choropleth.features
+      .map((f: any) => f.properties?.value)
+      .filter((v: any) => typeof v === 'number');
+    return [Math.min(...values), Math.max(...values)];
+  }, [choropleth]);
+
+  const colorScale = React.useCallback((value?: number) => {
+    if (value === undefined) return [0, 0, 0, 0];
+    const [min, max] = colorDomain;
+    const t = max === min ? 0 : (value - min) / (max - min);
+    const r = Math.round(255 * t);
+    const b = Math.round(255 * (1 - t));
+    return [r, 0, b, 120];
+  }, [colorDomain]);
 
   const layers = useMemo(() => {
-    const data = organizations.flatMap(org => 
+    const data = organizations.flatMap(org =>
       org.locations.map(location => ({
         coordinates: [location.longitude, location.latitude] as [number, number],
         organization: org,
@@ -35,30 +60,56 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
       }))
     );
 
-    return [
-      new ScatterplotLayer({
-        id: 'organizations',
-        data: data,
-        getPosition: (d: any) => d.coordinates,
-        getRadius: 200,
-        getFillColor: (d: any) => d.color,
-        getLineColor: [0, 0, 0, 100],
-        getLineWidth: 2,
-        radiusScale: 1,
-        radiusMinPixels: 8,
-        radiusMaxPixels: 20,
+    const result = [] as any[];
+
+    if (choropleth) {
+      result.push(new GeoJsonLayer({
+        id: 'census-choropleth',
+        data: choropleth,
+        stroked: false,
         pickable: true,
-        onClick: (info: any) => {
-          if (info.object && onOrganizationClick) {
-            onOrganizationClick(info.object.organization);
-          }
+        getFillColor: (f: any) => colorScale(f.properties?.value),
+        getLineColor: [255, 255, 255, 80],
+        lineWidthMinPixels: 0.5
+      }));
+    }
+
+    result.push(new ScatterplotLayer({
+      id: 'organizations',
+      data: data,
+      getPosition: (d: any) => d.coordinates,
+      getRadius: 200,
+      getFillColor: (d: any) => d.color,
+      getLineColor: [0, 0, 0, 100],
+      getLineWidth: 2,
+      radiusScale: 1,
+      radiusMinPixels: 8,
+      radiusMaxPixels: 20,
+      pickable: true,
+      onClick: (info: any) => {
+        if (info.object && onOrganizationClick) {
+          onOrganizationClick(info.object.organization);
         }
-      })
-    ];
-  }, [organizations, onOrganizationClick]);
+      }
+    }));
+
+    return result;
+  }, [organizations, onOrganizationClick, choropleth, colorScale]);
 
   return (
     <div className="w-full h-full relative">
+      <div className="absolute top-2 left-2 z-10">
+        <select
+          className="bg-white border border-gray-300 rounded p-2 text-sm"
+          value={geoType}
+          onChange={(e) => setGeoType(e.target.value as Geography)}
+        >
+          <option value="state">States</option>
+          <option value="county">Counties (OK)</option>
+          <option value="zip">ZIP Codes (OK)</option>
+        </select>
+      </div>
+
       <DeckGL
         viewState={viewState}
         onViewStateChange={(e: any) => setViewState(e.viewState)}
