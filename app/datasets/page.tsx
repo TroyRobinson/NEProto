@@ -9,6 +9,7 @@ export default function DatasetSearchPage() {
   const [term, setTerm] = useState('');
   const [requested, setRequested] = useState(false);
   const [fallback, setFallback] = useState<CensusDataset[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const query = db?.useQuery({
     censusDatasets: {
       $: {
@@ -25,9 +26,17 @@ export default function DatasetSearchPage() {
     if (!requested && results.length === 0 && fallback.length === 0) {
       setRequested(true);
       fetch('/api/refresh-datasets')
-        .then((r) => r.json())
-        .then((d) => setFallback(d.datasets || []))
-        .catch((err) => console.error('Dataset refresh failed', err));
+        .then(async (r) => {
+          if (!r.ok) {
+            throw new Error(`Request failed: ${r.status}`);
+          }
+          const d = await r.json();
+          setFallback(d.datasets || []);
+        })
+        .catch((err) => {
+          console.error('Dataset refresh failed', err);
+          setError('Failed to load dataset index.');
+        });
     }
   }, [requested, results.length, fallback.length]);
 
@@ -56,7 +65,7 @@ export default function DatasetSearchPage() {
           ))}
           {display.length === 0 && (
             <li className="text-sm text-gray-500">
-              {requested ? 'Loading dataset index...' : 'No datasets found.'}
+              {error || (requested ? 'Loading dataset index...' : 'No datasets found.')}
             </li>
           )}
         </ul>
