@@ -7,10 +7,12 @@ import { ScatterplotLayer, GeoJsonLayer } from '@deck.gl/layers';
 import DeckGL from '@deck.gl/react';
 import type { Layer } from '@deck.gl/core';
 import type { Organization } from '../types/organization';
+import { fetchZipStats } from '../lib/zipStats';
 
 interface OKCMapProps {
   organizations: Organization[];
   onOrganizationClick?: (org: Organization) => void;
+  metric: 'population' | 'applications';
 }
 
 const OKC_CENTER = {
@@ -18,7 +20,7 @@ const OKC_CENTER = {
   latitude: 35.4676
 };
 
-export default function OKCMap({ organizations, onOrganizationClick }: OKCMapProps) {
+export default function OKCMap({ organizations, onOrganizationClick, metric }: OKCMapProps) {
   const [viewState, setViewState] = useState({
     longitude: OKC_CENTER.longitude,
     latitude: OKC_CENTER.latitude,
@@ -28,73 +30,26 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
   });
 
   const [zipData, setZipData] = useState<any>(null);
-  const [bfsValue, setBfsValue] = useState<number | null>(null);
   const [maxPopulation, setMaxPopulation] = useState(0);
+  const [maxApplications, setMaxApplications] = useState(0);
 
   useEffect(() => {
-    async function loadZipData() {
+    async function load() {
       try {
-        const res = await fetch(
-          'https://raw.githubusercontent.com/OpenDataDE/State-zip-code-GeoJSON/master/ok_oklahoma_zip_codes_geo.min.json'
-        );
-        const json = await res.json();
-        const okcFeatures = (json.features || []).filter(
-          (f: any) => f.properties?.ZCTA5CE10?.startsWith('731')
-        );
-
-        const zipCodes = okcFeatures.map(
-          (f: any) => f.properties.ZCTA5CE10
-        );
-
-        const popRes = await fetch(
-          `https://api.census.gov/data/2021/acs/acs5?get=B01003_001E&for=zip%20code%20tabulation%20area:${zipCodes.join(',')}`
-        );
-        const popJson = await popRes.json();
-        const popMap = new Map(
-          popJson.slice(1).map((row: any) => [row[1], Number(row[0])])
-        );
-        const populations = Array.from(popMap.values()) as number[];
-        setMaxPopulation(Math.max(...populations));
-
-        const featuresWithPop = okcFeatures.map((f: any) => ({
-          ...f,
-          properties: {
-            ...f.properties,
-            population: popMap.get(f.properties.ZCTA5CE10) || 0
-          }
-        }));
-
-        setZipData({
-          type: 'FeatureCollection',
-          features: featuresWithPop
-        });
+        const { featureCollection, stats } = await fetchZipStats();
+        setZipData(featureCollection);
+        setMaxPopulation(Math.max(...stats.map((s) => s.population)));
+        setMaxApplications(Math.max(...stats.map((s) => s.applications)));
       } catch {
         setZipData(null);
       }
     }
-    loadZipData();
-  }, []);
-
-  useEffect(() => {
-    async function loadBFS() {
-      try {
-        const res = await fetch(
-          'https://api.census.gov/data/timeseries/eits/bfs?get=data_type_code,time_slot_id,seasonally_adj,category_code,cell_value,error_data&for=us:*&time=2023-12&data_type_code=BA_BA&category_code=TOTAL&seasonally_adj=no'
-        );
-        const json = await res.json();
-        const [, first] = json as any[];
-        // cell_value is at index 4 based on requested columns
-        setBfsValue(Number(first?.[4]));
-      } catch {
-        setBfsValue(null);
-      }
-    }
-    loadBFS();
+    load();
   }, []);
 
   const layers = useMemo(() => {
-    const data = organizations.flatMap(org =>
-      org.locations.map(location => ({
+    const data = organizations.flatMap((org) =>
+      org.locations.map((location) => ({
         coordinates: [location.longitude, location.latitude] as [number, number],
         organization: org,
         color: getCategoryColor(org.category)
@@ -129,8 +84,14 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
           data: zipData,
           filled: true,
           stroked: true,
-          getFillColor: (f: any) =>
-            getPopulationColor(f.properties.population, maxPopulation),
+          getFillColor: (f: any) => {
+            const value =
+              metric === 'population'
+                ? f.properties.population
+                : f.properties.applications;
+            const max = metric === 'population' ? maxPopulation : maxApplications;
+            return getChoroplethColor(value, max);
+          },
           getLineColor: [0, 123, 255, 200],
           lineWidthMinPixels: 1,
           pickable: true
@@ -139,7 +100,7 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
     }
 
     return baseLayers;
-  }, [organizations, onOrganizationClick, zipData, maxPopulation]);
+  }, [organizations, onOrganizationClick, zipData, metric, maxPopulation, maxApplications]);
 
   return (
     <div className="w-full h-full relative">
@@ -149,15 +110,21 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
         controller={true}
         layers={layers}
         getTooltip={({ object }) =>
-          object?.properties?.ZCTA5CE10 && bfsValue !== null
-            ? `ZIP: ${object.properties.ZCTA5CE10}\nPopulation: ${object.properties.population}\nBusiness Applications (Dec 2023, US): ${bfsValue}`
+          object?.properties?.ZCTA5CE10
+            ? `ZIP: ${object.properties.ZCTA5CE10}\n${
+                metric === 'population' ? 'Population' : 'Business Applications'
+              }: ${Math.round(
+                metric === 'population'
+                  ? object.properties.population
+                  : object.properties.applications
+              ).toLocaleString()}`
             : null
         }
-        style={{width: '100%', height: '100%'}}
+        style={{ width: '100%', height: '100%' }}
       >
         <MapGL
           mapStyle="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
-          style={{width: '100%', height: '100%'}}
+          style={{ width: '100%', height: '100%' }}
         />
       </DeckGL>
     </div>
@@ -168,25 +135,25 @@ function getCategoryColor(category: string): [number, number, number, number] {
   const colors: Record<string, [number, number, number, number]> = {
     'Food Security': [220, 53, 69, 200],
     'Housing & Shelter': [13, 110, 253, 200],
-    'Education': [25, 135, 84, 200],
-    'Healthcare': [220, 53, 133, 200],
+    Education: [25, 135, 84, 200],
+    Healthcare: [220, 53, 133, 200],
     'Youth Development': [255, 193, 7, 200],
     'Senior Services': [108, 117, 125, 200],
-    'Environmental': [32, 201, 151, 200],
+    Environmental: [32, 201, 151, 200],
     'Arts & Culture': [111, 66, 193, 200],
     'Community Development': [253, 126, 20, 200],
-    'Other': [134, 142, 150, 200]
+    Other: [134, 142, 150, 200]
   };
-  
+
   return colors[category] || colors['Other'];
 }
 
-function getPopulationColor(
-  population: number,
+function getChoroplethColor(
+  value: number,
   max: number
 ): [number, number, number, number] {
   if (!max) return [198, 219, 239, 180];
-  const t = population / max;
+  const t = value / max;
   const start = [198, 219, 239];
   const end = [8, 81, 156];
   const r = Math.round(start[0] + (end[0] - start[0]) * t);

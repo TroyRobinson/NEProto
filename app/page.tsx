@@ -16,6 +16,7 @@ const OKCMap = dynamic(() => import('../components/OKCMap'), {
 export default function Home() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
+  const [metric, setMetric] = useState<'population' | 'applications'>('population');
 
   const { data, isLoading, error } = db.useQuery({
     organizations: {
@@ -60,9 +61,21 @@ export default function Home() {
 
       <div className="flex">
         <div className="flex-1 h-screen relative">
-          <OKCMap 
+          <div className="absolute top-4 left-4 z-10 bg-white p-2 rounded shadow text-sm">
+            <label className="mr-2">Choropleth:</label>
+            <select
+              value={metric}
+              onChange={(e) => setMetric(e.target.value as 'population' | 'applications')}
+              className="border px-1 py-0.5"
+            >
+              <option value="population">Population</option>
+              <option value="applications">Business Applications</option>
+            </select>
+          </div>
+          <OKCMap
             organizations={organizations}
             onOrganizationClick={setSelectedOrg}
+            metric={metric}
           />
         </div>
 
