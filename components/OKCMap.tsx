@@ -3,12 +3,14 @@
 
 import React, { useState, useMemo } from 'react';
 import Map from 'react-map-gl/maplibre';
-import { ScatterplotLayer } from '@deck.gl/layers';
+import { ScatterplotLayer, GeoJsonLayer } from '@deck.gl/layers';
 import DeckGL from '@deck.gl/react';
 import type { Organization } from '../types/organization';
+import type { Stat } from '../types/stat';
 
 interface OKCMapProps {
   organizations: Organization[];
+  stat?: Stat | null;
   onOrganizationClick?: (org: Organization) => void;
 }
 
@@ -17,7 +19,7 @@ const OKC_CENTER = {
   latitude: 35.4676
 };
 
-export default function OKCMap({ organizations, onOrganizationClick }: OKCMapProps) {
+export default function OKCMap({ organizations, stat, onOrganizationClick }: OKCMapProps) {
   const [viewState, setViewState] = useState({
     longitude: OKC_CENTER.longitude,
     latitude: OKC_CENTER.latitude,
@@ -27,7 +29,7 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
   });
 
   const layers = useMemo(() => {
-    const data = organizations.flatMap(org => 
+    const data = organizations.flatMap(org =>
       org.locations.map(location => ({
         coordinates: [location.longitude, location.latitude] as [number, number],
         organization: org,
@@ -35,7 +37,7 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
       }))
     );
 
-    return [
+    const layersArr: any[] = [
       new ScatterplotLayer({
         id: 'organizations',
         data: data,
@@ -55,7 +57,33 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
         }
       })
     ];
-  }, [organizations, onOrganizationClick]);
+
+    if (stat) {
+      let statData: Record<string, number> = {};
+      try {
+        statData = stat.data ? JSON.parse(stat.data) : {};
+      } catch {
+        statData = {};
+      }
+      layersArr.push(
+        new GeoJsonLayer({
+          id: 'stat-layer',
+          data: '/okc_tracts.geojson',
+          pickable: false,
+          stroked: true,
+          filled: true,
+          getLineColor: [0, 0, 0, 100],
+          getFillColor: (f: any) => {
+            const geoid = f.properties.GEOID;
+            const value = statData[geoid];
+            return value ? getStatColor(value) : [0, 0, 0, 0];
+          }
+        })
+      );
+    }
+
+    return layersArr;
+  }, [organizations, stat, onOrganizationClick]);
 
   return (
     <div className="w-full h-full relative">
@@ -90,4 +118,11 @@ function getCategoryColor(category: string): [number, number, number, number] {
   };
   
   return colors[category] || colors['Other'];
+}
+
+function getStatColor(value: number): [number, number, number, number] {
+  const t = Math.max(0, Math.min(1, value / 100));
+  const r = Math.floor(255 * t);
+  const b = Math.floor(255 * (1 - t));
+  return [r, 0, b, 180];
 }
