@@ -3,13 +3,15 @@
 
 import React, { useState, useMemo } from 'react';
 import Map from 'react-map-gl/maplibre';
-import { ScatterplotLayer } from '@deck.gl/layers';
+import { ScatterplotLayer, GeoJsonLayer } from '@deck.gl/layers';
 import DeckGL from '@deck.gl/react';
 import type { Organization } from '../types/organization';
+import type { FeatureCollection } from 'geojson';
 
 interface OKCMapProps {
   organizations: Organization[];
   onOrganizationClick?: (org: Organization) => void;
+  choropleth?: FeatureCollection | null;
 }
 
 const OKC_CENTER = {
@@ -17,7 +19,7 @@ const OKC_CENTER = {
   latitude: 35.4676
 };
 
-export default function OKCMap({ organizations, onOrganizationClick }: OKCMapProps) {
+export default function OKCMap({ organizations, onOrganizationClick, choropleth }: OKCMapProps) {
   const [viewState, setViewState] = useState({
     longitude: OKC_CENTER.longitude,
     latitude: OKC_CENTER.latitude,
@@ -27,7 +29,7 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
   });
 
   const layers = useMemo(() => {
-    const data = organizations.flatMap(org => 
+    const data = organizations.flatMap(org =>
       org.locations.map(location => ({
         coordinates: [location.longitude, location.latitude] as [number, number],
         organization: org,
@@ -35,7 +37,7 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
       }))
     );
 
-    return [
+    const layersArr: any[] = [
       new ScatterplotLayer({
         id: 'organizations',
         data: data,
@@ -55,7 +57,20 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
         }
       })
     ];
-  }, [organizations, onOrganizationClick]);
+    if (choropleth) {
+      layersArr.push(
+        new GeoJsonLayer({
+          id: 'choropleth',
+          data: choropleth as any,
+          stroked: false,
+          filled: true,
+          getFillColor: (f: any) => getStatColor(f.properties?.value),
+          pickable: false,
+        })
+      );
+    }
+    return layersArr;
+  }, [organizations, onOrganizationClick, choropleth]);
 
   return (
     <div className="w-full h-full relative">
@@ -90,4 +105,15 @@ function getCategoryColor(category: string): [number, number, number, number] {
   };
   
   return colors[category] || colors['Other'];
+}
+
+function getStatColor(value: number | undefined): [number, number, number, number] {
+  if (value === undefined || isNaN(value)) {
+    return [0, 0, 0, 0];
+  }
+  // simple blue scale based on percentage 0-100
+  const intensity = Math.min(100, Math.max(0, value));
+  const alpha = 180;
+  const colorVal = Math.round((intensity / 100) * 255);
+  return [0, 0, colorVal, alpha];
 }
