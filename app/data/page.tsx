@@ -2,48 +2,48 @@
 
 import React, { useEffect, useState } from 'react';
 import TopNav from '../../components/TopNav';
+import {
+  loadSavedVars,
+  loadVarData,
+  type CensusRow,
+  type CensusVar,
+} from '../../lib/varStore';
 
-interface CensusRow {
-  geoid: string;
-  name: string;
-  value: number;
-  year: string;
-}
-
-const VAR_LABELS: Record<string, string> = {
-  B01003_001E: 'Population',
-  B19013_001E: 'Median Income',
-};
+const DEFAULT_VARS: CensusVar[] = [
+  { id: 'B01003_001E', label: 'Population', datasetPath: '2022/acs/acs5' },
+  { id: 'B19013_001E', label: 'Median Income', datasetPath: '2022/acs/acs5' },
+];
 
 export default function DataPage() {
+  const [options, setOptions] = useState<CensusVar[]>(DEFAULT_VARS);
   const [censusVar, setCensusVar] = useState('B01003_001E');
   const [rows, setRows] = useState<CensusRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    setOptions([...DEFAULT_VARS, ...loadSavedVars()]);
+  }, []);
+
+  const current = options.find((o) => o.id === censusVar) || DEFAULT_VARS[0];
+
+  useEffect(() => {
     async function load() {
       setLoading(true);
       setError(null);
+      const cached = loadVarData(censusVar);
+      if (cached) {
+        setRows(cached);
+        setLoading(false);
+        return;
+      }
       try {
         const res = await fetch(
-          `https://api.census.gov/data/2022/acs/acs5?get=NAME,${censusVar}&for=tract:*&in=state:40+county:109`
+          `/api/census-variable?dataset=${current.datasetPath}&variable=${censusVar}`
         );
+        if (!res.ok) throw new Error(`Request failed with ${res.status}`);
         const json = await res.json();
-        const headers = json[0];
-        const nameIdx = headers.indexOf('NAME');
-        const varIdx = headers.indexOf(censusVar);
-        const stateIdx = headers.indexOf('state');
-        const countyIdx = headers.indexOf('county');
-        const tractIdx = headers.indexOf('tract');
-        const year = '2022';
-        const data: CensusRow[] = json.slice(1).map((row: string[]) => ({
-          geoid: `${row[stateIdx]}${row[countyIdx]}${row[tractIdx]}`,
-          name: row[nameIdx],
-          value: Number(row[varIdx]),
-          year,
-        }));
-        setRows(data);
+        setRows(json.rows as CensusRow[]);
       } catch (e) {
         const msg = e instanceof Error ? e.message : 'Failed to load census data';
         setError(msg);
@@ -51,7 +51,7 @@ export default function DataPage() {
       setLoading(false);
     }
     load();
-  }, [censusVar]);
+  }, [censusVar, current]);
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -69,8 +69,11 @@ export default function DataPage() {
             onChange={(e) => setCensusVar(e.target.value)}
             className="border rounded p-1"
           >
-            <option value="B01003_001E">Population</option>
-            <option value="B19013_001E">Median Income</option>
+            {options.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.label}
+              </option>
+            ))}
           </select>
         </div>
         {loading && <div>Loading...</div>}
@@ -83,7 +86,7 @@ export default function DataPage() {
                   <th className="px-3 py-2 border">Year</th>
                   <th className="px-3 py-2 border">GEOID</th>
                   <th className="px-3 py-2 border text-left">Location</th>
-                  <th className="px-3 py-2 border text-right">{VAR_LABELS[censusVar]}</th>
+                  <th className="px-3 py-2 border text-right">{current.label}</th>
                 </tr>
               </thead>
               <tbody>
