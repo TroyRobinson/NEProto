@@ -52,7 +52,9 @@ export default function DataPage() {
       .then((json) => {
         const features = (json.features as ZipFeature[])
           .filter((f) => f.properties.ZCTA5CE10.startsWith("731"))
-          .slice(0, 5);
+          .sort((a, b) =>
+            a.properties.ZCTA5CE10.localeCompare(b.properties.ZCTA5CE10)
+          );
         setGeoRows(
           features.map((f) => {
             const coords = f.geometry.coordinates;
