@@ -54,6 +54,7 @@ export default function Home() {
           </div>
           <div className="flex items-center gap-4">
             <Link href="/data" className="text-blue-600 hover:underline">Data</Link>
+            <Link href="/data/search" className="text-blue-600 hover:underline">Search Stats</Link>
             <CircularAddButton onClick={() => setShowAddForm(true)} />
           </div>
         </div>
