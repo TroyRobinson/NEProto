@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import React, { useState, useMemo, useEffect } from 'react';
-import Map from 'react-map-gl/maplibre';
+import MapComponent from 'react-map-gl/maplibre';
 import { ScatterplotLayer, GeoJsonLayer } from '@deck.gl/layers';
 import DeckGL from '@deck.gl/react';
 import { feature } from 'topojson-client';
@@ -117,7 +117,7 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
         layers={[censusLayer, orgLayer].filter(Boolean)}
         style={{width: '100%', height: '100%'}}
       >
-        <Map
+        <MapComponent
           mapStyle="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
           style={{width: '100%', height: '100%'}}
         />
