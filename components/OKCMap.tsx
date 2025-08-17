@@ -1,9 +1,9 @@
 'use client';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Map from 'react-map-gl/maplibre';
-import { ScatterplotLayer } from '@deck.gl/layers';
+import { ScatterplotLayer, GeoJsonLayer } from '@deck.gl/layers';
 import DeckGL from '@deck.gl/react';
 import type { Organization } from '../types/organization';
 
@@ -26,8 +26,73 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
     bearing: 0
   });
 
+  const [geoType, setGeoType] = useState<'none' | 'zip' | 'tract'>('none');
+  const [censusData, setCensusData] = useState<null | {
+    geojson: any;
+    valueMap: Record<string, number>;
+    geoidProp: string;
+    min: number;
+    max: number;
+  }>(null);
+
+  useEffect(() => {
+    async function fetchCensus() {
+      if (geoType === 'none') {
+        setCensusData(null);
+        return;
+      }
+
+      try {
+        let geoURL = '';
+        let dataURL = '';
+        let geoidProp = '';
+
+        if (geoType === 'zip') {
+          geoURL =
+            'https://raw.githubusercontent.com/blackmad/census-geojson/master/census/2020/zip/40.json';
+          dataURL =
+            'https://api.census.gov/data/2022/acs/acs5?get=B19013_001E&for=zip%20code%20tabulation%20area:*&in=state:40';
+          geoidProp = 'ZCTA5CE20';
+        } else if (geoType === 'tract') {
+          geoURL =
+            'https://raw.githubusercontent.com/blackmad/census-geojson/master/census/2020/tract/40.json';
+          dataURL =
+            'https://api.census.gov/data/2022/acs/acs5?get=B19013_001E&for=tract:*&in=state:40&in=county:*';
+          geoidProp = 'GEOID';
+        }
+
+        const geoResp = await fetch(geoURL);
+        const geojson = await geoResp.json();
+        const dataResp = await fetch(dataURL);
+        const rows = await dataResp.json();
+        const valueMap: Record<string, number> = {};
+        for (const row of rows.slice(1)) {
+          let geoid = '';
+          if (geoType === 'zip') {
+            geoid = row[3];
+          } else if (geoType === 'tract') {
+            geoid = `${row[2]}${row[3]}${row[4]}`;
+          }
+          const val = Number(row[1]);
+          if (!Number.isNaN(val)) {
+            valueMap[geoid] = val;
+          }
+        }
+        const values = Object.values(valueMap);
+        const min = Math.min(...values);
+        const max = Math.max(...values);
+        setCensusData({ geojson, valueMap, geoidProp, min, max });
+      } catch (err) {
+        console.error('Error loading census data', err);
+        setCensusData(null);
+      }
+    }
+
+    fetchCensus();
+  }, [geoType]);
+
   const layers = useMemo(() => {
-    const data = organizations.flatMap(org => 
+    const data = organizations.flatMap(org =>
       org.locations.map(location => ({
         coordinates: [location.longitude, location.latitude] as [number, number],
         organization: org,
@@ -35,7 +100,7 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
       }))
     );
 
-    return [
+    const baseLayers = [
       new ScatterplotLayer({
         id: 'organizations',
         data: data,
@@ -55,10 +120,45 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
         }
       })
     ];
-  }, [organizations, onOrganizationClick]);
+
+    if (censusData) {
+      baseLayers.unshift(
+        new GeoJsonLayer({
+          id: 'census-choropleth',
+          data: censusData.geojson,
+          pickable: true,
+          filled: true,
+          getFillColor: (f: any) => {
+            const geoid = f.properties[censusData.geoidProp];
+            const val = censusData.valueMap[geoid];
+            if (val == null) return [0, 0, 0, 0];
+            const t = (val - censusData.min) / (censusData.max - censusData.min);
+            const r = Math.round(255 * t);
+            const g = Math.round(255 * (1 - t));
+            return [r, g, 0, 180];
+          },
+          getLineColor: [200, 200, 200, 200],
+          lineWidthMinPixels: 1
+        })
+      );
+    }
+
+    return baseLayers;
+  }, [organizations, onOrganizationClick, censusData]);
 
   return (
     <div className="w-full h-full relative">
+      <div className="absolute z-10 m-2 p-2 bg-white rounded shadow">
+        <select
+          value={geoType}
+          onChange={(e) => setGeoType(e.target.value as 'none' | 'zip' | 'tract')}
+          className="border rounded px-2 py-1 text-sm"
+        >
+          <option value="none">No Census Layer</option>
+          <option value="zip">Median Income by ZIP</option>
+          <option value="tract">Median Income by Tract</option>
+        </select>
+      </div>
       <DeckGL
         viewState={viewState}
         onViewStateChange={(e: any) => setViewState(e.viewState)}
