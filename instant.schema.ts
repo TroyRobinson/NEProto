@@ -25,6 +25,12 @@ const _schema = i.schema({
       longitude: i.number(),
       isPrimary: i.boolean(),
     }),
+    censusDatasets: i.entity({
+      title: i.string().indexed(),
+    }),
+    settings: i.entity({
+      datasetRefreshHours: i.number(),
+    }),
   },
   links: {
     orgLocations: {
