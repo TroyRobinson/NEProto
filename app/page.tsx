@@ -1,11 +1,15 @@
 'use client';
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import db from '../lib/db';
 import AddOrganizationForm from '../components/AddOrganizationForm';
 import CircularAddButton from '../components/CircularAddButton';
+import StatsSidebar from '../components/StatsSidebar';
+import { fetchOKCTractGeoJSON } from '../lib/census';
 import type { Organization } from '../types/organization';
+import type { FeatureCollection } from 'geojson';
 
 const OKCMap = dynamic(() => import('../components/OKCMap'), {
   ssr: false,
@@ -15,6 +19,8 @@ const OKCMap = dynamic(() => import('../components/OKCMap'), {
 export default function Home() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
+  const [selectedStat, setSelectedStat] = useState<string | null>(null);
+  const [tracts, setTracts] = useState<FeatureCollection | null>(null);
 
   const { data, isLoading, error } = db.useQuery({
     organizations: {
@@ -23,6 +29,26 @@ export default function Home() {
       photos: {}
     }
   });
+
+  const { data: statValuesData } = db.useQuery({
+    statValues: { $: { where: { 'stat.id': selectedStat } } }
+  });
+
+  useEffect(() => {
+    fetchOKCTractGeoJSON().then(setTracts);
+  }, []);
+
+  const choropleth = useMemo(() => {
+    if (!selectedStat || !tracts) return null;
+    const values = new Map(
+      (statValuesData?.statValues || []).map((v: any) => [v.geoid, v.value])
+    );
+    const features = tracts.features.map((f: any) => ({
+      ...f,
+      properties: { ...f.properties, value: values.get(f.properties.GEOID) }
+    }));
+    return { ...tracts, features } as FeatureCollection;
+  }, [selectedStat, statValuesData, tracts]);
 
   if (isLoading) {
     return (
@@ -50,15 +76,20 @@ export default function Home() {
             <h1 className="text-2xl font-bold text-gray-900">OKC Non-Profit Map</h1>
             <p className="text-gray-600">Discover local organizations making a difference</p>
           </div>
-          <CircularAddButton onClick={() => setShowAddForm(true)} />
+          <div className="flex items-center gap-4">
+            <a href="/stats" className="text-sm text-blue-600">Manage Stats</a>
+            <CircularAddButton onClick={() => setShowAddForm(true)} />
+          </div>
         </div>
       </header>
 
       <div className="flex">
         <div className="flex-1 h-screen relative">
-          <OKCMap 
+          <StatsSidebar selected={selectedStat} onSelect={setSelectedStat} />
+          <OKCMap
             organizations={organizations}
             onOrganizationClick={setSelectedOrg}
+            choropleth={choropleth}
           />
         </div>
 
