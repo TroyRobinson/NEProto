@@ -7,6 +7,12 @@ import { ScatterplotLayer, GeoJsonLayer } from '@deck.gl/layers';
 import DeckGL from '@deck.gl/react';
 import type { FeatureCollection } from 'geojson';
 import type { Organization } from '../types/organization';
+import {
+  loadSavedVars,
+  loadVarData,
+  type CensusVar,
+  type CensusRow,
+} from '../lib/varStore';
 
 interface OKCMapProps {
   organizations: Organization[];
@@ -27,8 +33,18 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
     bearing: 0
   });
 
+  const [options, setOptions] = useState<CensusVar[]>([
+    { id: 'B01003_001E', label: 'Population', datasetPath: '2022/acs/acs5' },
+    { id: 'B19013_001E', label: 'Median Income', datasetPath: '2022/acs/acs5' },
+  ]);
   const [censusVar, setCensusVar] = useState('B01003_001E');
   const [censusLayer, setCensusLayer] = useState<GeoJsonLayer | null>(null);
+
+  useEffect(() => {
+    setOptions((prev) => [...prev, ...loadSavedVars()]);
+  }, []);
+
+  const current = options.find((o) => o.id === censusVar) || options[0];
 
   useEffect(() => {
     async function loadCensus() {
@@ -36,20 +52,17 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
         "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Tracts_Blocks/MapServer/0/query?where=STATE='40'%20and%20COUNTY='109'&outFields=GEOID&outSR=4326&f=geojson"
       );
       const geo: FeatureCollection = await geoRes.json();
-      const res = await fetch(
-        `https://api.census.gov/data/2022/acs/acs5?get=NAME,${censusVar}&for=tract:*&in=state:40+county:109`
-      );
-      const json = await res.json();
-      const headers = json[0];
-      const varIdx = headers.indexOf(censusVar);
-      const tractIdx = headers.indexOf('tract');
-      const stateIdx = headers.indexOf('state');
-      const countyIdx = headers.indexOf('county');
+      let data: CensusRow[] | null = loadVarData(censusVar);
+      if (!data) {
+        const res = await fetch(
+          `/api/census-variable?dataset=${current.datasetPath}&variable=${censusVar}`
+        );
+        if (!res.ok) return;
+        const json = await res.json();
+        data = json.rows as CensusRow[];
+      }
       const values = new Map<string, number>(
-        json.slice(1).map((row: string[]) => [
-          `${row[stateIdx]}${row[countyIdx]}${row[tractIdx]}`,
-          Number(row[varIdx])
-        ])
+        data.map((r) => [r.geoid, r.value])
       );
       const feats = geo.features.map((f: any) => ({
         ...f,
@@ -74,7 +87,7 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
       setCensusLayer(layer);
     }
     loadCensus();
-  }, [censusVar]);
+  }, [censusVar, current]);
 
   const orgLayer = useMemo(() => {
     const data = organizations.flatMap(org =>
@@ -126,8 +139,11 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
           onChange={e => setCensusVar(e.target.value)}
           className="border rounded p-1"
         >
-          <option value="B01003_001E">Population</option>
-          <option value="B19013_001E">Median Income</option>
+          {options.map((o) => (
+            <option key={o.id} value={o.id}>
+              {o.label}
+            </option>
+          ))}
         </select>
       </div>
     </div>
