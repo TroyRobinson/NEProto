@@ -57,12 +57,13 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
           .map((f: any) => {
             const zip = f.properties.ZCTA5CE10;
             const base = parseInt(zip, 10);
+            const baseVal = base % 100;
             return {
               ...f,
               properties: {
                 ...f.properties,
-                stat1: (base % 100) / 100,
-                stat2: ((base * 3) % 100) / 100
+                stat1: baseVal / 100,
+                stat2: (100 - baseVal) / 100
               }
             };
           });

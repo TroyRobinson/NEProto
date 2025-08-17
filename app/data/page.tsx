@@ -54,8 +54,9 @@ export default function DataPage() {
         const stat2: Record<string, number> = {};
         list.forEach((r) => {
           const base = parseInt(r.zip, 10);
-          stat1[r.zip] = base % 100;
-          stat2[r.zip] = (base * 3) % 100;
+          const baseVal = base % 100;
+          stat1[r.zip] = baseVal;
+          stat2[r.zip] = 100 - baseVal;
         });
 
         setRows(list);
@@ -68,6 +69,8 @@ export default function DataPage() {
   }, []);
 
   const current = values[selected] || {};
+  const currentLabel =
+    STAT_OPTIONS.find((o) => o.key === selected)?.label ?? "Value";
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -109,7 +112,7 @@ export default function DataPage() {
               <tr className="bg-gray-50">
                 <th className="p-2 border">ZIP Code</th>
                 <th className="p-2 border">Polygon (sample)</th>
-                <th className="p-2 border">Value</th>
+                <th className="p-2 border">{currentLabel}</th>
               </tr>
             </thead>
             <tbody>
