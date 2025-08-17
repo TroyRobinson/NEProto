@@ -43,8 +43,13 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
       const headers = json[0];
       const varIdx = headers.indexOf(censusVar);
       const tractIdx = headers.indexOf('tract');
+      const stateIdx = headers.indexOf('state');
+      const countyIdx = headers.indexOf('county');
       const values = new Map<string, number>(
-        json.slice(1).map((row: string[]) => [row[tractIdx], Number(row[varIdx])])
+        json.slice(1).map((row: string[]) => [
+          row[stateIdx] + row[countyIdx] + row[tractIdx],
+          Number(row[varIdx])
+        ])
       );
       const feats = geo.features.map((f: any) => ({
         ...f,
