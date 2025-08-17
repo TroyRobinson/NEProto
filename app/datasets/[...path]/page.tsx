@@ -32,11 +32,18 @@ export default function DatasetDetailPage() {
         const entries = Object.entries(
           (json.variables as Record<string, RawVariable>) || {}
         );
-        const vars: Variable[] = entries.map(([name, meta]) => ({
-          name,
-          label: meta.label,
-          concept: meta.concept,
-        }));
+        const vars: Variable[] = entries
+          .filter(([name, meta]) => {
+            const lower = name.toLowerCase();
+            if (['for', 'in', 'ucgid'].includes(lower)) return false;
+            const concept = meta.concept?.toLowerCase() ?? '';
+            return !concept.startsWith('census api');
+          })
+          .map(([name, meta]) => ({
+            name,
+            label: meta.label,
+            concept: meta.concept,
+          }));
         setVariables(vars);
       } catch (e) {
         console.error('Failed to load variables', e);

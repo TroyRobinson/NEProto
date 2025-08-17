@@ -2,19 +2,12 @@
 
 import React, { useEffect, useState } from 'react';
 import TopNav from '../../components/TopNav';
-import type { CensusVariable } from '../../types/census';
-
-interface CensusRow {
-  geoid: string;
-  name: string;
-  value: number;
-  year: string;
-}
+import type { CensusVariable, CensusRecord } from '../../types/census';
 
 export default function DataPage() {
   const [variables, setVariables] = useState<CensusVariable[]>([]);
   const [censusVar, setCensusVar] = useState('');
-  const [rows, setRows] = useState<CensusRow[]>([]);
+  const [rows, setRows] = useState<CensusRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,22 +39,10 @@ export default function DataPage() {
         const selected = variables.find((v) => v.name === censusVar);
         if (!selected) throw new Error('Unknown variable');
         const res = await fetch(
-          `https://api.census.gov/data/${selected.datasetPath}?get=NAME,${censusVar}&for=tract:*&in=state:40+county:109`
+          `/api/census-variable?dataset=${selected.datasetPath}&variable=${censusVar}`
         );
-        const json = await res.json();
-        const headers = json[0];
-        const nameIdx = headers.indexOf('NAME');
-        const varIdx = headers.indexOf(censusVar);
-        const stateIdx = headers.indexOf('state');
-        const countyIdx = headers.indexOf('county');
-        const tractIdx = headers.indexOf('tract');
-        const year = '2022';
-        const data: CensusRow[] = json.slice(1).map((row: string[]) => ({
-          geoid: `${row[stateIdx]}${row[countyIdx]}${row[tractIdx]}`,
-          name: row[nameIdx],
-          value: Number(row[varIdx]),
-          year,
-        }));
+        if (!res.ok) throw new Error('Request failed');
+        const data: CensusRecord[] = await res.json();
         setRows(data);
       } catch (e) {
         const msg = e instanceof Error ? e.message : 'Failed to load census data';

@@ -7,7 +7,7 @@ import { ScatterplotLayer, GeoJsonLayer } from '@deck.gl/layers';
 import DeckGL from '@deck.gl/react';
 import type { FeatureCollection } from 'geojson';
 import type { Organization } from '../types/organization';
-import type { CensusVariable } from '../types/census';
+import type { CensusVariable, CensusRecord } from '../types/census';
 
 interface OKCMapProps {
   organizations: Organization[];
@@ -61,19 +61,12 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
       );
       const geo: FeatureCollection = await geoRes.json();
       const res = await fetch(
-        `https://api.census.gov/data/${selected.datasetPath}?get=NAME,${censusVar}&for=tract:*&in=state:40+county:109`
+        `/api/census-variable?dataset=${selected.datasetPath}&variable=${censusVar}`
       );
-      const json = await res.json();
-      const headers = json[0];
-      const varIdx = headers.indexOf(censusVar);
-      const tractIdx = headers.indexOf('tract');
-      const stateIdx = headers.indexOf('state');
-      const countyIdx = headers.indexOf('county');
+      if (!res.ok) return;
+      const data: CensusRecord[] = await res.json();
       const values = new Map<string, number>(
-        json.slice(1).map((row: string[]) => [
-          `${row[stateIdx]}${row[countyIdx]}${row[tractIdx]}`,
-          Number(row[varIdx])
-        ])
+        data.map((row) => [row.geoid, row.value])
       );
       const feats = geo.features.map((f: any) => ({
         ...f,
