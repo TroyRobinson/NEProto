@@ -27,6 +27,12 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
   });
   const [countyFeature, setCountyFeature] = useState<any>(null);
   const [zipFeatures, setZipFeatures] = useState<any[]>([]);
+  const [selectedStat, setSelectedStat] = useState<string>('stat1');
+
+  const STAT_OPTIONS = [
+    { key: 'stat1', label: 'Sample Stat A' },
+    { key: 'stat2', label: 'Sample Stat B' }
+  ];
 
   useEffect(() => {
     fetch(
@@ -48,13 +54,18 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
       .then(json => {
         const features = json.features
           .filter((f: any) => f.properties.ZCTA5CE10.startsWith('731'))
-          .map((f: any) => ({
-            ...f,
-            properties: {
-              ...f.properties,
-              intensity: Math.random()
-            }
-          }));
+          .map((f: any) => {
+            const zip = f.properties.ZCTA5CE10;
+            const base = parseInt(zip, 10);
+            return {
+              ...f,
+              properties: {
+                ...f.properties,
+                stat1: (base % 100) / 100,
+                stat2: ((base * 3) % 100) / 100
+              }
+            };
+          });
         setZipFeatures(features);
       })
       .catch(() => setZipFeatures([]));
@@ -114,8 +125,8 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
           getLineColor: [0, 0, 0, 120],
           lineWidthMinPixels: 1,
           getFillColor: (f: any) => {
-            const intensity = f.properties.intensity as number | undefined;
-            const v = Math.round((intensity ?? 0) * 255);
+            const val = f.properties[selectedStat] as number | undefined;
+            const v = Math.round((val ?? 0) * 255);
             return [255, 255 - v, 0, 120];
           }
         })
@@ -123,20 +134,33 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
     }
 
     return layersList;
-  }, [organizations, onOrganizationClick, countyFeature, zipFeatures]);
+  }, [organizations, onOrganizationClick, countyFeature, zipFeatures, selectedStat]);
 
   return (
     <div className="w-full h-full relative">
+      <div className="absolute left-2 top-2 z-10 bg-white rounded shadow p-1">
+        <select
+          className="border rounded px-2 py-1 text-sm"
+          value={selectedStat}
+          onChange={(e) => setSelectedStat(e.target.value)}
+        >
+          {STAT_OPTIONS.map((opt) => (
+            <option key={opt.key} value={opt.key}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </div>
       <DeckGL
         viewState={viewState}
         onViewStateChange={(e: any) => setViewState(e.viewState)}
         controller={true}
         layers={layers}
-        style={{width: '100%', height: '100%'}}
+        style={{ width: '100%', height: '100%' }}
       >
         <Map
           mapStyle="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
-          style={{width: '100%', height: '100%'}}
+          style={{ width: '100%', height: '100%' }}
         />
       </DeckGL>
     </div>

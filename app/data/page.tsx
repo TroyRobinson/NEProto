@@ -4,20 +4,20 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-const API_BASE = "https://api.census.gov/data/timeseries/eits/bfs";
-
-interface Row {
-  time: string;
-  category: string;
-  seasonally: string;
-  value: string;
-}
-
-interface GeoRow {
-  name: string;
+interface ZipRow {
+  zip: string;
   polygon: string;
-  intensity: number;
 }
+
+interface StatOption {
+  key: string;
+  label: string;
+}
+
+const STAT_OPTIONS: StatOption[] = [
+  { key: "stat1", label: "Sample Stat A" },
+  { key: "stat2", label: "Sample Stat B" },
+];
 
 interface ZipFeature {
   properties: { ZCTA5CE10: string };
@@ -25,24 +25,9 @@ interface ZipFeature {
 }
 
 export default function DataPage() {
-  const [codes, setCodes] = useState<string[]>([]);
-  const [selected, setSelected] = useState<string>("");
-  const [rows, setRows] = useState<Row[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [geoRows, setGeoRows] = useState<GeoRow[]>([]);
-
-  useEffect(() => {
-    fetch(
-      `${API_BASE}?get=data_type_code,time_slot_id,seasonally_adj,category_code,cell_value,error_data&for=us:*&time=2023`
-    )
-      .then((res) => res.json())
-      .then((json) => {
-        const [, ...data] = json as string[][];
-        const unique = Array.from(new Set(data.map((r) => r[0])));
-        setCodes(unique);
-      })
-      .catch(() => setCodes([]));
-  }, []);
+  const [rows, setRows] = useState<ZipRow[]>([]);
+  const [values, setValues] = useState<Record<string, Record<string, number>>>({});
+  const [selected, setSelected] = useState<string>(STAT_OPTIONS[0].key);
 
   useEffect(() => {
     fetch(
@@ -55,41 +40,34 @@ export default function DataPage() {
           .sort((a, b) =>
             a.properties.ZCTA5CE10.localeCompare(b.properties.ZCTA5CE10)
           );
-        setGeoRows(
-          features.map((f) => {
-            const coords = f.geometry.coordinates;
-            const ring = Array.isArray(coords[0][0][0]) ? coords[0][0] : coords[0];
-            return {
-              name: f.properties.ZCTA5CE10,
-              polygon: JSON.stringify((ring as number[][]).slice(0, 2)),
-              intensity: Math.round(Math.random() * 100),
-            };
-          })
-        );
+
+        const list: ZipRow[] = features.map((f) => {
+          const coords = f.geometry.coordinates;
+          const ring = Array.isArray(coords[0][0][0]) ? coords[0][0] : coords[0];
+          return {
+            zip: f.properties.ZCTA5CE10,
+            polygon: JSON.stringify((ring as number[][]).slice(0, 2)),
+          };
+        });
+
+        const stat1: Record<string, number> = {};
+        const stat2: Record<string, number> = {};
+        list.forEach((r) => {
+          const base = parseInt(r.zip, 10);
+          stat1[r.zip] = base % 100;
+          stat2[r.zip] = (base * 3) % 100;
+        });
+
+        setRows(list);
+        setValues({ stat1, stat2 });
       })
-      .catch(() => setGeoRows([]));
+      .catch(() => {
+        setRows([]);
+        setValues({});
+      });
   }, []);
 
-  useEffect(() => {
-    if (!selected) return;
-    setLoading(true);
-    fetch(
-      `${API_BASE}?get=time_slot_id,seasonally_adj,category_code,cell_value,error_data&for=us:*&time=2023&data_type_code=${selected}`
-    )
-      .then((res) => res.json())
-      .then((json) => {
-        const [, ...data] = json as string[][];
-        setRows(
-          data.map((r) => ({
-            time: r[5],
-            category: r[2],
-            seasonally: r[1],
-            value: r[3],
-          }))
-        );
-      })
-      .finally(() => setLoading(false));
-  }, [selected]);
+  const current = values[selected] || {};
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -97,7 +75,7 @@ export default function DataPage() {
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Census Data</h1>
-            <p className="text-gray-600">Business Formation Statistics (2023)</p>
+            <p className="text-gray-600">Sample ZIP Statistics</p>
           </div>
           <nav>
             <Link href="/" className="text-blue-600 hover:underline">
@@ -107,98 +85,54 @@ export default function DataPage() {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto p-4 space-y-8">
-        {geoRows.length > 0 && (
-          <div>
-            <h2 className="text-lg font-semibold mb-2">
-              Oklahoma City ZIP Intensities
-            </h2>
-            <div className="overflow-x-auto bg-white rounded shadow">
-              <table className="min-w-full text-sm">
-                <thead>
-                  <tr className="bg-gray-50">
-                    <th className="p-2 border">ZIP Code</th>
-                    <th className="p-2 border">Polygon (sample)</th>
-                    <th className="p-2 border">Intensity</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {geoRows.map((row, idx) => (
-                    <tr key={idx} className="odd:bg-white even:bg-gray-50">
-                      <td className="p-2 border">{row.name}</td>
-                      <td className="p-2 border font-mono truncate max-w-xs">
-                        {row.polygon}
-                      </td>
-                      <td className="p-2 border text-right">{row.intensity}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+      <main className="max-w-5xl mx-auto p-4 space-y-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Statistic
+          </label>
+          <select
+            className="border rounded px-3 py-2 w-64"
+            value={selected}
+            onChange={(e) => setSelected(e.target.value)}
+          >
+            {STAT_OPTIONS.map((opt) => (
+              <option key={opt.key} value={opt.key}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
 
-        <div className="space-y-2">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Business Formation Statistic
-            </label>
-            <select
-              className="border rounded px-3 py-2 w-64"
-              value={selected}
-              onChange={(e) => setSelected(e.target.value)}
-            >
-              <option value="">Select a data type</option>
-              {codes.map((code) => (
-                <option key={code} value={code}>
-                  {code}
-                </option>
+        <div className="overflow-x-auto bg-white rounded shadow">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50">
+                <th className="p-2 border">ZIP Code</th>
+                <th className="p-2 border">Polygon (sample)</th>
+                <th className="p-2 border">Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.zip} className="odd:bg-white even:bg-gray-50">
+                  <td className="p-2 border">{row.zip}</td>
+                  <td className="p-2 border font-mono truncate max-w-xs">
+                    {row.polygon}
+                  </td>
+                  <td className="p-2 border text-right">
+                    {current[row.zip] ?? ""}
+                  </td>
+                </tr>
               ))}
-            </select>
-          </div>
-
-          {selected ? (
-            <div className="overflow-x-auto bg-white rounded shadow">
-              <table className="min-w-full text-sm">
-                <thead>
-                  <tr className="bg-gray-50">
-                    <th className="p-2 border">Time</th>
-                    <th className="p-2 border">Category</th>
-                    <th className="p-2 border">Seasonally Adj</th>
-                    <th className="p-2 border">Value</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row, idx) => (
-                    <tr key={idx} className="odd:bg-white even:bg-gray-50">
-                      <td className="p-2 border">{row.time}</td>
-                      <td className="p-2 border">{row.category}</td>
-                      <td className="p-2 border">{row.seasonally}</td>
-                      <td className="p-2 border text-right">{row.value}</td>
-                    </tr>
-                  ))}
-                  {rows.length === 0 && !loading && (
-                    <tr>
-                      <td className="p-2 border text-center" colSpan={4}>
-                        No data
-                      </td>
-                    </tr>
-                  )}
-                  {loading && (
-                    <tr>
-                      <td className="p-2 border text-center" colSpan={4}>
-                        Loading...
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <p className="text-sm text-gray-500">
-              Select a data type above to load statistics.
-            </p>
-          )}
+              {rows.length === 0 && (
+                <tr>
+                  <td className="p-2 border text-center" colSpan={3}>
+                    No data
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </main>
     </div>
