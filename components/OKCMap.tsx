@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import React, { useState, useMemo, useEffect } from 'react';
-import Map from 'react-map-gl/maplibre';
+import MapGL from 'react-map-gl/maplibre';
 import { ScatterplotLayer, GeoJsonLayer } from '@deck.gl/layers';
 import DeckGL from '@deck.gl/react';
 import type { Layer } from '@deck.gl/core';
@@ -29,6 +29,7 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
 
   const [zipData, setZipData] = useState<any>(null);
   const [bfsValue, setBfsValue] = useState<number | null>(null);
+  const [maxPopulation, setMaxPopulation] = useState(0);
 
   useEffect(() => {
     async function loadZipData() {
@@ -40,7 +41,33 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
         const okcFeatures = (json.features || []).filter(
           (f: any) => f.properties?.ZCTA5CE10?.startsWith('731')
         );
-        setZipData({ type: 'FeatureCollection', features: okcFeatures });
+
+        const zipCodes = okcFeatures.map(
+          (f: any) => f.properties.ZCTA5CE10
+        );
+
+        const popRes = await fetch(
+          `https://api.census.gov/data/2021/acs/acs5?get=B01003_001E&for=zip%20code%20tabulation%20area:${zipCodes.join(',')}`
+        );
+        const popJson = await popRes.json();
+        const popMap = new Map(
+          popJson.slice(1).map((row: any) => [row[1], Number(row[0])])
+        );
+        const populations = Array.from(popMap.values()) as number[];
+        setMaxPopulation(Math.max(...populations));
+
+        const featuresWithPop = okcFeatures.map((f: any) => ({
+          ...f,
+          properties: {
+            ...f.properties,
+            population: popMap.get(f.properties.ZCTA5CE10) || 0
+          }
+        }));
+
+        setZipData({
+          type: 'FeatureCollection',
+          features: featuresWithPop
+        });
       } catch {
         setZipData(null);
       }
@@ -101,7 +128,8 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
           data: zipData,
           filled: true,
           stroked: true,
-          getFillColor: [0, 123, 255, 40],
+          getFillColor: (f: any) =>
+            getPopulationColor(f.properties.population, maxPopulation),
           getLineColor: [0, 123, 255, 200],
           lineWidthMinPixels: 1,
           pickable: true
@@ -110,7 +138,7 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
     }
 
     return baseLayers;
-  }, [organizations, onOrganizationClick, zipData]);
+  }, [organizations, onOrganizationClick, zipData, maxPopulation]);
 
   return (
     <div className="w-full h-full relative">
@@ -121,12 +149,12 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
         layers={layers}
         getTooltip={({ object }) =>
           object?.properties?.ZCTA5CE10 && bfsValue !== null
-            ? `Business Applications (2023): ${bfsValue}`
+            ? `ZIP: ${object.properties.ZCTA5CE10}\nPopulation: ${object.properties.population}\nBusiness Applications (2023): ${bfsValue}`
             : null
         }
         style={{width: '100%', height: '100%'}}
       >
-        <Map
+        <MapGL
           mapStyle="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
           style={{width: '100%', height: '100%'}}
         />
@@ -150,4 +178,18 @@ function getCategoryColor(category: string): [number, number, number, number] {
   };
   
   return colors[category] || colors['Other'];
+}
+
+function getPopulationColor(
+  population: number,
+  max: number
+): [number, number, number, number] {
+  if (!max) return [198, 219, 239, 180];
+  const t = population / max;
+  const start = [198, 219, 239];
+  const end = [8, 81, 156];
+  const r = Math.round(start[0] + (end[0] - start[0]) * t);
+  const g = Math.round(start[1] + (end[1] - start[1]) * t);
+  const b = Math.round(start[2] + (end[2] - start[2]) * t);
+  return [r, g, b, 200];
 }
