@@ -80,8 +80,24 @@ export default function DataPage() {
     loadCustom(m);
   }, [metric, rows, customMetrics, customData]);
 
+  function removeMetric(key: string) {
+    setCustomMetrics((prev) => {
+      const updated = prev.filter((m) => m.key !== key);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('customMetrics', JSON.stringify(updated));
+      }
+      return updated;
+    });
+    setCustomData((prev) => {
+      const { [key]: _unused, ...rest } = prev;
+      void _unused;
+      return rest;
+    });
+    setMetric('population');
+  }
+
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-background">
       <TopNav />
       <div className="p-4 text-foreground">
         <h1 className="text-2xl font-bold mb-4">Oklahoma City ZIP Data</h1>
@@ -93,15 +109,23 @@ export default function DataPage() {
               onChange={(e) => setMetric(e.target.value)}
               className="border px-1 py-0.5"
             >
-            <option value="population">Population</option>
-            <option value="applications">Business Applications</option>
-            {customMetrics.map((m) => (
-              <option key={m.key} value={m.key}>
-                {m.label}
-              </option>
-            ))}
-          </select>
+              <option value="population">Population</option>
+              <option value="applications">Business Applications</option>
+              {customMetrics.map((m) => (
+                <option key={m.key} value={m.key}>
+                  {m.label}
+                </option>
+              ))}
+            </select>
           </div>
+          {metric !== 'population' && metric !== 'applications' && (
+            <button
+              onClick={() => removeMetric(metric)}
+              className="text-red-600 underline text-sm"
+            >
+              Remove
+            </button>
+          )}
           <Link href="/stats" className="text-blue-600 hover:underline text-sm">
             Search Census stats
           </Link>
@@ -110,8 +134,8 @@ export default function DataPage() {
         {error && <div className="text-red-500">{error}</div>}
         {!loading && !error && (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-300 bg-white">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-gray-300 bg-background">
+              <thead className="bg-background">
                 <tr>
                   <th className="px-4 py-2 text-left text-sm font-semibold text-foreground">ZIP</th>
                   <th className="px-4 py-2 text-left text-sm font-semibold text-foreground">

@@ -37,7 +37,7 @@ export default function CensusStatExplorer() {
   const [cachedVars, setCachedVars] = useState<Record<string, Variable[]>>({});
   const [varQuery, setVarQuery] = useState('');
   const [loadingVars, setLoadingVars] = useState(false);
-  const [zipOnly, setZipOnly] = useState(false);
+  const [zipOnly, setZipOnly] = useState(true);
 
   useEffect(() => {
     async function loadDatasets() {
@@ -187,7 +187,7 @@ export default function CensusStatExplorer() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-background">
       <TopNav />
       <div className="p-4 text-foreground">
         <h1 className="text-2xl font-bold mb-4">Census Stat Explorer</h1>
@@ -267,7 +267,7 @@ export default function CensusStatExplorer() {
                   <h3 className="font-semibold mb-1">Metrics</h3>
                   <ul className="space-y-2">
                     {metricVars.map((v) => (
-                      <li key={v.name} className="bg-white p-2 rounded shadow">
+                      <li key={v.name} className="bg-background p-2 rounded shadow">
                         <div className="font-mono text-sm">{v.name}</div>
                         <div className="text-sm">{v.label}</div>
                         {v.concept && (
@@ -296,7 +296,7 @@ export default function CensusStatExplorer() {
                     <h3 className="font-semibold mb-1">Other variables</h3>
                     <ul className="space-y-2">
                       {otherVars.map((v) => (
-                        <li key={v.name} className="bg-white p-2 rounded shadow">
+                        <li key={v.name} className="bg-background p-2 rounded shadow">
                           <div className="font-mono text-sm">{v.name}</div>
                           <div className="text-sm">{v.label}</div>
                           {v.concept && (

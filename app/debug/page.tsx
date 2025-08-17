@@ -22,7 +22,7 @@ export default function DebugPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-background">
       <TopNav />
       <div className="p-8 text-foreground">
         <h1 className="text-2xl font-bold mb-4">Debug Page</h1>

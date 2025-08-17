@@ -9,7 +9,7 @@ interface TopNavProps {
 
 export default function TopNav({ onAddClick }: TopNavProps) {
   return (
-    <header className="bg-white border-b shadow-sm">
+    <header className="bg-background border-b shadow-sm">
       <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
         <div>
           <Link href="/" className="text-2xl font-bold text-foreground">
