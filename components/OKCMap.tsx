@@ -79,7 +79,10 @@ export default function OKCMap({ organizations, onOrganizationClick, selectedSta
           if (v === undefined) return [0, 0, 0, 0];
           return valueToColor(v);
         },
-        getLineColor: [0, 0, 0, 80],
+        getLineColor: (f: any) => {
+          const v = valueMap[f.properties.GEOID];
+          return v === undefined ? [0, 0, 0, 0] : [0, 0, 0, 80];
+        },
         lineWidthMinPixels: 1,
       });
       base.push(statLayer);
