@@ -94,7 +94,10 @@ export default function OKCMap({ organizations, onOrganizationClick, metric }: O
           },
           getLineColor: [0, 123, 255, 200],
           lineWidthMinPixels: 1,
-          pickable: true
+          pickable: true,
+          updateTriggers: {
+            getFillColor: [metric, maxPopulation, maxApplications]
+          }
         })
       );
     }
