@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -17,9 +18,9 @@ interface GeoRow {
   polygon: string;
 }
 
-interface Feature {
-  properties: { name: string };
-  geometry: { coordinates: number[][][] };
+interface ZipFeature {
+  properties: { ZCTA5CE10: string };
+  geometry: { coordinates: any };
 }
 
 export default function DataPage() {
@@ -45,16 +46,22 @@ export default function DataPage() {
 
   useEffect(() => {
     fetch(
-      "https://raw.githubusercontent.com/PublicaMundi/MappingAPI/master/data/geojson/us-states.json"
+      "https://raw.githubusercontent.com/OpenDataDE/State-zip-code-GeoJSON/master/ok_oklahoma_zip_codes_geo.min.json"
     )
       .then((res) => res.json())
       .then((json) => {
-        const features = (json.features as Feature[]).slice(0, 5);
+        const features = (json.features as ZipFeature[])
+          .filter((f) => f.properties.ZCTA5CE10.startsWith("731"))
+          .slice(0, 5);
         setGeoRows(
-          features.map((f) => ({
-            name: f.properties.name,
-            polygon: JSON.stringify(f.geometry.coordinates[0][0].slice(0, 2)),
-          }))
+          features.map((f) => {
+            const coords = f.geometry.coordinates;
+            const ring = Array.isArray(coords[0][0][0]) ? coords[0][0] : coords[0];
+            return {
+              name: f.properties.ZCTA5CE10,
+              polygon: JSON.stringify((ring as number[][]).slice(0, 2)),
+            };
+          })
         );
       })
       .catch(() => setGeoRows([]));
@@ -157,7 +164,7 @@ export default function DataPage() {
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="bg-gray-50">
-                  <th className="p-2 border">State</th>
+                  <th className="p-2 border">ZIP Code</th>
                   <th className="p-2 border">Polygon (sample)</th>
                 </tr>
               </thead>

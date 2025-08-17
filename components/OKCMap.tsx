@@ -26,6 +26,7 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
     bearing: 0
   });
   const [countyFeature, setCountyFeature] = useState<any>(null);
+  const [zipFeatures, setZipFeatures] = useState<any[]>([]);
 
   useEffect(() => {
     fetch(
@@ -37,6 +38,20 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
         setCountyFeature(feature);
       })
       .catch(() => setCountyFeature(null));
+  }, []);
+
+  useEffect(() => {
+    fetch(
+      'https://raw.githubusercontent.com/OpenDataDE/State-zip-code-GeoJSON/master/ok_oklahoma_zip_codes_geo.min.json'
+    )
+      .then(res => res.json())
+      .then(json => {
+        const features = json.features.filter((f: any) =>
+          f.properties.ZCTA5CE10.startsWith('731')
+        );
+        setZipFeatures(features);
+      })
+      .catch(() => setZipFeatures([]));
   }, []);
 
   const layers = useMemo(() => {
@@ -83,8 +98,21 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
       );
     }
 
+    if (zipFeatures.length > 0) {
+      layersList.push(
+        new GeoJsonLayer({
+          id: 'okc-zips',
+          data: zipFeatures,
+          stroked: true,
+          filled: false,
+          getLineColor: [0, 0, 0, 120],
+          lineWidthMinPixels: 1
+        })
+      );
+    }
+
     return layersList;
-  }, [organizations, onOrganizationClick, countyFeature]);
+  }, [organizations, onOrganizationClick, countyFeature, zipFeatures]);
 
   return (
     <div className="w-full h-full relative">
