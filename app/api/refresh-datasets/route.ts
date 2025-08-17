@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { init } from '@instantdb/admin';
 import crypto from 'crypto';
+import { promises as fs } from 'fs';
+import path from 'path';
 
 type CensusDataset = { identifier: string; title: string };
 
@@ -14,6 +16,9 @@ const ADMIN_TOKEN = process.env.INSTANT_ADMIN_TOKEN;
 export async function GET() {
   try {
     const res = await fetch('https://api.census.gov/data.json');
+    if (!res.ok) {
+      throw new Error(`Census API request failed: ${res.status}`);
+    }
     const json = await res.json();
     const datasets = (json.dataset || []) as CensusDataset[];
 
@@ -40,10 +45,20 @@ export async function GET() {
     return NextResponse.json({ datasets });
   } catch (err) {
     console.error('Failed to refresh datasets:', err);
-    return NextResponse.json(
-      { error: 'Failed to refresh datasets' },
-      { status: 500 }
-    );
+
+    // Fall back to a bundled dataset snapshot so the UI has something to show
+    try {
+      const filePath = path.join(process.cwd(), 'data', 'census-datasets.json');
+      const file = await fs.readFile(filePath, 'utf8');
+      const datasets = JSON.parse(file) as CensusDataset[];
+      return NextResponse.json({ datasets });
+    } catch (fallbackErr) {
+      console.error('Failed to load local dataset fallback:', fallbackErr);
+      return NextResponse.json(
+        { error: 'Failed to refresh datasets' },
+        { status: 500 }
+      );
+    }
   }
 }
 
