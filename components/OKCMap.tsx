@@ -5,11 +5,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import MapComponent from 'react-map-gl/maplibre';
 import { ScatterplotLayer, GeoJsonLayer } from '@deck.gl/layers';
 import DeckGL from '@deck.gl/react';
-import { feature } from 'topojson-client';
-// TopoJSON for U.S. counties (includes OKC region)
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore - no typed export
-import counties from 'us-atlas/counties-10m.json';
+import type { FeatureCollection } from 'geojson';
 import type { Organization } from '../types/organization';
 
 interface OKCMapProps {
@@ -31,33 +27,29 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
     bearing: 0
   });
 
-  const [geoType, setGeoType] = useState<'county'>('county');
   const [censusVar, setCensusVar] = useState('B01003_001E');
   const [censusLayer, setCensusLayer] = useState<GeoJsonLayer | null>(null);
 
   useEffect(() => {
     async function loadCensus() {
-      if (geoType !== 'county') {
-        setCensusLayer(null);
-        return;
-      }
-      const topo: any = counties;
-      const geo: any = feature(topo, topo.objects.counties);
-      const res = await fetch(`https://api.census.gov/data/2022/acs/acs5?get=NAME,${censusVar}&for=county:*&in=state:40`);
+      const geoRes = await fetch(
+        "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Tracts_Blocks/MapServer/2/query?where=STATE='40'%20and%20COUNTY='109'&outFields=GEOID&outSR=4326&f=geojson"
+      );
+      const geo: FeatureCollection = await geoRes.json();
+      const res = await fetch(
+        `https://api.census.gov/data/2022/acs/acs5?get=NAME,${censusVar}&for=tract:*&in=state:40+county:109`
+      );
       const json = await res.json();
       const headers = json[0];
       const varIdx = headers.indexOf(censusVar);
-      const stateIdx = headers.indexOf('state');
-      const countyIdx = headers.indexOf('county');
+      const tractIdx = headers.indexOf('tract');
       const values = new Map<string, number>(
-        json.slice(1).map((row: string[]) => [row[stateIdx] + row[countyIdx], Number(row[varIdx])])
+        json.slice(1).map((row: string[]) => [row[tractIdx], Number(row[varIdx])])
       );
-      const feats = geo.features
-        .filter((f: any) => f.id.startsWith('40')) // Oklahoma state FIPS
-        .map((f: any) => ({
-          ...f,
-          properties: { ...f.properties, value: values.get(f.id) }
-        }));
+      const feats = geo.features.map((f: any) => ({
+        ...f,
+        properties: { ...f.properties, value: values.get(f.properties.GEOID) }
+      }));
       const max = Math.max(...feats.map((f: any) => f.properties.value ?? 0));
       const layer = new GeoJsonLayer({
         id: 'census-choropleth',
@@ -77,7 +69,7 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
       setCensusLayer(layer);
     }
     loadCensus();
-  }, [geoType, censusVar]);
+  }, [censusVar]);
 
   const orgLayer = useMemo(() => {
     const data = organizations.flatMap(org =>
@@ -122,28 +114,16 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
           style={{width: '100%', height: '100%'}}
         />
       </DeckGL>
-      <div className="absolute top-2 left-2 z-10 bg-white bg-opacity-90 p-2 rounded shadow text-sm space-y-1">
-        <div>
-          <label className="mr-2">Geography</label>
-          <select
-            value={geoType}
-            onChange={e => setGeoType(e.target.value as 'county')}
-            className="border rounded p-1"
-          >
-            <option value="county">County</option>
-          </select>
-        </div>
-        <div>
-          <label className="mr-2">Statistic</label>
-          <select
-            value={censusVar}
-            onChange={e => setCensusVar(e.target.value)}
-            className="border rounded p-1"
-          >
-            <option value="B01003_001E">Population</option>
-            <option value="B19013_001E">Median Income</option>
-          </select>
-        </div>
+      <div className="absolute top-2 left-2 z-10 bg-white bg-opacity-90 p-2 rounded shadow text-sm">
+        <label className="mr-2">Statistic</label>
+        <select
+          value={censusVar}
+          onChange={e => setCensusVar(e.target.value)}
+          className="border rounded p-1"
+        >
+          <option value="B01003_001E">Population</option>
+          <option value="B19013_001E">Median Income</option>
+        </select>
       </div>
     </div>
   );
