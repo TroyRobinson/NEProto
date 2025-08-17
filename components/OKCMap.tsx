@@ -1,9 +1,9 @@
 'use client';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Map from 'react-map-gl/maplibre';
-import { ScatterplotLayer } from '@deck.gl/layers';
+import { ScatterplotLayer, GeoJsonLayer } from '@deck.gl/layers';
 import DeckGL from '@deck.gl/react';
 import type { Organization } from '../types/organization';
 
@@ -25,9 +25,22 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
     pitch: 0,
     bearing: 0
   });
+  const [countyFeature, setCountyFeature] = useState<any>(null);
+
+  useEffect(() => {
+    fetch(
+      'https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/oklahoma-counties.geojson'
+    )
+      .then(res => res.json())
+      .then(json => {
+        const feature = json.features.find((f: any) => f.properties.name === 'Oklahoma');
+        setCountyFeature(feature);
+      })
+      .catch(() => setCountyFeature(null));
+  }, []);
 
   const layers = useMemo(() => {
-    const data = organizations.flatMap(org => 
+    const data = organizations.flatMap(org =>
       org.locations.map(location => ({
         coordinates: [location.longitude, location.latitude] as [number, number],
         organization: org,
@@ -35,7 +48,7 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
       }))
     );
 
-    return [
+    const layersList: any[] = [
       new ScatterplotLayer({
         id: 'organizations',
         data: data,
@@ -55,7 +68,23 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
         }
       })
     ];
-  }, [organizations, onOrganizationClick]);
+
+    if (countyFeature) {
+      layersList.push(
+        new GeoJsonLayer({
+          id: 'okc-county',
+          data: countyFeature,
+          stroked: true,
+          filled: true,
+          getLineColor: [13, 110, 253, 255],
+          getFillColor: [13, 110, 253, 40],
+          lineWidthMinPixels: 2
+        })
+      );
+    }
+
+    return layersList;
+  }, [organizations, onOrganizationClick, countyFeature]);
 
   return (
     <div className="w-full h-full relative">
