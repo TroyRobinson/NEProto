@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { init } from '@instantdb/admin';
 import crypto from 'crypto';
+import sampleDatasets from './sample-datasets.json';
 
 type CensusDataset = { identifier: string; title: string };
 
@@ -9,11 +10,14 @@ const ADMIN_TOKEN = process.env.INSTANT_ADMIN_TOKEN;
 
 // Fetch the list of datasets from the Census API and, when InstantDB
 // credentials are available, cache the titles for faster searches. When
-// credentials are missing we still return the titles to the caller so the
-// datasets page can fall back to a client-side search instead of failing.
+// the API call fails we return a small local sample instead of an error so
+// the datasets page can still display something useful.
 export async function GET() {
   try {
     const res = await fetch('https://api.census.gov/data.json');
+    if (!res.ok) {
+      throw new Error(`Census API responded with ${res.status}`);
+    }
     const json = await res.json();
     const datasets = (json.dataset || []) as CensusDataset[];
 
@@ -40,10 +44,7 @@ export async function GET() {
     return NextResponse.json({ datasets });
   } catch (err) {
     console.error('Failed to refresh datasets:', err);
-    return NextResponse.json(
-      { error: 'Failed to refresh datasets' },
-      { status: 500 }
-    );
+    return NextResponse.json({ datasets: sampleDatasets }, { status: 200 });
   }
 }
 
