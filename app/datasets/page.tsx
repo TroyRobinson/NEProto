@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import TopNav from '../../components/TopNav';
 import db from '../../lib/db';
 
 export default function DatasetSearchPage() {
   const [term, setTerm] = useState('');
+  const [requested, setRequested] = useState(false);
   const { data } = db.useQuery({
     censusDatasets: {
       $: {
@@ -16,6 +17,13 @@ export default function DatasetSearchPage() {
     },
   });
   const results = data?.censusDatasets || [];
+
+  useEffect(() => {
+    if (!requested && results.length === 0) {
+      setRequested(true);
+      fetch('/api/refresh-datasets');
+    }
+  }, [requested, results.length]);
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -40,6 +48,11 @@ export default function DatasetSearchPage() {
               <div className="text-xs text-gray-600">{d.identifier}</div>
             </li>
           ))}
+          {results.length === 0 && (
+            <li className="text-sm text-gray-500">
+              {requested ? 'Loading dataset index...' : 'No datasets found.'}
+            </li>
+          )}
         </ul>
       </main>
     </div>
