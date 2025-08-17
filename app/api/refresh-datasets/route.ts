@@ -21,7 +21,18 @@ const ADMIN_TOKEN = process.env.INSTANT_ADMIN_TOKEN;
 // the datasets page can still display something useful.
 export async function GET() {
   try {
-    const res = await fetch('https://api.census.gov/data.json');
+    const controller = new AbortController();
+    // Abort the Census API request if it takes longer than 5 seconds so the
+    // handler can fall back to the bundled sample data instead of timing out
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch('https://api.census.gov/data.json', {
+      signal: controller.signal,
+    }).catch((err) => {
+      // Ensure we clear the timeout if the request fails before completion
+      clearTimeout(timeout);
+      throw err;
+    });
+    clearTimeout(timeout);
     if (!res.ok) {
       throw new Error(`Census API responded with ${res.status}`);
     }
