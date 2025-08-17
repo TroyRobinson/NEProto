@@ -31,12 +31,28 @@ export default function DataPage() {
       }
     }
     load();
-    const stored = JSON.parse(
-      typeof window !== 'undefined'
-        ? localStorage.getItem('customMetrics') || '[]'
-        : '[]'
-    );
-    setCustomMetrics(stored);
+    async function loadStored() {
+      const stored = JSON.parse(
+        typeof window !== 'undefined'
+          ? localStorage.getItem('customMetrics') || '[]'
+          : '[]'
+      ) as CustomMetric[];
+      const valid: CustomMetric[] = [];
+      for (const m of stored) {
+        try {
+          const res = await fetch(`${m.dataset}/geography.json`);
+          const geo = await res.json();
+          if (JSON.stringify(geo).toLowerCase().includes('zip code tabulation area')) {
+            valid.push(m);
+          }
+        } catch {
+          /* ignore */
+        }
+      }
+      setCustomMetrics(valid);
+      localStorage.setItem('customMetrics', JSON.stringify(valid));
+    }
+    loadStored();
   }, []);
 
   useEffect(() => {

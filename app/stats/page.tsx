@@ -5,11 +5,14 @@ import React, { useEffect, useState } from 'react';
 interface Dataset {
   title: string;
   variablesLink: string;
+  geographyLink: string;
+  hasZip?: boolean;
 }
 
 interface RawDataset {
   title?: string;
   c_variablesLink?: string;
+  c_geographyLink?: string;
 }
 
 interface Variable {
@@ -33,6 +36,7 @@ export default function CensusStatExplorer() {
   const [cachedVars, setCachedVars] = useState<Record<string, Variable[]>>({});
   const [varQuery, setVarQuery] = useState('');
   const [loadingVars, setLoadingVars] = useState(false);
+  const [zipOnly, setZipOnly] = useState(false);
 
   useEffect(() => {
     async function loadDatasets() {
@@ -40,14 +44,33 @@ export default function CensusStatExplorer() {
         const res = await fetch('https://api.census.gov/data.json');
         const json = await res.json();
         const ds: Dataset[] = (json.dataset as RawDataset[] || [])
-          .filter((d) => d.c_variablesLink)
+          .filter((d) => d.c_variablesLink && d.c_geographyLink)
           .map((d) => ({
             title: d.title || 'Untitled dataset',
             variablesLink: (d.c_variablesLink as string)
               .replace(/^http:/, 'https:')
               .replace(/\.html$/, '.json'),
+            geographyLink: (d.c_geographyLink as string)
+              .replace(/^http:/, 'https:')
+              .replace(/\.html$/, '.json'),
+            hasZip: undefined,
           }));
         setDatasets(ds);
+        // Asynchronously determine which datasets have ZIP code geographies
+        ds.forEach(async (d) => {
+          try {
+            const res = await fetch(d.geographyLink);
+            const geo = await res.json();
+            const hasZip = JSON.stringify(geo).toLowerCase().includes('zip code tabulation area');
+            setDatasets((prev) =>
+              prev.map((p) =>
+                p.geographyLink === d.geographyLink ? { ...p, hasZip } : p
+              )
+            );
+          } catch {
+            /* ignore */
+          }
+        });
       } catch (err) {
         console.error('Failed to load datasets', err);
       }
@@ -103,8 +126,10 @@ export default function CensusStatExplorer() {
     }
   }, []);
 
-  const filteredDatasets = datasets.filter((d) =>
-    d.title.toLowerCase().includes(datasetQuery.toLowerCase())
+  const filteredDatasets = datasets.filter(
+    (d) =>
+      d.title.toLowerCase().includes(datasetQuery.toLowerCase()) &&
+      (!zipOnly || d.hasZip)
   );
 
   const filteredVars = variables.filter((v) =>
@@ -130,6 +155,10 @@ export default function CensusStatExplorer() {
 
   function addMetric(v: Variable) {
     if (!selectedDataset) return;
+    if (selectedDataset.hasZip === false) {
+      alert('This dataset does not provide ZIP code values.');
+      return;
+    }
     const datasetPath = selectedDataset.variablesLink.replace(/\/variables\.json.*/, '');
     const metric: { key: string; dataset: string; variable: string; label: string } = {
       key: `${datasetPath}|${v.name}`,
@@ -162,13 +191,23 @@ export default function CensusStatExplorer() {
 
       {!selectedDataset ? (
         <div>
-          <input
-            type="text"
-            value={datasetQuery}
-            onChange={(e) => setDatasetQuery(e.target.value)}
-            placeholder="Search datasets..."
-            className="border px-2 py-1 mb-4 w-full max-w-md"
-          />
+          <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 mb-4">
+            <input
+              type="text"
+              value={datasetQuery}
+              onChange={(e) => setDatasetQuery(e.target.value)}
+              placeholder="Search datasets..."
+              className="border px-2 py-1 w-full max-w-md mb-2 sm:mb-0"
+            />
+            <label className="text-sm text-gray-700 flex items-center gap-1">
+              <input
+                type="checkbox"
+                checked={zipOnly}
+                onChange={(e) => setZipOnly(e.target.checked)}
+              />
+              ZIP code datasets only
+            </label>
+          </div>
           <ul className="space-y-2 max-h-[60vh] overflow-y-auto">
             {filteredDatasets.map((d) => (
               <li key={d.variablesLink}>
@@ -197,6 +236,12 @@ export default function CensusStatExplorer() {
           <h2 className="text-xl font-semibold mb-2">
             {selectedDataset.title}
           </h2>
+          {selectedDataset.hasZip === false && (
+            <p className="mb-2 text-sm text-red-600">
+              This dataset does not include ZIP code tabulation area data, so its
+              variables cannot be mapped.
+            </p>
+          )}
           <p className="mb-2 text-sm text-gray-700">
             Search by variable code or description, e.g., &quot;B01001&quot; or &quot;population&quot;.
           </p>
@@ -227,7 +272,12 @@ export default function CensusStatExplorer() {
                       )}
                       <button
                         onClick={() => addMetric(v)}
-                        className="mt-1 text-xs text-blue-600 underline"
+                        disabled={selectedDataset?.hasZip === false}
+                        className={`mt-1 text-xs underline ${
+                          selectedDataset?.hasZip === false
+                            ? 'text-gray-400 cursor-not-allowed'
+                            : 'text-blue-600'
+                        }`}
                       >
                         Add to metrics
                       </button>
