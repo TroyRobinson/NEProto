@@ -1,0 +1,33 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "GEOID": "001" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-97.6, 35.4],
+          [-97.6, 35.5],
+          [-97.5, 35.5],
+          [-97.5, 35.4],
+          [-97.6, 35.4]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": { "GEOID": "002" },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-97.5, 35.4],
+          [-97.5, 35.5],
+          [-97.4, 35.5],
+          [-97.4, 35.4],
+          [-97.5, 35.4]
+        ]]
+      }
+    }
+  ]
+}

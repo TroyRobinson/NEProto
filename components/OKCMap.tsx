@@ -1,14 +1,16 @@
 'use client';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Map from 'react-map-gl/maplibre';
-import { ScatterplotLayer } from '@deck.gl/layers';
+import { ScatterplotLayer, GeoJsonLayer } from '@deck.gl/layers';
 import DeckGL from '@deck.gl/react';
 import type { Organization } from '../types/organization';
+import type { StatValue } from '../types/stat';
 
 interface OKCMapProps {
   organizations: Organization[];
+  statValues?: StatValue[];
   onOrganizationClick?: (org: Organization) => void;
 }
 
@@ -17,7 +19,7 @@ const OKC_CENTER = {
   latitude: 35.4676
 };
 
-export default function OKCMap({ organizations, onOrganizationClick }: OKCMapProps) {
+export default function OKCMap({ organizations, statValues, onOrganizationClick }: OKCMapProps) {
   const [viewState, setViewState] = useState({
     longitude: OKC_CENTER.longitude,
     latitude: OKC_CENTER.latitude,
@@ -25,6 +27,13 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
     pitch: 0,
     bearing: 0
   });
+  const [geojson, setGeojson] = useState<any | null>(null);
+
+  useEffect(() => {
+    if (statValues) {
+      fetch('/okc_tracts.geojson').then(r => r.json()).then(setGeojson).catch(() => {});
+    }
+  }, [statValues]);
 
   const layers = useMemo(() => {
     const data = organizations.flatMap(org => 
@@ -35,7 +44,7 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
       }))
     );
 
-    return [
+    const layersList: any[] = [
       new ScatterplotLayer({
         id: 'organizations',
         data: data,
@@ -55,7 +64,29 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
         }
       })
     ];
-  }, [organizations, onOrganizationClick]);
+
+    if (geojson && statValues) {
+      const valueMap = new Map(statValues.map(v => [v.geoid, v.value]));
+      layersList.push(
+        new GeoJsonLayer({
+          id: 'stat-layer',
+          data: geojson,
+          filled: true,
+          stroked: true,
+          getFillColor: (f: any) => {
+            const v = valueMap.get(f.properties.GEOID);
+            if (v == null) return [0, 0, 0, 0];
+            const c = Math.min(255, Math.max(0, (v / 100) * 255));
+            return [c, 0, 255 - c, 120];
+          },
+          getLineColor: [0, 0, 0, 80],
+          lineWidthMinPixels: 1,
+        })
+      );
+    }
+
+    return layersList;
+  }, [organizations, onOrganizationClick, geojson, statValues]);
 
   return (
     <div className="w-full h-full relative">
