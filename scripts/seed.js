@@ -95,6 +95,19 @@ const sampleOrganizations = [
   }
 ];
 
+const sampleStats = [
+  {
+    title: '% of adults with high school diploma',
+    variable: 'DP02_0068PE',
+    geographyType: 'tract',
+  },
+  {
+    title: '% of households under poverty line',
+    variable: 'DP03_0119PE',
+    geographyType: 'tract',
+  },
+];
+
 async function seedDatabase() {
   console.log('Starting to seed database...');
   
@@ -133,6 +146,20 @@ async function seedDatabase() {
       }
       
       console.log(`✓ Created ${orgData.name} with ${orgData.locations.length} location(s)`);
+    }
+
+    for (const stat of sampleStats) {
+      const statId = generateId();
+      console.log(`Creating stat: ${stat.title}`);
+      await db.transact([
+        db.tx.stats[statId].update({
+          title: stat.title,
+          variable: stat.variable,
+          geographyType: stat.geographyType,
+          lastUpdated: 0,
+          refreshCadence: 'manual',
+        }),
+      ]);
     }
     
     console.log('✅ Database seeding completed successfully!');
