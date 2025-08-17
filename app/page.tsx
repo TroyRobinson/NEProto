@@ -6,6 +6,7 @@ import db from '../lib/db';
 import AddOrganizationForm from '../components/AddOrganizationForm';
 import CircularAddButton from '../components/CircularAddButton';
 import type { Organization } from '../types/organization';
+import type { Stat } from '../types/stat';
 
 const OKCMap = dynamic(() => import('../components/OKCMap'), {
   ssr: false,
@@ -15,13 +16,15 @@ const OKCMap = dynamic(() => import('../components/OKCMap'), {
 export default function Home() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
+  const [activeStat, setActiveStat] = useState<Stat | null>(null);
 
   const { data, isLoading, error } = db.useQuery({
     organizations: {
       locations: {},
       logo: {},
       photos: {}
-    }
+    },
+    stats: {}
   });
 
   if (isLoading) {
@@ -41,6 +44,7 @@ export default function Home() {
   }
 
   const organizations = data?.organizations || [];
+  const stats = data?.stats || [];
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -50,14 +54,36 @@ export default function Home() {
             <h1 className="text-2xl font-bold text-gray-900">OKC Non-Profit Map</h1>
             <p className="text-gray-600">Discover local organizations making a difference</p>
           </div>
-          <CircularAddButton onClick={() => setShowAddForm(true)} />
+          <div className="flex items-center space-x-4">
+            <a href="/stats" className="text-sm text-blue-600 hover:underline">Stat Management</a>
+            <CircularAddButton onClick={() => setShowAddForm(true)} />
+          </div>
         </div>
       </header>
 
       <div className="flex">
+        <div className="w-64 bg-white border-r p-4 space-y-2">
+          <h2 className="font-semibold mb-2">Stats</h2>
+          {stats.length === 0 && (
+            <div className="text-sm text-gray-500">No stats available</div>
+          )}
+          {stats.map((stat: Stat) => (
+            <label key={stat.id} className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={activeStat?.id === stat.id}
+                onChange={() =>
+                  setActiveStat(activeStat?.id === stat.id ? null : stat)
+                }
+              />
+              <span className="text-sm">{stat.title}</span>
+            </label>
+          ))}
+        </div>
         <div className="flex-1 h-screen relative">
-          <OKCMap 
+          <OKCMap
             organizations={organizations}
+            stat={activeStat}
             onOrganizationClick={setSelectedOrg}
           />
         </div>

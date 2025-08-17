@@ -19,6 +19,15 @@ const _schema = i.schema({
       statistics: i.string().optional(),
       createdAt: i.number().indexed(),
     }),
+    stats: i.entity({
+      title: i.string(),
+      variable: i.string(),
+      dataset: i.string(),
+      geography: i.string(),
+      data: i.string(),
+      lastUpdated: i.number().indexed(),
+      refreshCadence: i.string().optional(),
+    }),
     locations: i.entity({
       address: i.string(),
       latitude: i.number(),
