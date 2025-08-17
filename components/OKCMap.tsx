@@ -1,10 +1,15 @@
 'use client';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Map from 'react-map-gl/maplibre';
-import { ScatterplotLayer } from '@deck.gl/layers';
+import { ScatterplotLayer, GeoJsonLayer } from '@deck.gl/layers';
 import DeckGL from '@deck.gl/react';
+import { feature } from 'topojson-client';
+// TopoJSON for U.S. counties (includes OKC region)
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore - no typed export
+import counties from 'us-atlas/counties-10m.json';
 import type { Organization } from '../types/organization';
 
 interface OKCMapProps {
@@ -26,8 +31,56 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
     bearing: 0
   });
 
-  const layers = useMemo(() => {
-    const data = organizations.flatMap(org => 
+  const [geoType, setGeoType] = useState<'county'>('county');
+  const [censusVar, setCensusVar] = useState('B01003_001E');
+  const [censusLayer, setCensusLayer] = useState<GeoJsonLayer | null>(null);
+
+  useEffect(() => {
+    async function loadCensus() {
+      if (geoType !== 'county') {
+        setCensusLayer(null);
+        return;
+      }
+      const topo: any = counties;
+      const geo: any = feature(topo, topo.objects.counties);
+      const res = await fetch(`https://api.census.gov/data/2022/acs/acs5?get=NAME,${censusVar}&for=county:*&in=state:40`);
+      const json = await res.json();
+      const headers = json[0];
+      const varIdx = headers.indexOf(censusVar);
+      const stateIdx = headers.indexOf('state');
+      const countyIdx = headers.indexOf('county');
+      const values = new Map<string, number>(
+        json.slice(1).map((row: string[]) => [row[stateIdx] + row[countyIdx], Number(row[varIdx])])
+      );
+      const feats = geo.features
+        .filter((f: any) => f.id.startsWith('40')) // Oklahoma state FIPS
+        .map((f: any) => ({
+          ...f,
+          properties: { ...f.properties, value: values.get(f.id) }
+        }));
+      const max = Math.max(...feats.map((f: any) => f.properties.value ?? 0));
+      const layer = new GeoJsonLayer({
+        id: 'census-choropleth',
+        data: feats,
+        pickable: true,
+        stroked: true,
+        filled: true,
+        getFillColor: (d: any) => {
+          const v = d.properties.value;
+          if (!Number.isFinite(v) || max === 0) return [0, 0, 0, 0];
+          const t = v / max;
+          return [3, 78, 162, 50 + t * 205];
+        },
+        getLineColor: [255, 255, 255],
+        lineWidthMinPixels: 1
+      });
+      setCensusLayer(layer);
+    }
+    loadCensus();
+  }, [geoType, censusVar]);
+
+  const orgLayer = useMemo(() => {
+    const data = organizations.flatMap(org =>
       org.locations.map(location => ({
         coordinates: [location.longitude, location.latitude] as [number, number],
         organization: org,
@@ -35,26 +88,24 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
       }))
     );
 
-    return [
-      new ScatterplotLayer({
-        id: 'organizations',
-        data: data,
-        getPosition: (d: any) => d.coordinates,
-        getRadius: 200,
-        getFillColor: (d: any) => d.color,
-        getLineColor: [0, 0, 0, 100],
-        getLineWidth: 2,
-        radiusScale: 1,
-        radiusMinPixels: 8,
-        radiusMaxPixels: 20,
-        pickable: true,
-        onClick: (info: any) => {
-          if (info.object && onOrganizationClick) {
-            onOrganizationClick(info.object.organization);
-          }
+    return new ScatterplotLayer({
+      id: 'organizations',
+      data: data,
+      getPosition: (d: any) => d.coordinates,
+      getRadius: 200,
+      getFillColor: (d: any) => d.color,
+      getLineColor: [0, 0, 0, 100],
+      getLineWidth: 2,
+      radiusScale: 1,
+      radiusMinPixels: 8,
+      radiusMaxPixels: 20,
+      pickable: true,
+      onClick: (info: any) => {
+        if (info.object && onOrganizationClick) {
+          onOrganizationClick(info.object.organization);
         }
-      })
-    ];
+      }
+    });
   }, [organizations, onOrganizationClick]);
 
   return (
@@ -63,7 +114,7 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
         viewState={viewState}
         onViewStateChange={(e: any) => setViewState(e.viewState)}
         controller={true}
-        layers={layers}
+        layers={[censusLayer, orgLayer].filter(Boolean)}
         style={{width: '100%', height: '100%'}}
       >
         <Map
@@ -71,6 +122,29 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
           style={{width: '100%', height: '100%'}}
         />
       </DeckGL>
+      <div className="absolute top-2 left-2 z-10 bg-white bg-opacity-90 p-2 rounded shadow text-sm space-y-1">
+        <div>
+          <label className="mr-2">Geography</label>
+          <select
+            value={geoType}
+            onChange={e => setGeoType(e.target.value as 'county')}
+            className="border rounded p-1"
+          >
+            <option value="county">County</option>
+          </select>
+        </div>
+        <div>
+          <label className="mr-2">Statistic</label>
+          <select
+            value={censusVar}
+            onChange={e => setCensusVar(e.target.value)}
+            className="border rounded p-1"
+          >
+            <option value="B01003_001E">Population</option>
+            <option value="B19013_001E">Median Income</option>
+          </select>
+        </div>
+      </div>
     </div>
   );
 }
