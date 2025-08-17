@@ -16,11 +16,13 @@ interface Variable {
   name: string;
   label: string;
   concept?: string;
+  predicateType?: string;
 }
 
 interface RawVariable {
   label: string;
   concept?: string;
+  predicateType?: string;
 }
 
 export default function CensusStatExplorer() {
@@ -28,6 +30,7 @@ export default function CensusStatExplorer() {
   const [datasetQuery, setDatasetQuery] = useState('');
   const [selectedDataset, setSelectedDataset] = useState<Dataset | null>(null);
   const [variables, setVariables] = useState<Variable[]>([]);
+  const [cachedVars, setCachedVars] = useState<Record<string, Variable[]>>({});
   const [varQuery, setVarQuery] = useState('');
   const [loadingVars, setLoadingVars] = useState(false);
 
@@ -58,16 +61,28 @@ export default function CensusStatExplorer() {
     async function loadVariables() {
       setLoadingVars(true);
       try {
-        const res = await fetch(link);
-        const json = await res.json();
-        const vars: Variable[] = Object.entries(
-          (json.variables as Record<string, RawVariable>) || {}
-        ).map(([name, info]) => ({
-          name,
-          label: info.label,
-          concept: info.concept,
-        }));
-        setVariables(vars);
+        if (cachedVars[link]) {
+          setVariables(cachedVars[link]);
+        } else {
+          const res = await fetch(link);
+          const json = await res.json();
+          const vars: Variable[] = Object.entries(
+            (json.variables as Record<string, RawVariable>) || {}
+          ).map(([name, info]) => ({
+            name,
+            label: info.label,
+            concept: info.concept,
+            predicateType: info.predicateType,
+          }));
+          setVariables(vars);
+          setCachedVars((prev) => {
+            const updated = { ...prev, [link]: vars };
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('censusVarCache', JSON.stringify(updated));
+            }
+            return updated;
+          });
+        }
       } catch (err) {
         console.error('Failed to load variables', err);
       } finally {
@@ -75,7 +90,18 @@ export default function CensusStatExplorer() {
       }
     }
     loadVariables();
-  }, [selectedDataset]);
+  }, [selectedDataset, cachedVars]);
+
+  // Load cached variables from localStorage on first render
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const stored = JSON.parse(localStorage.getItem('censusVarCache') || '{}');
+      setCachedVars(stored);
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   const filteredDatasets = datasets.filter((d) =>
     d.title.toLowerCase().includes(datasetQuery.toLowerCase())
@@ -86,6 +112,21 @@ export default function CensusStatExplorer() {
       .toLowerCase()
       .includes(varQuery.toLowerCase())
   );
+
+  function isMetric(v: Variable) {
+    const type = v.predicateType?.toLowerCase() || '';
+    const label = v.label.toLowerCase();
+    if (!['int', 'float', 'double', 'number'].some((t) => type.includes(t))) {
+      return false;
+    }
+    if (/(code|identifier|geograph|flag)/.test(label)) {
+      return false;
+    }
+    return true;
+  }
+
+  const metricVars = filteredVars.filter(isMetric);
+  const otherVars = filteredVars.filter((v) => !isMetric(v));
 
   function addMetric(v: Variable) {
     if (!selectedDataset) return;
@@ -169,23 +210,51 @@ export default function CensusStatExplorer() {
           {loadingVars ? (
             <div>Loading...</div>
           ) : (
-            <ul className="space-y-2 max-h-[60vh] overflow-y-auto">
-              {filteredVars.map((v) => (
-                <li key={v.name} className="bg-white p-2 rounded shadow">
-                  <div className="font-mono text-sm">{v.name}</div>
-                  <div className="text-sm">{v.label}</div>
-                  {v.concept && (
-                    <div className="text-xs text-gray-500">{v.concept}</div>
+            <div className="max-h-[60vh] overflow-y-auto space-y-4">
+              <p className="text-sm text-gray-700">
+                Metrics are numeric values you can map. Codes and identifiers are listed
+                under Other variables.
+              </p>
+              <div>
+                <h3 className="font-semibold mb-1">Metrics</h3>
+                <ul className="space-y-2">
+                  {metricVars.map((v) => (
+                    <li key={v.name} className="bg-white p-2 rounded shadow">
+                      <div className="font-mono text-sm">{v.name}</div>
+                      <div className="text-sm">{v.label}</div>
+                      {v.concept && (
+                        <div className="text-xs text-gray-500">{v.concept}</div>
+                      )}
+                      <button
+                        onClick={() => addMetric(v)}
+                        className="mt-1 text-xs text-blue-600 underline"
+                      >
+                        Add to metrics
+                      </button>
+                    </li>
+                  ))}
+                  {metricVars.length === 0 && (
+                    <li className="text-sm text-gray-600">No metrics found</li>
                   )}
-                  <button
-                    onClick={() => addMetric(v)}
-                    className="mt-1 text-xs text-blue-600 underline"
-                  >
-                    Add to metrics
-                  </button>
-                </li>
-              ))}
-            </ul>
+                </ul>
+              </div>
+              {otherVars.length > 0 && (
+                <div>
+                  <h3 className="font-semibold mb-1">Other variables</h3>
+                  <ul className="space-y-2">
+                    {otherVars.map((v) => (
+                      <li key={v.name} className="bg-white p-2 rounded shadow">
+                        <div className="font-mono text-sm">{v.name}</div>
+                        <div className="text-sm">{v.label}</div>
+                        {v.concept && (
+                          <div className="text-xs text-gray-500">{v.concept}</div>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
           )}
         </div>
       )}

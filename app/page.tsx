@@ -1,12 +1,19 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import db from '../lib/db';
 import AddOrganizationForm from '../components/AddOrganizationForm';
 import CircularAddButton from '../components/CircularAddButton';
 import type { Organization } from '../types/organization';
+
+interface CustomMetric {
+  key: string;
+  label: string;
+  dataset: string;
+  variable: string;
+}
 
 const OKCMap = dynamic(() => import('../components/OKCMap'), {
   ssr: false,
@@ -16,7 +23,20 @@ const OKCMap = dynamic(() => import('../components/OKCMap'), {
 export default function Home() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
-  const [metric, setMetric] = useState<'population' | 'applications'>('population');
+  const [metric, setMetric] = useState<string>('population');
+  const [customMetrics, setCustomMetrics] = useState<CustomMetric[]>([]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const stored: CustomMetric[] = JSON.parse(
+        localStorage.getItem('customMetrics') || '[]'
+      );
+      setCustomMetrics(stored);
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   const { data, isLoading, error } = db.useQuery({
     organizations: {
@@ -65,17 +85,23 @@ export default function Home() {
             <label className="mr-2">Choropleth:</label>
             <select
               value={metric}
-              onChange={(e) => setMetric(e.target.value as 'population' | 'applications')}
+              onChange={(e) => setMetric(e.target.value)}
               className="border px-1 py-0.5"
             >
               <option value="population">Population</option>
               <option value="applications">Business Applications</option>
+              {customMetrics.map((m) => (
+                <option key={m.key} value={m.key}>
+                  {m.label}
+                </option>
+              ))}
             </select>
           </div>
           <OKCMap
             organizations={organizations}
             onOrganizationClick={setSelectedOrg}
             metric={metric}
+            customMetrics={customMetrics}
           />
         </div>
 
