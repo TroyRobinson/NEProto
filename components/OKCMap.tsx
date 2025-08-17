@@ -1,9 +1,9 @@
 'use client';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Map from 'react-map-gl/maplibre';
-import { ScatterplotLayer } from '@deck.gl/layers';
+import { ScatterplotLayer, GeoJsonLayer } from '@deck.gl/layers';
 import DeckGL from '@deck.gl/react';
 import type { Organization } from '../types/organization';
 
@@ -26,8 +26,45 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
     bearing: 0
   });
 
+  const [zipData, setZipData] = useState<any>(null);
+  const [bfsValue, setBfsValue] = useState<number | null>(null);
+
+  useEffect(() => {
+    async function loadZipData() {
+      try {
+        const res = await fetch(
+          'https://raw.githubusercontent.com/OpenDataDE/State-zip-code-GeoJSON/master/ok_oklahoma_zip_codes_geo.min.json'
+        );
+        const json = await res.json();
+        const okcFeatures = (json.features || []).filter(
+          (f: any) => f.properties?.ZCTA5CE10?.startsWith('731')
+        );
+        setZipData({ type: 'FeatureCollection', features: okcFeatures });
+      } catch {
+        setZipData(null);
+      }
+    }
+    loadZipData();
+  }, []);
+
+  useEffect(() => {
+    async function loadBFS() {
+      try {
+        const res = await fetch(
+          'https://api.census.gov/data/timeseries/eits/bfs?get=data_type_code,cell_value&for=county:109&in=state:40&time=2023&data_type_code=BA_BA'
+        );
+        const json = await res.json();
+        const [, first] = json;
+        setBfsValue(Number(first?.[1]));
+      } catch {
+        setBfsValue(null);
+      }
+    }
+    loadBFS();
+  }, []);
+
   const layers = useMemo(() => {
-    const data = organizations.flatMap(org => 
+    const data = organizations.flatMap(org =>
       org.locations.map(location => ({
         coordinates: [location.longitude, location.latitude] as [number, number],
         organization: org,
@@ -35,7 +72,7 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
       }))
     );
 
-    return [
+    const baseLayers = [
       new ScatterplotLayer({
         id: 'organizations',
         data: data,
@@ -55,7 +92,24 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
         }
       })
     ];
-  }, [organizations, onOrganizationClick]);
+
+    if (zipData) {
+      baseLayers.push(
+        new GeoJsonLayer({
+          id: 'okc-zips',
+          data: zipData,
+          filled: true,
+          stroked: true,
+          getFillColor: [0, 123, 255, 40],
+          getLineColor: [0, 123, 255, 200],
+          lineWidthMinPixels: 1,
+          pickable: true
+        })
+      );
+    }
+
+    return baseLayers;
+  }, [organizations, onOrganizationClick, zipData]);
 
   return (
     <div className="w-full h-full relative">
@@ -64,6 +118,11 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
         onViewStateChange={(e: any) => setViewState(e.viewState)}
         controller={true}
         layers={layers}
+        getTooltip={({ object }) =>
+          object?.properties?.ZCTA5CE10 && bfsValue !== null
+            ? `Business Applications (2023): ${bfsValue}`
+            : null
+        }
         style={{width: '100%', height: '100%'}}
       >
         <Map
