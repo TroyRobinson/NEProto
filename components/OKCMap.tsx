@@ -1,15 +1,23 @@
 'use client';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Map from 'react-map-gl/maplibre';
-import { ScatterplotLayer } from '@deck.gl/layers';
+import { ScatterplotLayer, GeoJsonLayer } from '@deck.gl/layers';
 import DeckGL from '@deck.gl/react';
+import { feature } from 'topojson-client';
+import countiesTopo from 'us-atlas/counties-10m.json' assert { type: 'json' };
 import type { Organization } from '../types/organization';
+
+interface ChoroplethConfig {
+  geography: 'zip' | 'county';
+  variable: string;
+}
 
 interface OKCMapProps {
   organizations: Organization[];
   onOrganizationClick?: (org: Organization) => void;
+  choropleth?: ChoroplethConfig;
 }
 
 const OKC_CENTER = {
@@ -17,7 +25,7 @@ const OKC_CENTER = {
   latitude: 35.4676
 };
 
-export default function OKCMap({ organizations, onOrganizationClick }: OKCMapProps) {
+export default function OKCMap({ organizations, onOrganizationClick, choropleth }: OKCMapProps) {
   const [viewState, setViewState] = useState({
     longitude: OKC_CENTER.longitude,
     latitude: OKC_CENTER.latitude,
@@ -26,8 +34,67 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
     bearing: 0
   });
 
+  const [choroplethLayer, setChoroplethLayer] = useState<GeoJsonLayer | null>(null);
+
+  useEffect(() => {
+    if (!choropleth) {
+      setChoroplethLayer(null);
+      return;
+    }
+
+    async function loadChoropleth() {
+      let features: any[] = [];
+
+      if (choropleth.geography === 'zip') {
+        const [geoRes, dataRes] = await Promise.all([
+          fetch('https://raw.githubusercontent.com/OpenDataDE/State-zip-code-GeoJSON/master/ok_oklahoma_zip_codes_geo.min.json'),
+          fetch(`https://api.census.gov/data/2022/acs/acs5?get=NAME,${choropleth.variable}&for=zip%20code%20tabulation%20area:*`)
+        ]);
+        const geojson = await geoRes.json();
+        const rows: any[] = await dataRes.json();
+        const dataMap = new Map(rows.slice(1).map(r => [r[2], parseFloat(r[1])]));
+        features = geojson.features.map((f: any) => ({
+          ...f,
+          properties: { ...f.properties, value: dataMap.get(f.properties.ZCTA5CE10) }
+        }));
+      } else if (choropleth.geography === 'county') {
+        const geo = feature(countiesTopo as any, (countiesTopo as any).objects.counties) as any;
+        const okFeatures = geo.features.filter((f: any) => String(f.id).startsWith('40'));
+        const dataRes = await fetch(`https://api.census.gov/data/2022/acs/acs5?get=NAME,${choropleth.variable}&for=county:*&in=state:40`);
+        const rows: any[] = await dataRes.json();
+        const dataMap = new Map(rows.slice(1).map(r => [`${r[2]}${r[3]}`, parseFloat(r[1])]));
+        features = okFeatures.map((f: any) => ({
+          ...f,
+          properties: { ...f.properties, value: dataMap.get(String(f.id)) }
+        }));
+      }
+
+      const values = features.map(f => f.properties.value).filter((v: number) => !isNaN(v));
+      const min = Math.min(...values);
+      const max = Math.max(...values);
+
+      setChoroplethLayer(new GeoJsonLayer({
+        id: 'census-choropleth',
+        data: features,
+        stroked: false,
+        filled: true,
+        pickable: true,
+        getFillColor: (d: any) => {
+          const v = d.properties.value;
+          if (v == null || isNaN(v)) return [0, 0, 0, 0];
+          const t = (v - min) / (max - min || 1);
+          const r = 255 * (1 - t);
+          const b = 255 * t;
+          return [r, 0, b, 150];
+        }
+      }));
+    }
+
+    loadChoropleth();
+  }, [choropleth]);
+
   const layers = useMemo(() => {
-    const data = organizations.flatMap(org => 
+    const data = organizations.flatMap(org =>
       org.locations.map(location => ({
         coordinates: [location.longitude, location.latitude] as [number, number],
         organization: org,
@@ -35,7 +102,7 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
       }))
     );
 
-    return [
+    const baseLayers = [
       new ScatterplotLayer({
         id: 'organizations',
         data: data,
@@ -55,7 +122,13 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
         }
       })
     ];
-  }, [organizations, onOrganizationClick]);
+
+    if (choroplethLayer) {
+      baseLayers.unshift(choroplethLayer);
+    }
+
+    return baseLayers;
+  }, [organizations, onOrganizationClick, choroplethLayer]);
 
   return (
     <div className="w-full h-full relative">
