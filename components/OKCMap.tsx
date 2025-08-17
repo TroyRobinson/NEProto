@@ -5,6 +5,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import Map from 'react-map-gl/maplibre';
 import { ScatterplotLayer, GeoJsonLayer } from '@deck.gl/layers';
 import DeckGL from '@deck.gl/react';
+import type { Layer } from '@deck.gl/core';
 import type { Organization } from '../types/organization';
 
 interface OKCMapProps {
@@ -72,7 +73,7 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
       }))
     );
 
-    const baseLayers = [
+    const baseLayers: Layer[] = [
       new ScatterplotLayer({
         id: 'organizations',
         data: data,
