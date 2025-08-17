@@ -6,6 +6,8 @@ import TopNav from '../../../components/TopNav';
 
 type Variable = { name: string; label: string; concept: string };
 
+type AddPayload = { name: string; label: string; datasetPath: string };
+
 export default function DatasetDetailPage() {
   const params = useParams();
   const segments = (params?.path as string[]) || [];
@@ -45,6 +47,8 @@ export default function DatasetDetailPage() {
     load();
   }, [datasetPath]);
 
+  const [adding, setAdding] = useState<string | null>(null);
+
   const filtered = term
     ? variables.filter((v) => {
         const t = term.toLowerCase();
@@ -55,6 +59,26 @@ export default function DatasetDetailPage() {
         );
       })
     : variables;
+
+  async function handleAdd(v: Variable) {
+    try {
+      setAdding(v.name);
+      const body: AddPayload = {
+        name: v.name,
+        label: v.label,
+        datasetPath,
+      };
+      await fetch('/api/selected-variables', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+    } catch (e) {
+      console.error('Failed to add variable', e);
+    } finally {
+      setAdding(null);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -76,9 +100,20 @@ export default function DatasetDetailPage() {
         <ul className="space-y-1">
           {filtered.map((v) => (
             <li key={v.name} className="border-b py-1">
-              <div className="font-medium">{v.name}</div>
-              <div className="text-sm">{v.label}</div>
-              <div className="text-xs text-gray-600">{v.concept}</div>
+              <div className="flex justify-between items-start">
+                <div>
+                  <div className="font-medium">{v.name}</div>
+                  <div className="text-sm">{v.label}</div>
+                  <div className="text-xs text-gray-600">{v.concept}</div>
+                </div>
+                <button
+                  onClick={() => handleAdd(v)}
+                  disabled={adding === v.name}
+                  className="ml-2 px-2 py-1 text-xs border rounded disabled:opacity-50"
+                >
+                  {adding === v.name ? 'Adding...' : 'Add'}
+                </button>
+              </div>
             </li>
           ))}
           {filtered.length === 0 && (
