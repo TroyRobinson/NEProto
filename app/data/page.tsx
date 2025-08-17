@@ -16,6 +16,7 @@ interface Row {
 interface GeoRow {
   name: string;
   polygon: string;
+  intensity: number;
 }
 
 interface ZipFeature {
@@ -60,6 +61,7 @@ export default function DataPage() {
             return {
               name: f.properties.ZCTA5CE10,
               polygon: JSON.stringify((ring as number[][]).slice(0, 2)),
+              intensity: Math.round(Math.random() * 100),
             };
           })
         );
@@ -166,6 +168,7 @@ export default function DataPage() {
                 <tr className="bg-gray-50">
                   <th className="p-2 border">ZIP Code</th>
                   <th className="p-2 border">Polygon (sample)</th>
+                  <th className="p-2 border">Intensity</th>
                 </tr>
               </thead>
               <tbody>
@@ -175,6 +178,7 @@ export default function DataPage() {
                     <td className="p-2 border font-mono truncate max-w-xs">
                       {row.polygon}
                     </td>
+                    <td className="p-2 border text-right">{row.intensity}</td>
                   </tr>
                 ))}
               </tbody>

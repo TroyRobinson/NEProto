@@ -46,9 +46,15 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
     )
       .then(res => res.json())
       .then(json => {
-        const features = json.features.filter((f: any) =>
-          f.properties.ZCTA5CE10.startsWith('731')
-        );
+        const features = json.features
+          .filter((f: any) => f.properties.ZCTA5CE10.startsWith('731'))
+          .map((f: any) => ({
+            ...f,
+            properties: {
+              ...f.properties,
+              intensity: Math.random()
+            }
+          }));
         setZipFeatures(features);
       })
       .catch(() => setZipFeatures([]));
@@ -104,9 +110,14 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
           id: 'okc-zips',
           data: zipFeatures,
           stroked: true,
-          filled: false,
+          filled: true,
           getLineColor: [0, 0, 0, 120],
-          lineWidthMinPixels: 1
+          lineWidthMinPixels: 1,
+          getFillColor: (f: any) => {
+            const intensity = f.properties.intensity as number | undefined;
+            const v = Math.round((intensity ?? 0) * 255);
+            return [255, 255 - v, 0, 120];
+          }
         })
       );
     }
