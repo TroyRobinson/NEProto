@@ -27,7 +27,7 @@ export default function AddOrganizationForm({ onSuccess, onCancel }: AddOrganiza
 
   if (!db) {
     return (
-      <div className="bg-white p-6 rounded-lg shadow-lg max-w-2xl mx-auto">
+      <div className="bg-background p-6 rounded-lg shadow-lg max-w-2xl mx-auto">
         <p className="text-red-500">Database not configured.</p>
       </div>
     );
@@ -99,12 +99,12 @@ export default function AddOrganizationForm({ onSuccess, onCancel }: AddOrganiza
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-lg max-w-2xl mx-auto">
+    <div className="bg-background p-6 rounded-lg shadow-lg max-w-2xl mx-auto">
       <h2 className="text-2xl font-bold mb-6">Add Non-Profit Organization</h2>
       
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-foreground mb-1">
             Organization Name *
           </label>
           <input
@@ -113,12 +113,12 @@ export default function AddOrganizationForm({ onSuccess, onCancel }: AddOrganiza
             value={formData.name}
             onChange={handleChange}
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-foreground/20 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-foreground mb-1">
             Description *
           </label>
           <textarea
@@ -127,12 +127,12 @@ export default function AddOrganizationForm({ onSuccess, onCancel }: AddOrganiza
             onChange={handleChange}
             required
             rows={3}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-foreground/20 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-foreground mb-1">
             Category *
           </label>
           <select
@@ -140,7 +140,7 @@ export default function AddOrganizationForm({ onSuccess, onCancel }: AddOrganiza
             value={formData.category}
             onChange={handleChange}
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-foreground/20 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">Select a category</option>
             {ORG_CATEGORIES.map(category => (
@@ -151,7 +151,7 @@ export default function AddOrganizationForm({ onSuccess, onCancel }: AddOrganiza
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-foreground mb-1">
               Website
             </label>
             <input
@@ -159,12 +159,12 @@ export default function AddOrganizationForm({ onSuccess, onCancel }: AddOrganiza
               name="website"
               value={formData.website}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-foreground/20 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-foreground mb-1">
               Phone
             </label>
             <input
@@ -172,13 +172,13 @@ export default function AddOrganizationForm({ onSuccess, onCancel }: AddOrganiza
               name="phone"
               value={formData.phone}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-foreground/20 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-foreground mb-1">
             Email
           </label>
           <input
@@ -186,12 +186,12 @@ export default function AddOrganizationForm({ onSuccess, onCancel }: AddOrganiza
             name="email"
             value={formData.email}
             onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-foreground/20 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-foreground mb-1">
             Statistics/Impact
           </label>
           <textarea
@@ -200,12 +200,12 @@ export default function AddOrganizationForm({ onSuccess, onCancel }: AddOrganiza
             onChange={handleChange}
             rows={2}
             placeholder="e.g., Serves 500 families monthly, Reduced homelessness by 15%"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-foreground/20 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-foreground mb-1">
             Address *
           </label>
           <input
@@ -214,13 +214,13 @@ export default function AddOrganizationForm({ onSuccess, onCancel }: AddOrganiza
             value={formData.address}
             onChange={handleChange}
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-foreground/20 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-foreground mb-1">
               Latitude *
             </label>
             <input
@@ -230,12 +230,12 @@ export default function AddOrganizationForm({ onSuccess, onCancel }: AddOrganiza
               onChange={handleChange}
               step="any"
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-foreground/20 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-foreground mb-1">
               Longitude *
             </label>
             <input
@@ -245,7 +245,7 @@ export default function AddOrganizationForm({ onSuccess, onCancel }: AddOrganiza
               onChange={handleChange}
               step="any"
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-foreground/20 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
         </div>
@@ -263,7 +263,7 @@ export default function AddOrganizationForm({ onSuccess, onCancel }: AddOrganiza
             <button
               type="button"
               onClick={onCancel}
-              className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400"
+              className="flex-1 bg-foreground/20 text-foreground py-2 px-4 rounded-md hover:bg-foreground/30"
             >
               Cancel
             </button>

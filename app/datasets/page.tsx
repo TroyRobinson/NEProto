@@ -5,12 +5,16 @@ import Link from 'next/link';
 import TopNav from '../../components/TopNav';
 import db from '../../lib/db';
 type CensusDataset = { id?: string; identifier: string; title: string; path?: string };
+type RawDataset = {
+  identifier: string;
+  title: string;
+  distribution?: { accessURL?: string }[];
+};
 
 export default function DatasetSearchPage() {
   const [term, setTerm] = useState('');
-  const [requested, setRequested] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [fallback, setFallback] = useState<CensusDataset[]>([]);
+  const [remote, setRemote] = useState<CensusDataset[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const where = term
@@ -33,47 +37,52 @@ export default function DatasetSearchPage() {
   });
   const results = query?.data?.censusDatasets || [];
 
-  const filteredFallback = term
-    ? fallback.filter((d) => {
+  const filteredRemote = term
+    ? remote.filter((d) => {
         const t = term.toLowerCase();
         return (
           d.title.toLowerCase().includes(t) ||
           d.identifier.toLowerCase().includes(t)
         );
       })
-    : fallback;
+    : remote;
 
-  const display = results.length > 0 ? results : filteredFallback;
+  const display = results.length > 0 ? results : filteredRemote;
 
   useEffect(() => {
-    if (!requested && results.length === 0 && fallback.length === 0) {
-      setRequested(true);
+    if (results.length === 0 && remote.length === 0) {
       setLoading(true);
-      fetch('/api/refresh-datasets')
+      fetch('https://api.census.gov/data.json')
         .then((r) => {
           if (!r.ok) throw new Error(`Request failed with ${r.status}`);
           return r.json();
         })
-        .then((d) =>
-          setFallback(
-            (d.datasets || []).sort((a: CensusDataset, b: CensusDataset) =>
-              a.title.localeCompare(b.title)
-            )
-          )
-        )
+        .then((json) => {
+          const datasets: CensusDataset[] = ((json.dataset as RawDataset[]) || []).map(
+            (ds) => ({
+              identifier: ds.identifier,
+              title: ds.title,
+              path: ds.distribution?.[0]?.accessURL?.replace(
+                'https://api.census.gov/data/',
+                ''
+              )
+            })
+          );
+          setRemote(datasets.sort((a, b) => a.title.localeCompare(b.title)));
+        })
         .catch((err) => {
-          console.error('Dataset refresh failed', err);
+          console.error('Dataset fetch failed', err);
           setError('Failed to load dataset index.');
         })
         .finally(() => setLoading(false));
     }
-  }, [requested, results.length, fallback.length]);
+  }, [results.length, remote.length]);
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <header className="bg-white shadow-sm border-b">
+    <div className="min-h-screen bg-background">
+      <header className="bg-background shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900">Census Datasets</h1>
+          <h1 className="text-2xl font-bold text-foreground">Census Datasets</h1>
           <TopNav />
         </div>
       </header>
@@ -91,18 +100,18 @@ export default function DatasetSearchPage() {
               {d.path ? (
                 <Link href={`/datasets/${d.path}`} className="block">
                   <div className="font-medium">{d.title}</div>
-                  <div className="text-xs text-gray-600">{d.identifier}</div>
+                  <div className="text-xs text-foreground/70">{d.identifier}</div>
                 </Link>
               ) : (
                 <>
                   <div className="font-medium">{d.title}</div>
-                  <div className="text-xs text-gray-600">{d.identifier}</div>
+                  <div className="text-xs text-foreground/70">{d.identifier}</div>
                 </>
               )}
             </li>
           ))}
           {display.length === 0 && (
-            <li className="text-sm text-gray-500">
+            <li className="text-sm text-foreground/60">
               {error
                 ? error
                 : loading
