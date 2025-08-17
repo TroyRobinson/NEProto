@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import db from '../lib/db';
 import AddOrganizationForm from '../components/AddOrganizationForm';
 import CircularAddButton from '../components/CircularAddButton';
@@ -15,6 +16,7 @@ const OKCMap = dynamic(() => import('../components/OKCMap'), {
 export default function Home() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
+  const [metric, setMetric] = useState<'population' | 'applications'>('population');
 
   const { data, isLoading, error } = db.useQuery({
     organizations: {
@@ -50,15 +52,30 @@ export default function Home() {
             <h1 className="text-2xl font-bold text-gray-900">OKC Non-Profit Map</h1>
             <p className="text-gray-600">Discover local organizations making a difference</p>
           </div>
-          <CircularAddButton onClick={() => setShowAddForm(true)} />
+          <div className="flex items-center gap-4">
+            <Link href="/data" className="text-blue-600 hover:underline">Data</Link>
+            <CircularAddButton onClick={() => setShowAddForm(true)} />
+          </div>
         </div>
       </header>
 
       <div className="flex">
         <div className="flex-1 h-screen relative">
-          <OKCMap 
+          <div className="absolute top-4 left-4 z-10 bg-white p-2 rounded shadow text-sm">
+            <label className="mr-2">Choropleth:</label>
+            <select
+              value={metric}
+              onChange={(e) => setMetric(e.target.value as 'population' | 'applications')}
+              className="border px-1 py-0.5"
+            >
+              <option value="population">Population</option>
+              <option value="applications">Business Applications</option>
+            </select>
+          </div>
+          <OKCMap
             organizations={organizations}
             onOrganizationClick={setSelectedOrg}
+            metric={metric}
           />
         </div>
 
