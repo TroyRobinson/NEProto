@@ -24,8 +24,8 @@ export default function DataPage() {
   }, []);
 
   return (
-    <div className="min-h-screen p-4 bg-gray-100">
-      <h1 className="text-2xl font-bold mb-4">Oklahoma City ZIP Data</h1>
+    <div className="min-h-screen p-4 bg-gray-100 text-black">
+      <h1 className="text-2xl font-bold mb-4 text-black">Oklahoma City ZIP Data</h1>
       <div className="mb-4">
         <label className="mr-2">Metric:</label>
         <select
@@ -44,8 +44,8 @@ export default function DataPage() {
           <table className="min-w-full divide-y divide-gray-300 bg-white">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-2 text-left text-sm font-semibold text-gray-900">ZIP</th>
-                <th className="px-4 py-2 text-left text-sm font-semibold text-gray-900">
+                <th className="px-4 py-2 text-left text-sm font-semibold text-black">ZIP</th>
+                <th className="px-4 py-2 text-left text-sm font-semibold text-black">
                   {metric === 'population' ? 'Population' : 'Business Applications'}
                 </th>
               </tr>
@@ -53,8 +53,8 @@ export default function DataPage() {
             <tbody className="divide-y divide-gray-200">
               {rows.map((row) => (
                 <tr key={row.zip}>
-                  <td className="px-4 py-2 text-sm text-gray-700">{row.zip}</td>
-                  <td className="px-4 py-2 text-sm text-gray-700">
+                  <td className="px-4 py-2 text-sm text-black">{row.zip}</td>
+                  <td className="px-4 py-2 text-sm text-black">
                     {metric === 'population'
                       ? row.population.toLocaleString()
                       : Math.round(row.applications).toLocaleString()}

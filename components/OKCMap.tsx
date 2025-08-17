@@ -90,7 +90,7 @@ export default function OKCMap({ organizations, onOrganizationClick, metric }: O
                 ? f.properties.population
                 : f.properties.applications;
             const max = metric === 'population' ? maxPopulation : maxApplications;
-            return getChoroplethColor(value, max);
+            return getChoroplethColor(value, max, metric);
           },
           getLineColor: [0, 123, 255, 200],
           lineWidthMinPixels: 1,
@@ -150,12 +150,18 @@ function getCategoryColor(category: string): [number, number, number, number] {
 
 function getChoroplethColor(
   value: number,
-  max: number
+  max: number,
+  metric: 'population' | 'applications'
 ): [number, number, number, number] {
-  if (!max) return [198, 219, 239, 180];
+  if (!max) {
+    return metric === 'population'
+      ? [198, 219, 239, 180]
+      : [254, 224, 144, 180];
+  }
   const t = value / max;
-  const start = [198, 219, 239];
-  const end = [8, 81, 156];
+  const start =
+    metric === 'population' ? [198, 219, 239] : [254, 224, 144];
+  const end = metric === 'population' ? [8, 81, 156] : [217, 72, 1];
   const r = Math.round(start[0] + (end[0] - start[0]) * t);
   const g = Math.round(start[1] + (end[1] - start[1]) * t);
   const b = Math.round(start[2] + (end[2] - start[2]) * t);
