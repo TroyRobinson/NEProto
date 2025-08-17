@@ -79,11 +79,12 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
     async function loadBFS() {
       try {
         const res = await fetch(
-          'https://api.census.gov/data/timeseries/eits/bfs?get=data_type_code,cell_value&for=county:109&in=state:40&time=2023&data_type_code=BA_BA'
+          'https://api.census.gov/data/timeseries/eits/bfs?get=data_type_code,time_slot_id,seasonally_adj,category_code,cell_value,error_data&for=us:*&time=2023-12&data_type_code=BA_BA&category_code=TOTAL&seasonally_adj=no'
         );
         const json = await res.json();
-        const [, first] = json;
-        setBfsValue(Number(first?.[1]));
+        const [, first] = json as any[];
+        // cell_value is at index 4 based on requested columns
+        setBfsValue(Number(first?.[4]));
       } catch {
         setBfsValue(null);
       }
@@ -149,7 +150,7 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
         layers={layers}
         getTooltip={({ object }) =>
           object?.properties?.ZCTA5CE10 && bfsValue !== null
-            ? `ZIP: ${object.properties.ZCTA5CE10}\nPopulation: ${object.properties.population}\nBusiness Applications (2023): ${bfsValue}`
+            ? `ZIP: ${object.properties.ZCTA5CE10}\nPopulation: ${object.properties.population}\nBusiness Applications (Dec 2023, US): ${bfsValue}`
             : null
         }
         style={{width: '100%', height: '100%'}}

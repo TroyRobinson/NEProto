@@ -2,11 +2,13 @@
 
 import React, { useEffect, useState } from 'react';
 
-interface CensusRow {
+interface BFSRow {
   time: string;
+  geo: string;
+  dataLabel: string;
   cell_value: string;
-  seasonally_adj: string;
   category_code: string;
+  seasonally_adj: string;
 }
 
 interface StateRow {
@@ -15,7 +17,7 @@ interface StateRow {
   firstCoord: string;
 }
 
-type Row = CensusRow | StateRow;
+type Row = BFSRow | StateRow;
 
 const DATASETS = [
   { code: 'BA_BA', label: 'Business Applications', type: 'bfs' },
@@ -38,7 +40,7 @@ export default function DataPage() {
       try {
         if (selected.type === 'bfs') {
           const res = await fetch(
-            `https://api.census.gov/data/timeseries/eits/bfs?get=data_type_code,time_slot_id,seasonally_adj,category_code,cell_value,error_data&for=us:*&time=2023&data_type_code=${selected.code}`
+            `https://api.census.gov/data/timeseries/eits/bfs?get=data_type_code,time_slot_id,seasonally_adj,category_code,cell_value,error_data&for=us:*&time=2023&data_type_code=${selected.code}&category_code=TOTAL&seasonally_adj=no`
           );
           const json = await res.json();
           const [header, ...data] = json as string[][];
@@ -49,10 +51,12 @@ export default function DataPage() {
             });
             return {
               time: obj.time,
+              geo: obj.us === '1' ? 'US' : obj.us,
+              dataLabel: selected.label,
               cell_value: obj.cell_value,
-              seasonally_adj: obj.seasonally_adj,
               category_code: obj.category_code,
-            } as CensusRow;
+              seasonally_adj: obj.seasonally_adj,
+            } as BFSRow;
           });
           setRows(objs);
         } else if (selected.type === 'geo') {
@@ -104,19 +108,23 @@ export default function DataPage() {
           <table className="min-w-full divide-y divide-gray-300 bg-white">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-2 text-left text-sm font-semibold text-gray-900">Time</th>
+                <th className="px-4 py-2 text-left text-sm font-semibold text-gray-900">Date</th>
+                <th className="px-4 py-2 text-left text-sm font-semibold text-gray-900">Geography</th>
+                <th className="px-4 py-2 text-left text-sm font-semibold text-gray-900">Data Type</th>
+                <th className="px-4 py-2 text-left text-sm font-semibold text-gray-900">Category Code</th>
                 <th className="px-4 py-2 text-left text-sm font-semibold text-gray-900">Value</th>
                 <th className="px-4 py-2 text-left text-sm font-semibold text-gray-900">Seasonally Adjusted</th>
-                <th className="px-4 py-2 text-left text-sm font-semibold text-gray-900">Category Code</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {(rows as CensusRow[]).map((row, idx) => (
+              {(rows as BFSRow[]).map((row, idx) => (
                 <tr key={idx}>
                   <td className="px-4 py-2 text-sm text-gray-700">{row.time}</td>
+                  <td className="px-4 py-2 text-sm text-gray-700">{row.geo}</td>
+                  <td className="px-4 py-2 text-sm text-gray-700">{row.dataLabel}</td>
+                  <td className="px-4 py-2 text-sm text-gray-700">{row.category_code}</td>
                   <td className="px-4 py-2 text-sm text-gray-700">{row.cell_value}</td>
                   <td className="px-4 py-2 text-sm text-gray-700">{row.seasonally_adj}</td>
-                  <td className="px-4 py-2 text-sm text-gray-700">{row.category_code}</td>
                 </tr>
               ))}
             </tbody>
