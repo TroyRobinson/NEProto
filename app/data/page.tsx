@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { fetchZipStats, type ZipStats } from '../../lib/zipStats';
+import TopNav from '../../components/TopNav';
 
 interface CustomMetric {
   key: string;
@@ -80,16 +81,18 @@ export default function DataPage() {
   }, [metric, rows, customMetrics, customData]);
 
   return (
-    <div className="min-h-screen p-4 bg-gray-100 text-black">
-      <h1 className="text-2xl font-bold mb-4 text-black">Oklahoma City ZIP Data</h1>
-      <div className="mb-4 flex items-center gap-4">
-        <div>
-          <label className="mr-2">Metric:</label>
-          <select
-            value={metric}
-            onChange={(e) => setMetric(e.target.value)}
-            className="border px-1 py-0.5"
-          >
+    <div className="min-h-screen bg-gray-100">
+      <TopNav />
+      <div className="p-4 text-foreground">
+        <h1 className="text-2xl font-bold mb-4">Oklahoma City ZIP Data</h1>
+        <div className="mb-4 flex items-center gap-4">
+          <div>
+            <label className="mr-2">Metric:</label>
+            <select
+              value={metric}
+              onChange={(e) => setMetric(e.target.value)}
+              className="border px-1 py-0.5"
+            >
             <option value="population">Population</option>
             <option value="applications">Business Applications</option>
             {customMetrics.map((m) => (
@@ -98,45 +101,46 @@ export default function DataPage() {
               </option>
             ))}
           </select>
+          </div>
+          <Link href="/stats" className="text-blue-600 hover:underline text-sm">
+            Search Census stats
+          </Link>
         </div>
-        <Link href="/stats" className="text-blue-600 hover:underline text-sm">
-          Search Census stats
-        </Link>
-      </div>
-      {loading && <div>Loading...</div>}
-      {error && <div className="text-red-500">{error}</div>}
-      {!loading && !error && (
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-300 bg-white">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-2 text-left text-sm font-semibold text-black">ZIP</th>
-                <th className="px-4 py-2 text-left text-sm font-semibold text-black">
-                  {metric === 'population'
-                    ? 'Population'
-                    : metric === 'applications'
-                      ? 'Business Applications'
-                      : customMetrics.find((m) => m.key === metric)?.label || 'Value'}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {rows.map((row) => (
-                <tr key={row.zip}>
-                  <td className="px-4 py-2 text-sm text-black">{row.zip}</td>
-                  <td className="px-4 py-2 text-sm text-black">
+        {loading && <div>Loading...</div>}
+        {error && <div className="text-red-500">{error}</div>}
+        {!loading && !error && (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-300 bg-white">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-2 text-left text-sm font-semibold text-foreground">ZIP</th>
+                  <th className="px-4 py-2 text-left text-sm font-semibold text-foreground">
                     {metric === 'population'
-                      ? row.population.toLocaleString()
+                      ? 'Population'
                       : metric === 'applications'
-                        ? Math.round(row.applications).toLocaleString()
-                        : customData[metric]?.get(row.zip)?.toLocaleString() ?? 'N/A'}
-                  </td>
+                        ? 'Business Applications'
+                        : customMetrics.find((m) => m.key === metric)?.label || 'Value'}
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {rows.map((row) => (
+                  <tr key={row.zip}>
+                    <td className="px-4 py-2 text-sm text-foreground">{row.zip}</td>
+                    <td className="px-4 py-2 text-sm text-foreground">
+                      {metric === 'population'
+                        ? row.population.toLocaleString()
+                        : metric === 'applications'
+                          ? Math.round(row.applications).toLocaleString()
+                          : customData[metric]?.get(row.zip)?.toLocaleString() ?? 'N/A'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

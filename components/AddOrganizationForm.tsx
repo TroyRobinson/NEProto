@@ -90,12 +90,12 @@ export default function AddOrganizationForm({ onSuccess, onCancel }: AddOrganiza
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-lg max-w-2xl mx-auto">
+    <div className="bg-white p-6 rounded-lg shadow-lg max-w-2xl mx-auto text-foreground">
       <h2 className="text-2xl font-bold mb-6">Add Non-Profit Organization</h2>
-      
+
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium mb-1">
             Organization Name *
           </label>
           <input
@@ -109,7 +109,7 @@ export default function AddOrganizationForm({ onSuccess, onCancel }: AddOrganiza
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium mb-1">
             Description *
           </label>
           <textarea
@@ -123,7 +123,7 @@ export default function AddOrganizationForm({ onSuccess, onCancel }: AddOrganiza
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium mb-1">
             Category *
           </label>
           <select
@@ -142,7 +142,7 @@ export default function AddOrganizationForm({ onSuccess, onCancel }: AddOrganiza
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium mb-1">
               Website
             </label>
             <input
@@ -155,7 +155,7 @@ export default function AddOrganizationForm({ onSuccess, onCancel }: AddOrganiza
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium mb-1">
               Phone
             </label>
             <input
@@ -169,7 +169,7 @@ export default function AddOrganizationForm({ onSuccess, onCancel }: AddOrganiza
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium mb-1">
             Email
           </label>
           <input
@@ -182,7 +182,7 @@ export default function AddOrganizationForm({ onSuccess, onCancel }: AddOrganiza
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium mb-1">
             Statistics/Impact
           </label>
           <textarea
@@ -196,7 +196,7 @@ export default function AddOrganizationForm({ onSuccess, onCancel }: AddOrganiza
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium mb-1">
             Address *
           </label>
           <input
@@ -211,7 +211,7 @@ export default function AddOrganizationForm({ onSuccess, onCancel }: AddOrganiza
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium mb-1">
               Latitude *
             </label>
             <input
@@ -226,7 +226,7 @@ export default function AddOrganizationForm({ onSuccess, onCancel }: AddOrganiza
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium mb-1">
               Longitude *
             </label>
             <input
@@ -254,7 +254,7 @@ export default function AddOrganizationForm({ onSuccess, onCancel }: AddOrganiza
             <button
               type="button"
               onClick={onCancel}
-              className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400"
+              className="flex-1 bg-gray-300 text-foreground py-2 px-4 rounded-md hover:bg-gray-400"
             >
               Cancel
             </button>

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import TopNav from '../../components/TopNav';
 
 interface Dataset {
   title: string;
@@ -186,128 +187,131 @@ export default function CensusStatExplorer() {
   }
 
   return (
-    <div className="min-h-screen p-4 bg-gray-100 text-black">
-      <h1 className="text-2xl font-bold mb-4">Census Stat Explorer</h1>
+    <div className="min-h-screen bg-gray-100">
+      <TopNav />
+      <div className="p-4 text-foreground">
+        <h1 className="text-2xl font-bold mb-4">Census Stat Explorer</h1>
 
-      {!selectedDataset ? (
-        <div>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 mb-4">
+        {!selectedDataset ? (
+          <div>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 mb-4">
+              <input
+                type="text"
+                value={datasetQuery}
+                onChange={(e) => setDatasetQuery(e.target.value)}
+                placeholder="Search datasets..."
+                className="border px-2 py-1 w-full max-w-md mb-2 sm:mb-0"
+              />
+              <label className="text-sm text-foreground/80 flex items-center gap-1">
+                <input
+                  type="checkbox"
+                  checked={zipOnly}
+                  onChange={(e) => setZipOnly(e.target.checked)}
+                />
+                ZIP code datasets only
+              </label>
+            </div>
+            <ul className="space-y-2 max-h-[60vh] overflow-y-auto">
+              {filteredDatasets.map((d) => (
+                <li key={d.variablesLink}>
+                  <button
+                    onClick={() => setSelectedDataset(d)}
+                    className="text-blue-600 hover:underline"
+                  >
+                    {d.title}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <div>
+            <button
+              onClick={() => {
+                setSelectedDataset(null);
+                setVariables([]);
+                setVarQuery('');
+              }}
+              className="text-blue-600 hover:underline mb-4"
+            >
+              ← Back to datasets
+            </button>
+            <h2 className="text-xl font-semibold mb-2">
+              {selectedDataset.title}
+            </h2>
+            {selectedDataset.hasZip === false && (
+              <p className="mb-2 text-sm text-red-600">
+                This dataset does not include ZIP code tabulation area data, so its
+                variables cannot be mapped.
+              </p>
+            )}
+            <p className="mb-2 text-sm text-foreground/80">
+              Search by variable code or description, e.g., &quot;B01001&quot; or &quot;population&quot;.
+            </p>
             <input
               type="text"
-              value={datasetQuery}
-              onChange={(e) => setDatasetQuery(e.target.value)}
-              placeholder="Search datasets..."
-              className="border px-2 py-1 w-full max-w-md mb-2 sm:mb-0"
+              value={varQuery}
+              onChange={(e) => setVarQuery(e.target.value)}
+              placeholder="Search variables by code or keyword..."
+              className="border px-2 py-1 mb-4 w-full max-w-md"
             />
-            <label className="text-sm text-gray-700 flex items-center gap-1">
-              <input
-                type="checkbox"
-                checked={zipOnly}
-                onChange={(e) => setZipOnly(e.target.checked)}
-              />
-              ZIP code datasets only
-            </label>
-          </div>
-          <ul className="space-y-2 max-h-[60vh] overflow-y-auto">
-            {filteredDatasets.map((d) => (
-              <li key={d.variablesLink}>
-                <button
-                  onClick={() => setSelectedDataset(d)}
-                  className="text-blue-600 hover:underline"
-                >
-                  {d.title}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : (
-        <div>
-          <button
-            onClick={() => {
-              setSelectedDataset(null);
-              setVariables([]);
-              setVarQuery('');
-            }}
-            className="text-blue-600 hover:underline mb-4"
-          >
-            ← Back to datasets
-          </button>
-          <h2 className="text-xl font-semibold mb-2">
-            {selectedDataset.title}
-          </h2>
-          {selectedDataset.hasZip === false && (
-            <p className="mb-2 text-sm text-red-600">
-              This dataset does not include ZIP code tabulation area data, so its
-              variables cannot be mapped.
-            </p>
-          )}
-          <p className="mb-2 text-sm text-gray-700">
-            Search by variable code or description, e.g., &quot;B01001&quot; or &quot;population&quot;.
-          </p>
-          <input
-            type="text"
-            value={varQuery}
-            onChange={(e) => setVarQuery(e.target.value)}
-            placeholder="Search variables by code or keyword..."
-            className="border px-2 py-1 mb-4 w-full max-w-md"
-          />
-          {loadingVars ? (
-            <div>Loading...</div>
-          ) : (
-            <div className="max-h-[60vh] overflow-y-auto space-y-4">
-              <p className="text-sm text-gray-700">
-                Metrics are numeric values you can map. Codes and identifiers are listed
-                under Other variables.
-              </p>
-              <div>
-                <h3 className="font-semibold mb-1">Metrics</h3>
-                <ul className="space-y-2">
-                  {metricVars.map((v) => (
-                    <li key={v.name} className="bg-white p-2 rounded shadow">
-                      <div className="font-mono text-sm">{v.name}</div>
-                      <div className="text-sm">{v.label}</div>
-                      {v.concept && (
-                        <div className="text-xs text-gray-500">{v.concept}</div>
-                      )}
-                      <button
-                        onClick={() => addMetric(v)}
-                        disabled={selectedDataset?.hasZip === false}
-                        className={`mt-1 text-xs underline ${
-                          selectedDataset?.hasZip === false
-                            ? 'text-gray-400 cursor-not-allowed'
-                            : 'text-blue-600'
-                        }`}
-                      >
-                        Add to metrics
-                      </button>
-                    </li>
-                  ))}
-                  {metricVars.length === 0 && (
-                    <li className="text-sm text-gray-600">No metrics found</li>
-                  )}
-                </ul>
-              </div>
-              {otherVars.length > 0 && (
+            {loadingVars ? (
+              <div>Loading...</div>
+            ) : (
+              <div className="max-h-[60vh] overflow-y-auto space-y-4">
+                <p className="text-sm text-foreground/80">
+                  Metrics are numeric values you can map. Codes and identifiers are listed
+                  under Other variables.
+                </p>
                 <div>
-                  <h3 className="font-semibold mb-1">Other variables</h3>
+                  <h3 className="font-semibold mb-1">Metrics</h3>
                   <ul className="space-y-2">
-                    {otherVars.map((v) => (
+                    {metricVars.map((v) => (
                       <li key={v.name} className="bg-white p-2 rounded shadow">
                         <div className="font-mono text-sm">{v.name}</div>
                         <div className="text-sm">{v.label}</div>
                         {v.concept && (
-                          <div className="text-xs text-gray-500">{v.concept}</div>
+                          <div className="text-xs text-foreground/60">{v.concept}</div>
                         )}
+                        <button
+                          onClick={() => addMetric(v)}
+                          disabled={selectedDataset?.hasZip === false}
+                          className={`mt-1 text-xs underline ${
+                            selectedDataset?.hasZip === false
+                              ? 'text-foreground/40 cursor-not-allowed'
+                              : 'text-blue-600'
+                          }`}
+                        >
+                          Add to metrics
+                        </button>
                       </li>
                     ))}
+                    {metricVars.length === 0 && (
+                      <li className="text-sm text-foreground/60">No metrics found</li>
+                    )}
                   </ul>
                 </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
+                {otherVars.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold mb-1">Other variables</h3>
+                    <ul className="space-y-2">
+                      {otherVars.map((v) => (
+                        <li key={v.name} className="bg-white p-2 rounded shadow">
+                          <div className="font-mono text-sm">{v.name}</div>
+                          <div className="text-sm">{v.label}</div>
+                          {v.concept && (
+                            <div className="text-xs text-foreground/60">{v.concept}</div>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
