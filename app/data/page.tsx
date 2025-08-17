@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { fetchZipStats, type ZipStats } from '../../lib/zipStats';
 
 export default function DataPage() {
@@ -26,16 +27,21 @@ export default function DataPage() {
   return (
     <div className="min-h-screen p-4 bg-gray-100 text-black">
       <h1 className="text-2xl font-bold mb-4 text-black">Oklahoma City ZIP Data</h1>
-      <div className="mb-4">
-        <label className="mr-2">Metric:</label>
-        <select
-          value={metric}
-          onChange={(e) => setMetric(e.target.value as 'population' | 'applications')}
-          className="border px-1 py-0.5"
-        >
-          <option value="population">Population</option>
-          <option value="applications">Business Applications</option>
-        </select>
+      <div className="mb-4 flex items-center gap-4">
+        <div>
+          <label className="mr-2">Metric:</label>
+          <select
+            value={metric}
+            onChange={(e) => setMetric(e.target.value as 'population' | 'applications')}
+            className="border px-1 py-0.5"
+          >
+            <option value="population">Population</option>
+            <option value="applications">Business Applications</option>
+          </select>
+        </div>
+        <Link href="/stats" className="text-blue-600 hover:underline text-sm">
+          Search Census stats
+        </Link>
       </div>
       {loading && <div>Loading...</div>}
       {error && <div className="text-red-500">{error}</div>}
