@@ -90,7 +90,7 @@ export default function AddOrganizationForm({ onSuccess, onCancel }: AddOrganiza
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-lg max-w-2xl mx-auto text-foreground">
+    <div className="bg-background p-6 rounded-lg shadow-lg max-w-2xl mx-auto text-foreground">
       <h2 className="text-2xl font-bold mb-6">Add Non-Profit Organization</h2>
 
       <form onSubmit={handleSubmit} className="space-y-4">

@@ -37,10 +37,21 @@ export default function CensusStatExplorer() {
   const [cachedVars, setCachedVars] = useState<Record<string, Variable[]>>({});
   const [varQuery, setVarQuery] = useState('');
   const [loadingVars, setLoadingVars] = useState(false);
-  const [zipOnly, setZipOnly] = useState(false);
+  const [zipOnly, setZipOnly] = useState(true);
 
   useEffect(() => {
     async function loadDatasets() {
+      if (typeof window !== 'undefined') {
+        try {
+          const cached = localStorage.getItem('censusDatasetCache');
+          if (cached) {
+            setDatasets(JSON.parse(cached));
+            return;
+          }
+        } catch {
+          /* ignore */
+        }
+      }
       try {
         const res = await fetch('https://api.census.gov/data.json');
         const json = await res.json();
@@ -57,27 +68,44 @@ export default function CensusStatExplorer() {
             hasZip: undefined,
           }));
         setDatasets(ds);
-        // Asynchronously determine which datasets have ZIP code geographies
-        ds.forEach(async (d) => {
-          try {
-            const res = await fetch(d.geographyLink);
-            const geo = await res.json();
-            const hasZip = JSON.stringify(geo).toLowerCase().includes('zip code tabulation area');
-            setDatasets((prev) =>
-              prev.map((p) =>
-                p.geographyLink === d.geographyLink ? { ...p, hasZip } : p
-              )
-            );
-          } catch {
-            /* ignore */
-          }
-        });
       } catch (err) {
         console.error('Failed to load datasets', err);
       }
     }
     loadDatasets();
   }, []);
+
+  useEffect(() => {
+    // For datasets without hasZip information, fetch their geography definition once
+    datasets.forEach((d) => {
+      if (d.hasZip !== undefined) return;
+      fetch(d.geographyLink)
+        .then((res) => res.json())
+        .then((geo) => {
+          const hasZip = JSON.stringify(geo)
+            .toLowerCase()
+            .includes('zip code tabulation area');
+          setDatasets((prev) =>
+            prev.map((p) =>
+              p.geographyLink === d.geographyLink ? { ...p, hasZip } : p
+            )
+          );
+        })
+        .catch(() => {
+          /* ignore */
+        });
+    });
+  }, [datasets]);
+
+  // Persist dataset index and hasZip info to localStorage
+  useEffect(() => {
+    if (typeof window === 'undefined' || !datasets.length) return;
+    try {
+      localStorage.setItem('censusDatasetCache', JSON.stringify(datasets));
+    } catch {
+      /* ignore */
+    }
+  }, [datasets]);
 
   useEffect(() => {
     if (!selectedDataset) return;
@@ -187,7 +215,7 @@ export default function CensusStatExplorer() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-background">
       <TopNav />
       <div className="p-4 text-foreground">
         <h1 className="text-2xl font-bold mb-4">Census Stat Explorer</h1>
@@ -267,7 +295,7 @@ export default function CensusStatExplorer() {
                   <h3 className="font-semibold mb-1">Metrics</h3>
                   <ul className="space-y-2">
                     {metricVars.map((v) => (
-                      <li key={v.name} className="bg-white p-2 rounded shadow">
+                      <li key={v.name} className="bg-background p-2 rounded shadow">
                         <div className="font-mono text-sm">{v.name}</div>
                         <div className="text-sm">{v.label}</div>
                         {v.concept && (
@@ -296,7 +324,7 @@ export default function CensusStatExplorer() {
                     <h3 className="font-semibold mb-1">Other variables</h3>
                     <ul className="space-y-2">
                       {otherVars.map((v) => (
-                        <li key={v.name} className="bg-white p-2 rounded shadow">
+                        <li key={v.name} className="bg-background p-2 rounded shadow">
                           <div className="font-mono text-sm">{v.name}</div>
                           <div className="text-sm">{v.label}</div>
                           {v.concept && (

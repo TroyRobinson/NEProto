@@ -22,6 +22,16 @@ interface ZipStatsResult {
 }
 
 export async function fetchZipStats(): Promise<ZipStatsResult> {
+  if (typeof window !== 'undefined') {
+    const cached = localStorage.getItem('zipStatsCache');
+    if (cached) {
+      try {
+        return JSON.parse(cached) as ZipStatsResult;
+      } catch {
+        /* ignore corrupt cache */
+      }
+    }
+  }
   // Fetch ZIP polygons for Oklahoma, then filter OKC ZIPs (731xx)
   const geoRes = await fetch(
     'https://raw.githubusercontent.com/OpenDataDE/State-zip-code-GeoJSON/master/ok_oklahoma_zip_codes_geo.min.json'
@@ -98,12 +108,19 @@ export async function fetchZipStats(): Promise<ZipStatsResult> {
     population: f.properties.population,
     applications: f.properties.applications
   }));
-
-  return {
+  const result = {
     featureCollection: {
       type: 'FeatureCollection',
       features: featuresWithStats
     } as FeatureCollection,
     stats
   };
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem('zipStatsCache', JSON.stringify(result));
+    } catch {
+      /* ignore */
+    }
+  }
+  return result;
 }

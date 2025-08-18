@@ -16,7 +16,7 @@ interface CustomMetric {
 
 const OKCMap = dynamic(() => import('../components/OKCMap'), {
   ssr: false,
-  loading: () => <div className="w-full h-full bg-gray-100 flex items-center justify-center">Loading map...</div>
+  loading: () => <div className="w-full h-full bg-background flex items-center justify-center">Loading map...</div>
 });
 
 export default function Home() {
@@ -47,7 +47,7 @@ export default function Home() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-lg">Loading organizations...</div>
       </div>
     );
@@ -55,7 +55,7 @@ export default function Home() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-red-500">Error loading data: {error.message}</div>
       </div>
     );
@@ -64,12 +64,12 @@ export default function Home() {
   const organizations = data?.organizations || [];
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-background">
       <TopNav onAddClick={() => setShowAddForm(true)} />
 
       <div className="flex">
         <div className="flex-1 h-screen relative">
-          <div className="absolute top-4 left-4 z-10 bg-white p-2 rounded shadow text-sm text-foreground">
+          <div className="absolute top-4 left-4 z-10 bg-background p-2 rounded shadow text-sm text-foreground">
             <label className="mr-2">Choropleth:</label>
             <select
               value={metric}
@@ -94,7 +94,7 @@ export default function Home() {
         </div>
 
         {selectedOrg && (
-          <div className="w-96 bg-white shadow-lg overflow-y-auto text-foreground">
+          <div className="w-96 bg-background shadow-lg overflow-y-auto text-foreground">
             <div className="p-6">
               <div className="flex justify-between items-start mb-4">
                 <h2 className="text-xl font-bold">{selectedOrg.name}</h2>
