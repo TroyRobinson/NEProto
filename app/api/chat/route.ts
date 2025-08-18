@@ -106,15 +106,14 @@ export async function POST(req: NextRequest) {
   const toolInvocations: { name: string; args: Record<string, unknown> }[] = [];
 
   while (true) {
-    const response = await callOpenRouter(
-      {
-        model: 'openai/gpt-5-nano',
-        messages: convo,
-        tools,
-        tool_choice: 'auto',
-      },
-      logs
-    );
+    const response = await callOpenRouter({
+      model: 'openai/gpt-5-nano',
+      messages: convo,
+      tools,
+      tool_choice: 'auto',
+      reasoning: { effort: "low" },
+      text: { verbosity: "low" },
+    });
 
     const message = response.choices?.[0]?.message;
     const toolCalls = message?.tool_calls ?? [];
