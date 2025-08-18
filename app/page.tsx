@@ -5,6 +5,9 @@ import dynamic from 'next/dynamic';
 import db from '../lib/db';
 import AddOrganizationForm from '../components/AddOrganizationForm';
 import CircularAddButton from '../components/CircularAddButton';
+import CensusChat from '../components/CensusChat';
+import MetricDropdown from '../components/MetricDropdown';
+import MetricsTable from '../components/MetricsTable';
 import type { Organization } from '../types/organization';
 
 const OKCMap = dynamic(() => import('../components/OKCMap'), {
@@ -15,6 +18,11 @@ const OKCMap = dynamic(() => import('../components/OKCMap'), {
 export default function Home() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
+  const [metrics, setMetrics] = useState<{ id: string; label: string }[]>([]);
+
+  const addMetric = (m: { id: string; label: string }) => {
+    setMetrics(prev => (prev.find(p => p.id === m.id) ? prev : [...prev, m]));
+  };
 
   const { data, isLoading, error } = db.useQuery({
     organizations: {
@@ -50,13 +58,16 @@ export default function Home() {
             <h1 className="text-2xl font-bold text-gray-900">OKC Non-Profit Map</h1>
             <p className="text-gray-600">Discover local organizations making a difference</p>
           </div>
-          <CircularAddButton onClick={() => setShowAddForm(true)} />
+          <div className="flex items-center gap-4">
+            <MetricDropdown metrics={metrics} />
+            <CircularAddButton onClick={() => setShowAddForm(true)} />
+          </div>
         </div>
       </header>
 
       <div className="flex">
         <div className="flex-1 h-screen relative">
-          <OKCMap 
+          <OKCMap
             organizations={organizations}
             onOrganizationClick={setSelectedOrg}
           />
@@ -150,6 +161,14 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      <div className="max-w-7xl mx-auto px-4">
+        <MetricsTable metrics={metrics} />
+      </div>
+
+      <div className="fixed bottom-4 right-4 w-80 h-96 bg-white shadow-lg p-2">
+        <CensusChat onAddMetric={addMetric} />
+      </div>
     </div>
   );
 }
