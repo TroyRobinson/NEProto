@@ -1,4 +1,5 @@
 import type { Feature, Geometry } from 'geojson';
+import type { LogMessage } from '../types/log';
 
 export interface ZctaFeature extends Feature {
   geometry: Geometry;
@@ -21,16 +22,18 @@ const OKC_ZCTAS = [
 
 export async function fetchZctaMetric(
   variable: string,
-  year = '2021'
+  year = '2021',
+  addLog?: (entry: LogMessage) => void
 ): Promise<ZctaFeature[]> {
   const values = new Map<string, number | null>();
 
   await Promise.all(
     OKC_ZCTAS.map(async (zcta) => {
-      const res = await fetch(
-        `https://api.census.gov/data/${year}/acs/acs5?get=${variable}&for=zip%20code%20tabulation%20area:${zcta}`
-      );
+      const url = `https://api.census.gov/data/${year}/acs/acs5?get=${variable}&for=zip%20code%20tabulation%20area:${zcta}`;
+      addLog?.({ service: 'US Census', direction: 'request', body: url });
+      const res = await fetch(url);
       const json = await res.json();
+      addLog?.({ service: 'US Census', direction: 'response', body: json });
       const raw = Number(json[1][0]);
       // Filter out large negative sentinel values that represent missing data
       const val = isNaN(raw) || raw < -100000 ? null : raw;

@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState } from 'react';
 import { fetchZctaMetric, type ZctaFeature } from '../lib/census';
+import { useLogs } from './LogContext';
 
 interface Metric {
   id: string;
@@ -23,6 +24,7 @@ export function MetricsProvider({ children }: { children: React.ReactNode }) {
   const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
   const [zctaFeatures, setZctaFeatures] = useState<ZctaFeature[] | undefined>();
   const [metricFeatures, setMetricFeatures] = useState<Record<string, ZctaFeature[]>>({});
+  const { addLog } = useLogs();
 
   const addMetric = async (m: Metric) => {
     setMetrics(prev => (prev.find(p => p.id === m.id) ? prev : [...prev, m]));
@@ -34,7 +36,7 @@ export function MetricsProvider({ children }: { children: React.ReactNode }) {
     let features = metricFeatures[id];
     if (!features) {
       const varId = id.includes('_') ? id : id + '_001E';
-      features = await fetchZctaMetric(varId);
+      features = await fetchZctaMetric(varId, '2021', addLog);
       setMetricFeatures(prev => ({ ...prev, [id]: features! }));
     }
     setZctaFeatures(features);

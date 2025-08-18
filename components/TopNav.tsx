@@ -25,12 +25,13 @@ export default function TopNav({ linkHref, linkText, onAddOrganization }: TopNav
           <Link href={linkHref} className="text-blue-600 underline text-sm">
             {linkText}
           </Link>
+          <Link href="/logs" className="text-blue-600 underline text-sm">
+            Logs
+          </Link>
           {metrics.length > 0 && (
             <MetricDropdown metrics={metrics} selected={selectedMetric} onSelect={selectMetric} />
           )}
-          {onAddOrganization && (
-            <CircularAddButton onClick={onAddOrganization} />
-          )}
+          {onAddOrganization && <CircularAddButton onClick={onAddOrganization} />}
         </div>
       </div>
     </header>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useLogs } from './LogContext';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -15,6 +16,7 @@ export default function CensusChat({ onAddMetric }: CensusChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const { addLogs } = useLogs();
 
   const sendMessage = async () => {
     if (!input.trim()) return;
@@ -29,6 +31,9 @@ export default function CensusChat({ onAddMetric }: CensusChatProps) {
       body: JSON.stringify({ messages: [{ role: 'system', content: 'You help users find US Census statistics.' }, ...newMessages] }),
     });
     const data = await res.json();
+    if (data.logs) {
+      addLogs(data.logs);
+    }
     setMessages([...newMessages, { role: 'assistant', content: data.message.content }]);
     setLoading(false);
 
