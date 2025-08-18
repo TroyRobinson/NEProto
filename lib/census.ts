@@ -38,9 +38,7 @@ export async function fetchZctaMetric(
     })
   );
 
-  const geoRes = await fetch(
-    'https://raw.githubusercontent.com/OpenDataDE/State-zip-code-GeoJSON/master/ok_oklahoma_zip_codes_geo.min.json'
-  );
+  const geoRes = await fetch('/okc_zcta.geojson');
   const geoJson = await geoRes.json();
 
   const features: ZctaFeature[] = (geoJson.features as Array<{
