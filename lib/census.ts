@@ -37,7 +37,7 @@ const OKC_ZCTAS = [
 
 export async function fetchZctaMetric(
   variable: string,
-  year = '2021'
+  year = '2023'
 ): Promise<ZctaFeature[]> {
   const values = new Map<string, number | null>();
 
@@ -47,18 +47,17 @@ export async function fetchZctaMetric(
     message: { type: 'metric', variable, year },
   });
 
-  await Promise.all(
-    OKC_ZCTAS.map(async (zcta) => {
-      const res = await fetch(
-        `https://api.census.gov/data/${year}/acs/acs5?get=${variable}&for=zip%20code%20tabulation%20area:${zcta}`
-      );
-      const json = await res.json();
-      const raw = Number(json[1][0]);
-      // Filter out large negative sentinel values that represent missing data
-      const val = isNaN(raw) || raw < -100000 ? null : raw;
-      values.set(zcta, val);
-    })
+  const res = await fetch(
+    `https://api.census.gov/data/${year}/acs/acs5?get=${variable}&for=zip%20code%20tabulation%20area:${OKC_ZCTAS.join(',')}`
   );
+  const json = await res.json();
+  for (let i = 1; i < json.length; i++) {
+    const raw = Number(json[i][0]);
+    const zcta = String(json[i][1]);
+    // Filter out large negative sentinel values that represent missing data
+    const val = isNaN(raw) || raw < -100000 ? null : raw;
+    values.set(zcta, val);
+  }
 
   const geoRes = await fetch(
     'https://raw.githubusercontent.com/OpenDataDE/State-zip-code-GeoJSON/master/ok_oklahoma_zip_codes_geo.min.json'
