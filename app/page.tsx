@@ -2,12 +2,10 @@
 
 import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
-import Link from 'next/link';
 import db from '../lib/db';
 import AddOrganizationForm from '../components/AddOrganizationForm';
-import CircularAddButton from '../components/CircularAddButton';
 import CensusChat from '../components/CensusChat';
-import MetricDropdown from '../components/MetricDropdown';
+import TopNav from '../components/TopNav';
 import { useMetrics } from '../components/MetricContext';
 import type { Organization } from '../types/organization';
 
@@ -19,7 +17,7 @@ const OKCMap = dynamic(() => import('../components/OKCMap'), {
 export default function Home() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
-  const { metrics, selectedMetric, zctaFeatures, addMetric, selectMetric } = useMetrics();
+  const { zctaFeatures, addMetric } = useMetrics();
 
   const { data, isLoading, error } = db.useQuery({
     organizations: {
@@ -49,19 +47,11 @@ export default function Home() {
 
   return (
     <div className="h-screen bg-gray-100 flex flex-col overflow-hidden">
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">OKC Non-Profit Map</h1>
-            <p className="text-gray-600">Discover local organizations making a difference</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <Link href="/data" className="text-blue-600 underline text-sm">Data</Link>
-            <MetricDropdown metrics={metrics} selected={selectedMetric} onSelect={selectMetric} />
-            <CircularAddButton onClick={() => setShowAddForm(true)} />
-          </div>
-        </div>
-      </header>
+      <TopNav
+        linkHref="/data"
+        linkText="Data"
+        onAddOrganization={() => setShowAddForm(true)}
+      />
 
       <div className="flex flex-1 overflow-hidden">
         {selectedOrg && (
