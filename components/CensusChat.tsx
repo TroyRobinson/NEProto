@@ -8,7 +8,7 @@ interface ChatMessage {
 }
 
 interface CensusChatProps {
-  onAddMetric: (metric: { id: string; label: string }) => void;
+  onAddMetric: (metric: { id: string; label: string }) => void | Promise<void>;
 }
 
 export default function CensusChat({ onAddMetric }: CensusChatProps) {
@@ -35,7 +35,7 @@ export default function CensusChat({ onAddMetric }: CensusChatProps) {
     if (data.toolInvocations) {
       for (const inv of data.toolInvocations) {
         if (inv.name === 'add_metric') {
-          onAddMetric(inv.args);
+          await onAddMetric(inv.args);
         }
       }
     }
