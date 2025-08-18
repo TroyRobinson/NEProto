@@ -25,6 +25,9 @@ export default function TopNav({ linkHref, linkText, onAddOrganization }: TopNav
           <Link href={linkHref} className="text-blue-600 underline text-sm">
             {linkText}
           </Link>
+          <Link href="/settings" className="text-blue-600 underline text-sm">
+            Settings
+          </Link>
           {metrics.length > 0 && (
             <MetricDropdown metrics={metrics} selected={selectedMetric} onSelect={selectMetric} />
           )}
