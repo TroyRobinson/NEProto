@@ -57,14 +57,29 @@ export default function OKCMap({ organizations, onOrganizationClick, zctaFeature
         }
       })
     ];
-    if (zctaFeatures) {
+    if (zctaFeatures && zctaFeatures.length > 0) {
+      const vals = zctaFeatures
+        .map((f) => f.properties.value)
+        .filter((v): v is number => v != null);
+      const min = Math.min(...vals);
+      const max = Math.max(...vals);
+      const range = max - min || 1;
+
+      const getMetricColor = (value: number | null): [number, number, number, number] => {
+        if (value == null) return [0, 0, 0, 0];
+        const t = (value - min) / range;
+        const r = Math.round(255 * t);
+        const b = Math.round(255 * (1 - t));
+        return [r, 100, b, 120];
+      };
+
       layers.unshift(
         new GeoJsonLayer({
           id: 'zcta-metric',
           data: zctaFeatures,
           stroked: true,
           filled: true,
-          getFillColor: (f: any) => getIncomeColor(f.properties.value),
+          getFillColor: (f: any) => getMetricColor(f.properties.value),
           getLineColor: [0, 0, 0, 80],
           lineWidthMinPixels: 1,
           pickable: false,
@@ -107,14 +122,4 @@ function getCategoryColor(category: string): [number, number, number, number] {
   };
   
   return colors[category] || colors['Other'];
-}
-
-function getIncomeColor(value: number | null): [number, number, number, number] {
-  if (value == null) return [0, 0, 0, 0];
-  const min = 30000;
-  const max = 100000;
-  const t = Math.min(1, Math.max(0, (value - min) / (max - min)));
-  const r = Math.round(255 * t);
-  const b = Math.round(255 * (1 - t));
-  return [r, 100, b, 120];
 }
