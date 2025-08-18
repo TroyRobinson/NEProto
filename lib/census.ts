@@ -25,40 +25,29 @@ export interface ZctaFeature extends Feature {
   };
 }
 
-const OKC_ZCTAS = [
-  '73003', '73007', '73008', '73012', '73013', '73020', '73025', '73034', '73045',
-  '73049', '73054', '73066', '73078', '73084', '73097', '73102', '73103', '73104',
-  '73105', '73106', '73107', '73108', '73109', '73110', '73111', '73112', '73114',
-  '73115', '73116', '73117', '73118', '73119', '73120', '73121', '73122', '73127',
-  '73128', '73129', '73130', '73131', '73132', '73134', '73135', '73139', '73141',
-  '73142', '73145', '73149', '73150', '73151', '73159', '73162', '73169', '73179',
-  '74857'
-];
-
 export async function fetchZctaMetric(
   variable: string,
-  year = '2021'
+  year = '2023'
 ): Promise<ZctaFeature[]> {
-  const values = new Map<string, number | null>();
-
   await log({
     service: 'US Census',
     direction: 'request',
     message: { type: 'metric', variable, year },
   });
 
-  await Promise.all(
-    OKC_ZCTAS.map(async (zcta) => {
-      const res = await fetch(
-        `https://api.census.gov/data/${year}/acs/acs5?get=${variable}&for=zip%20code%20tabulation%20area:${zcta}`
-      );
-      const json = await res.json();
-      const raw = Number(json[1][0]);
-      // Filter out large negative sentinel values that represent missing data
-      const val = isNaN(raw) || raw < -100000 ? null : raw;
-      values.set(zcta, val);
-    })
+  const res = await fetch(
+    `https://api.census.gov/data/${year}/acs/acs5?get=NAME,${variable}&ucgid=pseudo(0500000US40109$8600000)`
   );
+  const json = await res.json();
+
+  const values = new Map<string, number | null>();
+  for (let i = 1; i < json.length; i++) {
+    const [name, rawVal] = json[i] as [string, string];
+    const zcta = name.split(' ')[1];
+    const raw = Number(rawVal);
+    const val = isNaN(raw) || raw < -100000 ? null : raw;
+    values.set(zcta, val);
+  }
 
   const geoRes = await fetch(
     'https://raw.githubusercontent.com/OpenDataDE/State-zip-code-GeoJSON/master/ok_oklahoma_zip_codes_geo.min.json'
@@ -69,7 +58,7 @@ export async function fetchZctaMetric(
     geometry: Geometry;
     properties: Record<string, unknown>;
   }>)
-    .filter((f) => OKC_ZCTAS.includes(String(f.properties['ZCTA5CE10'])))
+    .filter((f) => values.has(String(f.properties['ZCTA5CE10'])))
     .map((f) => ({
       type: 'Feature',
       geometry: f.geometry,

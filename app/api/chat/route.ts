@@ -15,18 +15,48 @@ interface CensusVariable {
 
 let variablesCache: Array<[string, { label: string; concept: string }]> | null = null;
 const searchCache = new Map<string, CensusVariable[]>();
+const canonicalVariables: Array<{ variable: CensusVariable; aliases: string[] }> = [
+  {
+    variable: {
+      id: 'B19013_001E',
+      label: 'Median household income',
+      concept: 'INCOME AND BENEFITS (IN 2023 INFLATION-ADJUSTED DOLLARS)',
+    },
+    aliases: [
+      'median household income',
+      'median hh income',
+      'median income',
+      'household income median',
+      'b19013',
+      'b19013_001e',
+    ],
+  },
+];
+
+const canonicalMap = new Map<string, CensusVariable>();
+for (const entry of canonicalVariables) {
+  for (const a of entry.aliases) {
+    canonicalMap.set(a.toLowerCase(), entry.variable);
+  }
+  canonicalMap.set(entry.variable.id.toLowerCase(), entry.variable);
+}
 
 async function searchCensus(query: string): Promise<CensusVariable[]> {
   const q = query.toLowerCase();
   if (searchCache.has(q)) return searchCache.get(q)!;
+  const canonical = canonicalMap.get(q);
+  if (canonical) {
+    searchCache.set(q, [canonical]);
+    return [canonical];
+  }
   if (!variablesCache) {
-    // Load variables from the 2021 ACS 5-year dataset once per process
+    // Load variables from the 2023 ACS 5-year dataset once per process
     addLog({
       service: 'US Census',
       direction: 'request',
       message: { endpoint: 'variables.json' },
     });
-    const resp = await fetch('https://api.census.gov/data/2021/acs/acs5/variables.json');
+    const resp = await fetch('https://api.census.gov/data/2023/acs/acs5/variables.json');
     const json = await resp.json();
     addLog({
       service: 'US Census',
@@ -81,7 +111,7 @@ export async function POST(req: NextRequest) {
       function: {
         name: 'search_census',
         description:
-          'Search the US Census ACS 2021 5-year dataset for variables matching a query. Returns a list of matching variable ids and descriptions.',
+          'Search the US Census ACS 2023 5-year dataset for variables matching a query. Returns a list of matching variable ids and descriptions.',
         parameters: {
           type: 'object',
           properties: {
