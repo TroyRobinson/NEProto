@@ -112,26 +112,7 @@ export default function OKCMap({ organizations, onOrganizationClick, metric, cus
       }))
     );
 
-    const baseLayers: Layer[] = [
-      new ScatterplotLayer({
-        id: 'organizations',
-        data: data,
-        getPosition: (d: any) => d.coordinates,
-        getRadius: 200,
-        getFillColor: (d: any) => d.color,
-        getLineColor: [0, 0, 0, 100],
-        getLineWidth: 2,
-        radiusScale: 1,
-        radiusMinPixels: 8,
-        radiusMaxPixels: 20,
-        pickable: true,
-        onClick: (info: any) => {
-          if (info.object && onOrganizationClick) {
-            onOrganizationClick(info.object.organization);
-          }
-        }
-      })
-    ];
+    const baseLayers: Layer[] = [];
 
     if (zipData) {
       baseLayers.push(
@@ -164,6 +145,27 @@ export default function OKCMap({ organizations, onOrganizationClick, metric, cus
         })
       );
     }
+
+    baseLayers.push(
+      new ScatterplotLayer({
+        id: 'organizations',
+        data: data,
+        getPosition: (d: any) => d.coordinates,
+        getRadius: 200,
+        getFillColor: (d: any) => d.color,
+        getLineColor: [0, 0, 0, 100],
+        getLineWidth: 2,
+        radiusScale: 1,
+        radiusMinPixels: 8,
+        radiusMaxPixels: 20,
+        pickable: true,
+        onClick: (info: any) => {
+          if (info.object && onOrganizationClick) {
+            onOrganizationClick(info.object.organization);
+          }
+        }
+      })
+    );
 
     return baseLayers;
   }, [organizations, onOrganizationClick, zipData, metric, maxPopulation, maxApplications, customData, customMax]);
