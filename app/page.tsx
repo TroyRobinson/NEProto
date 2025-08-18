@@ -7,7 +7,6 @@ import AddOrganizationForm from '../components/AddOrganizationForm';
 import CircularAddButton from '../components/CircularAddButton';
 import CensusChat from '../components/CensusChat';
 import MetricDropdown from '../components/MetricDropdown';
-import MetricsTable from '../components/MetricsTable';
 import { fetchZctaMetric, type ZctaFeature } from '../lib/census';
 import type { Organization } from '../types/organization';
 
@@ -74,7 +73,7 @@ export default function Home() {
   const organizations = data?.organizations || [];
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="h-screen bg-gray-100 flex flex-col overflow-hidden">
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
           <div>
@@ -89,15 +88,7 @@ export default function Home() {
         </div>
       </header>
 
-      <div className="flex">
-        <div className="flex-1 h-screen relative">
-          <OKCMap
-            organizations={organizations}
-            onOrganizationClick={setSelectedOrg}
-            zctaFeatures={zctaFeatures}
-          />
-        </div>
-
+      <div className="flex flex-1 overflow-hidden">
         {selectedOrg && (
           <div className="w-96 bg-white shadow-lg overflow-y-auto">
             <div className="p-6">
@@ -174,6 +165,14 @@ export default function Home() {
             </div>
           </div>
         )}
+
+        <div className="flex-1 relative">
+          <OKCMap
+            organizations={organizations}
+            onOrganizationClick={setSelectedOrg}
+            zctaFeatures={zctaFeatures}
+          />
+        </div>
       </div>
 
       {showAddForm && (
@@ -186,10 +185,6 @@ export default function Home() {
           </div>
         </div>
       )}
-
-      <div className="max-w-7xl mx-auto px-4">
-        <MetricsTable metrics={metrics} />
-      </div>
 
       <div className="fixed bottom-4 right-4 w-80 h-96 bg-white text-gray-900 shadow-lg p-2 border">
         <CensusChat onAddMetric={addMetric} />
