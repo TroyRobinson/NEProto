@@ -16,7 +16,7 @@ interface SettingsContextValue {
   settings: Settings;
   updateSettings: (updates: Partial<Settings>) => void;
   dataStatus: DataStatus;
-  refreshData: () => Promise<void>;
+  refreshData: (force?: boolean) => Promise<void>;
 }
 
 const SettingsContext = createContext<SettingsContextValue | undefined>(undefined);
@@ -27,7 +27,13 @@ const STORE_NAME = 'data';
 async function openDb(): Promise<IDBDatabase> {
   if (typeof indexedDB === 'undefined') throw new Error('IndexedDB not supported');
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 1);
+    let req: IDBOpenDBRequest;
+    try {
+      req = indexedDB.open(DB_NAME, 1);
+    } catch (err) {
+      reject(err);
+      return;
+    }
     req.onupgradeneeded = () => {
       req.result.createObjectStore(STORE_NAME);
     };
@@ -67,20 +73,19 @@ async function idbSet<T>(key: string, value: T): Promise<void> {
   }
 }
 
-async function loadVariables(year: string) {
+async function loadVariables(year: string, force = false) {
   const key = `census_vars_${year}`;
-  const cached = await idbGet<[string, unknown][]>(key);
+  const cached = force ? undefined : await idbGet<[string, unknown][]>(key);
   if (cached) return cached;
-  const res = await fetch(`https://api.census.gov/data/${year}/acs/acs5/variables.json`);
-  const json = await res.json();
-  const entries = Object.entries(json.variables as Record<string, unknown>);
+  const res = await fetch(`/api/census/variables?year=${year}${force ? '&refresh=1' : ''}`);
+  const entries = await res.json();
   await idbSet(key, entries);
-  return entries;
+  return entries as [string, unknown][];
 }
 
-async function loadPolygons() {
+async function loadPolygons(force = false) {
   const key = 'okc_zcta_polygons';
-  const cached = await idbGet<unknown>(key);
+  const cached = force ? undefined : await idbGet<unknown>(key);
   if (cached) return cached;
   const res = await fetch('/okc_zcta.geojson');
   const json = await res.json();
@@ -95,11 +100,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const updateSettings = (updates: Partial<Settings>) =>
     setSettings((prev) => ({ ...prev, ...updates }));
 
-  const refreshData = async () => {
+  const refreshData = async (force = false) => {
     try {
       const [vars, polys] = await Promise.all([
-        loadVariables(settings.year),
-        loadPolygons(),
+        loadVariables(settings.year, force),
+        loadPolygons(force),
       ]);
       setDataStatus({ variablesLoaded: vars.length, polygonsLoaded: polys.features?.length ?? 0 });
     } catch (err) {

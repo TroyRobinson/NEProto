@@ -33,7 +33,7 @@ export default function SettingsPage() {
           <div>Variables loaded: {dataStatus.variablesLoaded ?? 'not loaded'}</div>
           <div>ZCTA polygons loaded: {dataStatus.polygonsLoaded ?? 'not loaded'}</div>
           <button
-            onClick={refreshData}
+            onClick={() => refreshData(true)}
             className="px-4 py-2 bg-blue-600 text-white rounded"
           >
             Refresh Data
