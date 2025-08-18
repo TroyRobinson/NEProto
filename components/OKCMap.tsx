@@ -65,12 +65,17 @@ export default function OKCMap({ organizations, onOrganizationClick, zctaFeature
       const max = Math.max(...vals);
       const range = max - min || 1;
 
+      // Indigo gradient from light (indigo-100) to dark (indigo-700)
+      const start: [number, number, number] = [224, 231, 255];
+      const end: [number, number, number] = [67, 56, 202];
+
       const getMetricColor = (value: number | null): [number, number, number, number] => {
         if (value == null) return [0, 0, 0, 0];
         const t = (value - min) / range;
-        const r = Math.round(255 * t);
-        const b = Math.round(255 * (1 - t));
-        return [r, 100, b, 120];
+        const r = Math.round(start[0] + t * (end[0] - start[0]));
+        const g = Math.round(start[1] + t * (end[1] - start[1]));
+        const b = Math.round(start[2] + t * (end[2] - start[2]));
+        return [r, g, b, 160];
       };
 
       layers.unshift(
@@ -82,7 +87,7 @@ export default function OKCMap({ organizations, onOrganizationClick, zctaFeature
           getFillColor: (f: any) => getMetricColor(f.properties.value),
           getLineColor: [0, 0, 0, 80],
           lineWidthMinPixels: 1,
-          pickable: false,
+          pickable: true,
         }) as any
       );
     }
@@ -97,6 +102,15 @@ export default function OKCMap({ organizations, onOrganizationClick, zctaFeature
         controller={true}
         layers={layers}
         style={{width: '100%', height: '100%'}}
+        getTooltip={({ object }) => {
+          if (object && 'properties' in object && object.properties &&
+            'value' in object.properties && object.properties.value != null) {
+            const zcta = (object as any).properties.ZCTA5CE10;
+            const val = (object as any).properties.value as number;
+            return { text: `ZIP ${zcta}: $${val.toLocaleString()}` };
+          }
+          return null;
+        }}
       >
         <Map
           mapStyle="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
