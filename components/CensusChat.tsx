@@ -42,22 +42,22 @@ export default function CensusChat({ onAddMetric }: CensusChatProps) {
   };
 
   return (
-    <div className="flex flex-col h-full bg-gray-900 text-gray-100">
-      <div className="flex-1 overflow-y-auto mb-2 space-y-2 p-2 rounded bg-gray-800">
+    <div className="flex flex-col h-full bg-white text-gray-900">
+      <div className="flex-1 overflow-y-auto mb-2 space-y-2 p-2 rounded bg-gray-100">
         {messages.map((m, idx) => (
           <div key={idx} className={m.role === 'user' ? 'text-right' : 'text-left'}>
             <span
-              className={`inline-block px-2 py-1 rounded ${m.role === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-100'}`}
+              className={`inline-block px-2 py-1 rounded ${m.role === 'user' ? 'bg-blue-100 text-blue-800' : 'bg-gray-200 text-gray-900'}`}
             >
               {m.content}
             </span>
           </div>
         ))}
-        {loading && <div className="text-sm text-gray-400">Thinking...</div>}
+        {loading && <div className="text-sm text-gray-500">Thinking...</div>}
       </div>
       <div className="flex">
         <input
-          className="flex-1 bg-gray-800 border border-gray-700 rounded-l p-2 text-gray-100"
+          className="flex-1 bg-white border border-gray-300 rounded-l p-2 text-gray-900"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && sendMessage()}

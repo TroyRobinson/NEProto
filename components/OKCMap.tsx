@@ -79,9 +79,9 @@ export default function OKCMap({ organizations, onOrganizationClick, zctaFeature
       ];
 
       const getMetricColor = (value: number | null): [number, number, number, number] => {
-        if (value == null) return [0, 0, 0, 0];
+        if (value == null || !isFinite(value)) return [0, 0, 0, 0];
         const t = (value - min) / range;
-        const idx = Math.min(indigo.length - 1, Math.floor(t * indigo.length));
+        const idx = Math.max(0, Math.min(indigo.length - 1, Math.floor(t * (indigo.length - 1))));
         const [r, g, b] = indigo[idx];
         return [r, g, b, 200];
       };
