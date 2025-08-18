@@ -1,4 +1,5 @@
 import type { Feature, Geometry } from 'geojson';
+import { OKC_ZCTAS } from './okcZctas';
 
 async function log(entry: {
   service: string;
@@ -25,20 +26,17 @@ export interface ZctaFeature extends Feature {
   };
 }
 
-const OKC_ZCTAS = [
-  '73003', '73007', '73008', '73012', '73013', '73020', '73025', '73034', '73045',
-  '73049', '73054', '73066', '73078', '73084', '73097', '73102', '73103', '73104',
-  '73105', '73106', '73107', '73108', '73109', '73110', '73111', '73112', '73114',
-  '73115', '73116', '73117', '73118', '73119', '73120', '73121', '73122', '73127',
-  '73128', '73129', '73130', '73131', '73132', '73134', '73135', '73139', '73141',
-  '73142', '73145', '73149', '73150', '73151', '73159', '73162', '73169', '73179',
-  '74857'
-];
+const metricCache = new Map<string, ZctaFeature[]>();
 
 export async function fetchZctaMetric(
   variable: string,
   year = '2023'
 ): Promise<ZctaFeature[]> {
+  const cacheKey = `${variable}-${year}`;
+  if (metricCache.has(cacheKey)) {
+    return metricCache.get(cacheKey)!;
+  }
+
   const values = new Map<string, number | null>();
 
   await log({
@@ -85,5 +83,6 @@ export async function fetchZctaMetric(
     message: { type: 'metric', variable, count: features.length },
   });
 
+  metricCache.set(cacheKey, features);
   return features;
 }
