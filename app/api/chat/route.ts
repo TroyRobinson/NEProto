@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
 
   while (true) {
     const response = await callOpenRouter({
-      model: 'openai/gpt-oss-120b:nitro',
+      model: 'openai/gpt-5-nano',
       messages: convo,
       tools,
       tool_choice: 'auto',
