@@ -1,5 +1,21 @@
 import type { Feature, Geometry } from 'geojson';
 
+async function log(entry: {
+  service: string;
+  direction: 'request' | 'response';
+  message: unknown;
+}) {
+  try {
+    await fetch('/api/logs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(entry),
+    });
+  } catch {
+    // ignore logging errors on client
+  }
+}
+
 export interface ZctaFeature extends Feature {
   geometry: Geometry;
   properties: {
@@ -24,6 +40,12 @@ export async function fetchZctaMetric(
   year = '2021'
 ): Promise<ZctaFeature[]> {
   const values = new Map<string, number | null>();
+
+  await log({
+    service: 'US Census',
+    direction: 'request',
+    message: { type: 'metric', variable, year },
+  });
 
   await Promise.all(
     OKC_ZCTAS.map(async (zcta) => {
@@ -57,6 +79,12 @@ export async function fetchZctaMetric(
         value: values.get(String(f.properties['ZCTA5CE10'])) ?? null,
       },
     }));
+
+  await log({
+    service: 'US Census',
+    direction: 'response',
+    message: { type: 'metric', variable, count: features.length },
+  });
 
   return features;
 }
