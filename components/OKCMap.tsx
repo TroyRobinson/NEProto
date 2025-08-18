@@ -3,13 +3,16 @@
 
 import React, { useState, useMemo } from 'react';
 import Map from 'react-map-gl/maplibre';
-import { ScatterplotLayer } from '@deck.gl/layers';
+import { ScatterplotLayer, GeoJsonLayer } from '@deck.gl/layers';
 import DeckGL from '@deck.gl/react';
 import type { Organization } from '../types/organization';
+
+import type { ZctaFeature } from '../lib/census';
 
 interface OKCMapProps {
   organizations: Organization[];
   onOrganizationClick?: (org: Organization) => void;
+  zctaFeatures?: ZctaFeature[];
 }
 
 const OKC_CENTER = {
@@ -17,7 +20,7 @@ const OKC_CENTER = {
   latitude: 35.4676
 };
 
-export default function OKCMap({ organizations, onOrganizationClick }: OKCMapProps) {
+export default function OKCMap({ organizations, onOrganizationClick, zctaFeatures }: OKCMapProps) {
   const [viewState, setViewState] = useState({
     longitude: OKC_CENTER.longitude,
     latitude: OKC_CENTER.latitude,
@@ -27,18 +30,17 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
   });
 
   const layers = useMemo(() => {
-    const data = organizations.flatMap(org => 
+    const orgData = organizations.flatMap(org =>
       org.locations.map(location => ({
         coordinates: [location.longitude, location.latitude] as [number, number],
         organization: org,
         color: getCategoryColor(org.category)
       }))
     );
-
-    return [
+    const layers: any[] = [
       new ScatterplotLayer({
         id: 'organizations',
-        data: data,
+        data: orgData,
         getPosition: (d: any) => d.coordinates,
         getRadius: 200,
         getFillColor: (d: any) => d.color,
@@ -55,7 +57,50 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
         }
       })
     ];
-  }, [organizations, onOrganizationClick]);
+    if (zctaFeatures && zctaFeatures.length > 0) {
+      const vals = zctaFeatures
+        .map((f) => f.properties.value)
+        .filter((v): v is number => v != null && v >= 0);
+      const min = Math.min(...vals);
+      const max = Math.max(...vals);
+      const range = max - min || 1;
+
+      // Tailwind indigo palette (100 -> 900)
+      const indigo: [number, number, number][] = [
+        [224, 231, 255], // 100
+        [199, 210, 254], // 200
+        [165, 180, 252], // 300
+        [129, 140, 248], // 400
+        [99, 102, 241],  // 500
+        [79, 70, 229],   // 600
+        [67, 56, 202],   // 700
+        [55, 48, 163],   // 800
+        [49, 46, 129],   // 900
+      ];
+
+      const getMetricColor = (value: number | null): [number, number, number, number] => {
+        if (value == null || !isFinite(value) || value < 0) return [0, 0, 0, 0];
+        const t = (value - min) / range;
+        const idx = Math.max(0, Math.min(indigo.length - 1, Math.floor(t * (indigo.length - 1))));
+        const [r, g, b] = indigo[idx];
+        return [r, g, b, 200];
+      };
+
+      layers.unshift(
+        new GeoJsonLayer({
+          id: 'zcta-metric',
+          data: zctaFeatures,
+          stroked: true,
+          filled: true,
+          getFillColor: (f: any) => getMetricColor(f.properties.value),
+          getLineColor: [0, 0, 0, 80],
+          lineWidthMinPixels: 1,
+          pickable: true,
+        }) as any
+      );
+    }
+    return layers;
+  }, [organizations, onOrganizationClick, zctaFeatures]);
 
   return (
     <div className="w-full h-full relative">
@@ -65,6 +110,21 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
         controller={true}
         layers={layers}
         style={{width: '100%', height: '100%'}}
+        getTooltip={({ object }) => {
+          if (
+            object &&
+            'properties' in object &&
+            object.properties &&
+            'value' in object.properties &&
+            object.properties.value != null &&
+            object.properties.value >= 0
+          ) {
+            const zcta = (object as any).properties.ZCTA5CE10;
+            const val = (object as any).properties.value as number;
+            return { text: `ZIP ${zcta}: ${val.toLocaleString()}` };
+          }
+          return null;
+        }}
       >
         <Map
           mapStyle="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"

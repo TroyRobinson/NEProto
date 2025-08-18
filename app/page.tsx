@@ -5,6 +5,10 @@ import dynamic from 'next/dynamic';
 import db from '../lib/db';
 import AddOrganizationForm from '../components/AddOrganizationForm';
 import CircularAddButton from '../components/CircularAddButton';
+import CensusChat from '../components/CensusChat';
+import MetricDropdown from '../components/MetricDropdown';
+import MetricsTable from '../components/MetricsTable';
+import { fetchZctaMetric, type ZctaFeature } from '../lib/census';
 import type { Organization } from '../types/organization';
 
 const OKCMap = dynamic(() => import('../components/OKCMap'), {
@@ -15,6 +19,33 @@ const OKCMap = dynamic(() => import('../components/OKCMap'), {
 export default function Home() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
+  const [metrics, setMetrics] = useState<{ id: string; label: string }[]>([]);
+  const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
+  const [zctaFeatures, setZctaFeatures] = useState<ZctaFeature[] | undefined>();
+  const [metricFeatures, setMetricFeatures] = useState<Record<string, ZctaFeature[]>>({});
+
+  const addMetric = async (m: { id: string; label: string }) => {
+    setMetrics(prev => (prev.find(p => p.id === m.id) ? prev : [...prev, m]));
+    setSelectedMetric(m.id);
+    let features = metricFeatures[m.id];
+    if (!features) {
+      const varId = m.id.includes('_') ? m.id : m.id + '_001E';
+      features = await fetchZctaMetric(varId);
+      setMetricFeatures(prev => ({ ...prev, [m.id]: features! }));
+    }
+    setZctaFeatures(features);
+  };
+
+  const handleMetricSelect = async (id: string) => {
+    setSelectedMetric(id);
+    let features = metricFeatures[id];
+    if (!features) {
+      const varId = id.includes('_') ? id : id + '_001E';
+      features = await fetchZctaMetric(varId);
+      setMetricFeatures(prev => ({ ...prev, [id]: features! }));
+    }
+    setZctaFeatures(features);
+  };
 
   const { data, isLoading, error } = db.useQuery({
     organizations: {
@@ -50,15 +81,20 @@ export default function Home() {
             <h1 className="text-2xl font-bold text-gray-900">OKC Non-Profit Map</h1>
             <p className="text-gray-600">Discover local organizations making a difference</p>
           </div>
-          <CircularAddButton onClick={() => setShowAddForm(true)} />
+          <div className="flex items-center gap-4">
+            <a href="/data" className="text-blue-600 underline text-sm">Data</a>
+            <MetricDropdown metrics={metrics} selected={selectedMetric} onSelect={handleMetricSelect} />
+            <CircularAddButton onClick={() => setShowAddForm(true)} />
+          </div>
         </div>
       </header>
 
       <div className="flex">
         <div className="flex-1 h-screen relative">
-          <OKCMap 
+          <OKCMap
             organizations={organizations}
             onOrganizationClick={setSelectedOrg}
+            zctaFeatures={zctaFeatures}
           />
         </div>
 
@@ -150,6 +186,14 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      <div className="max-w-7xl mx-auto px-4">
+        <MetricsTable metrics={metrics} />
+      </div>
+
+      <div className="fixed bottom-4 right-4 w-80 h-96 bg-white text-gray-900 shadow-lg p-2 border">
+        <CensusChat onAddMetric={addMetric} />
+      </div>
     </div>
   );
 }
