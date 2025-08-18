@@ -31,8 +31,10 @@ export async function fetchZctaMetric(
         `https://api.census.gov/data/${year}/acs/acs5?get=${variable}&for=zip%20code%20tabulation%20area:${zcta}`
       );
       const json = await res.json();
-      const val = Number(json[1][0]);
-      values.set(zcta, isNaN(val) ? null : val);
+      const raw = Number(json[1][0]);
+      // Filter out large negative sentinel values that represent missing data
+      const val = isNaN(raw) || raw < -100000 ? null : raw;
+      values.set(zcta, val);
     })
   );
 

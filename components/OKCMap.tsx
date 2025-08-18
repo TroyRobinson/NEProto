@@ -60,7 +60,7 @@ export default function OKCMap({ organizations, onOrganizationClick, zctaFeature
     if (zctaFeatures && zctaFeatures.length > 0) {
       const vals = zctaFeatures
         .map((f) => f.properties.value)
-        .filter((v): v is number => v != null);
+        .filter((v): v is number => v != null && v >= 0);
       const min = Math.min(...vals);
       const max = Math.max(...vals);
       const range = max - min || 1;
@@ -79,7 +79,7 @@ export default function OKCMap({ organizations, onOrganizationClick, zctaFeature
       ];
 
       const getMetricColor = (value: number | null): [number, number, number, number] => {
-        if (value == null || !isFinite(value)) return [0, 0, 0, 0];
+        if (value == null || !isFinite(value) || value < 0) return [0, 0, 0, 0];
         const t = (value - min) / range;
         const idx = Math.max(0, Math.min(indigo.length - 1, Math.floor(t * (indigo.length - 1))));
         const [r, g, b] = indigo[idx];
@@ -111,8 +111,14 @@ export default function OKCMap({ organizations, onOrganizationClick, zctaFeature
         layers={layers}
         style={{width: '100%', height: '100%'}}
         getTooltip={({ object }) => {
-          if (object && 'properties' in object && object.properties &&
-            'value' in object.properties && object.properties.value != null) {
+          if (
+            object &&
+            'properties' in object &&
+            object.properties &&
+            'value' in object.properties &&
+            object.properties.value != null &&
+            object.properties.value >= 0
+          ) {
             const zcta = (object as any).properties.ZCTA5CE10;
             const val = (object as any).properties.value as number;
             return { text: `ZIP ${zcta}: ${val.toLocaleString()}` };

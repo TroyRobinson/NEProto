@@ -17,7 +17,7 @@ export default function MetricDropdown({ metrics, selected, onSelect }: MetricDr
   }
   return (
     <select
-      className="p-2 border rounded"
+      className="p-2 border rounded bg-white text-gray-900"
       value={selected ?? ''}
       onChange={(e) => onSelect(e.target.value)}
     >

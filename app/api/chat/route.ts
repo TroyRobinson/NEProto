@@ -6,16 +6,31 @@ interface Message {
   tool_call_id?: string;
 }
 
-async function searchCensus(query: string) {
-  // Search variables from the 2021 ACS 5-year dataset
-  const resp = await fetch('https://api.census.gov/data/2021/acs/acs5/variables.json');
-  const json = await resp.json();
-  const variables = json.variables as Record<string, { label: string; concept: string }>;
+interface CensusVariable {
+  id: string;
+  label: string;
+  concept: string;
+}
+
+let variablesCache: Array<[string, { label: string; concept: string }]> | null = null;
+const searchCache = new Map<string, CensusVariable[]>();
+
+async function searchCensus(query: string): Promise<CensusVariable[]> {
   const q = query.toLowerCase();
-  const results = Object.entries(variables)
+  if (searchCache.has(q)) return searchCache.get(q)!;
+  if (!variablesCache) {
+    // Load variables from the 2021 ACS 5-year dataset once per process
+    const resp = await fetch('https://api.census.gov/data/2021/acs/acs5/variables.json');
+    const json = await resp.json();
+    variablesCache = Object.entries(
+      json.variables as Record<string, { label: string; concept: string }>
+    );
+  }
+  const results = variablesCache
     .filter(([, info]) => info.label.toLowerCase().includes(q))
     .slice(0, 5)
     .map(([id, info]) => ({ id, label: info.label, concept: info.concept }));
+  searchCache.set(q, results);
   return results;
 }
 
