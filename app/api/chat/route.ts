@@ -14,19 +14,27 @@ interface CensusVariable {
 }
 
 let variablesCache: Array<[string, { label: string; concept: string }]> | null = null;
+let variablesIndex: Map<string, { label: string; concept: string }>; // for lookup
 const searchCache = new Map<string, CensusVariable[]>();
+
+const CANONICAL: Record<string, string> = {
+  'median household income': 'B19013_001E',
+  'median hh income': 'B19013_001E',
+  b19013: 'B19013_001E',
+  'income median': 'B19013_001E',
+};
 
 async function searchCensus(query: string): Promise<CensusVariable[]> {
   const q = query.toLowerCase();
   if (searchCache.has(q)) return searchCache.get(q)!;
   if (!variablesCache) {
-    // Load variables from the 2021 ACS 5-year dataset once per process
+    // Load variables from the 2023 ACS 5-year dataset once per process
     addLog({
       service: 'US Census',
       direction: 'request',
       message: { endpoint: 'variables.json' },
     });
-    const resp = await fetch('https://api.census.gov/data/2021/acs/acs5/variables.json');
+    const resp = await fetch('https://api.census.gov/data/2023/acs/acs5/variables.json');
     const json = await resp.json();
     addLog({
       service: 'US Census',
@@ -36,12 +44,24 @@ async function searchCensus(query: string): Promise<CensusVariable[]> {
     variablesCache = Object.entries(
       json.variables as Record<string, { label: string; concept: string }>
     );
+    variablesIndex = new Map(variablesCache);
   }
   addLog({
     service: 'US Census',
     direction: 'request',
     message: { type: 'search', query },
   });
+
+  if (CANONICAL[q]) {
+    const info = variablesIndex.get(CANONICAL[q]);
+    if (info) {
+      const result = [{ id: CANONICAL[q], label: info.label, concept: info.concept }];
+      searchCache.set(q, result);
+      addLog({ service: 'US Census', direction: 'response', message: result });
+      return result;
+    }
+  }
+
   const results = variablesCache
     .filter(([, info]) => info.label.toLowerCase().includes(q))
     .slice(0, 5)
@@ -81,7 +101,7 @@ export async function POST(req: NextRequest) {
       function: {
         name: 'search_census',
         description:
-          'Search the US Census ACS 2021 5-year dataset for variables matching a query. Returns a list of matching variable ids and descriptions.',
+          'Search the US Census ACS 2023 5-year dataset for variables matching a query. Returns a list of matching variable ids and descriptions.',
         parameters: {
           type: 'object',
           properties: {
