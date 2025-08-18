@@ -3,13 +3,16 @@
 
 import React, { useState, useMemo } from 'react';
 import Map from 'react-map-gl/maplibre';
-import { ScatterplotLayer } from '@deck.gl/layers';
+import { ScatterplotLayer, GeoJsonLayer } from '@deck.gl/layers';
 import DeckGL from '@deck.gl/react';
 import type { Organization } from '../types/organization';
+
+import type { ZctaFeature } from '../lib/census';
 
 interface OKCMapProps {
   organizations: Organization[];
   onOrganizationClick?: (org: Organization) => void;
+  zctaFeatures?: ZctaFeature[];
 }
 
 const OKC_CENTER = {
@@ -17,7 +20,7 @@ const OKC_CENTER = {
   latitude: 35.4676
 };
 
-export default function OKCMap({ organizations, onOrganizationClick }: OKCMapProps) {
+export default function OKCMap({ organizations, onOrganizationClick, zctaFeatures }: OKCMapProps) {
   const [viewState, setViewState] = useState({
     longitude: OKC_CENTER.longitude,
     latitude: OKC_CENTER.latitude,
@@ -27,18 +30,17 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
   });
 
   const layers = useMemo(() => {
-    const data = organizations.flatMap(org => 
+    const orgData = organizations.flatMap(org =>
       org.locations.map(location => ({
         coordinates: [location.longitude, location.latitude] as [number, number],
         organization: org,
         color: getCategoryColor(org.category)
       }))
     );
-
-    return [
+    const layers: any[] = [
       new ScatterplotLayer({
         id: 'organizations',
-        data: data,
+        data: orgData,
         getPosition: (d: any) => d.coordinates,
         getRadius: 200,
         getFillColor: (d: any) => d.color,
@@ -55,7 +57,22 @@ export default function OKCMap({ organizations, onOrganizationClick }: OKCMapPro
         }
       })
     ];
-  }, [organizations, onOrganizationClick]);
+    if (zctaFeatures) {
+      layers.unshift(
+        new GeoJsonLayer({
+          id: 'zcta-metric',
+          data: zctaFeatures,
+          stroked: true,
+          filled: true,
+          getFillColor: (f: any) => getIncomeColor(f.properties.value),
+          getLineColor: [0, 0, 0, 80],
+          lineWidthMinPixels: 1,
+          pickable: false,
+        }) as any
+      );
+    }
+    return layers;
+  }, [organizations, onOrganizationClick, zctaFeatures]);
 
   return (
     <div className="w-full h-full relative">
@@ -90,4 +107,14 @@ function getCategoryColor(category: string): [number, number, number, number] {
   };
   
   return colors[category] || colors['Other'];
+}
+
+function getIncomeColor(value: number | null): [number, number, number, number] {
+  if (value == null) return [0, 0, 0, 0];
+  const min = 30000;
+  const max = 100000;
+  const t = Math.min(1, Math.max(0, (value - min) / (max - min)));
+  const r = Math.round(255 * t);
+  const b = Math.round(255 * (1 - t));
+  return [r, 100, b, 120];
 }

@@ -8,6 +8,7 @@ import CircularAddButton from '../components/CircularAddButton';
 import CensusChat from '../components/CensusChat';
 import MetricDropdown from '../components/MetricDropdown';
 import MetricsTable from '../components/MetricsTable';
+import { fetchZctaMetric, type ZctaFeature } from '../lib/census';
 import type { Organization } from '../types/organization';
 
 const OKCMap = dynamic(() => import('../components/OKCMap'), {
@@ -19,9 +20,22 @@ export default function Home() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
   const [metrics, setMetrics] = useState<{ id: string; label: string }[]>([]);
+  const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
+  const [zctaFeatures, setZctaFeatures] = useState<ZctaFeature[] | undefined>();
 
-  const addMetric = (m: { id: string; label: string }) => {
+  const addMetric = async (m: { id: string; label: string }) => {
     setMetrics(prev => (prev.find(p => p.id === m.id) ? prev : [...prev, m]));
+    setSelectedMetric(m.id);
+    const varId = m.id.includes('_') ? m.id : m.id + '_001E';
+    const features = await fetchZctaMetric(varId);
+    setZctaFeatures(features);
+  };
+
+  const handleMetricSelect = async (id: string) => {
+    setSelectedMetric(id);
+    const varId = id.includes('_') ? id : id + '_001E';
+    const features = await fetchZctaMetric(varId);
+    setZctaFeatures(features);
   };
 
   const { data, isLoading, error } = db.useQuery({
@@ -59,7 +73,8 @@ export default function Home() {
             <p className="text-gray-600">Discover local organizations making a difference</p>
           </div>
           <div className="flex items-center gap-4">
-            <MetricDropdown metrics={metrics} />
+            <a href="/data" className="text-blue-600 underline text-sm">Data</a>
+            <MetricDropdown metrics={metrics} selected={selectedMetric} onSelect={handleMetricSelect} />
             <CircularAddButton onClick={() => setShowAddForm(true)} />
           </div>
         </div>
@@ -70,6 +85,7 @@ export default function Home() {
           <OKCMap
             organizations={organizations}
             onOrganizationClick={setSelectedOrg}
+            zctaFeatures={zctaFeatures}
           />
         </div>
 
