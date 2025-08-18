@@ -4,10 +4,9 @@ import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
 import db from '../lib/db';
 import AddOrganizationForm from '../components/AddOrganizationForm';
-import CircularAddButton from '../components/CircularAddButton';
 import CensusChat from '../components/CensusChat';
-import MetricDropdown from '../components/MetricDropdown';
-import { fetchZctaMetric, type ZctaFeature } from '../lib/census';
+import TopNav from '../components/TopNav';
+import { useMetrics } from '../components/MetricContext';
 import type { Organization } from '../types/organization';
 
 const OKCMap = dynamic(() => import('../components/OKCMap'), {
@@ -18,33 +17,7 @@ const OKCMap = dynamic(() => import('../components/OKCMap'), {
 export default function Home() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
-  const [metrics, setMetrics] = useState<{ id: string; label: string }[]>([]);
-  const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
-  const [zctaFeatures, setZctaFeatures] = useState<ZctaFeature[] | undefined>();
-  const [metricFeatures, setMetricFeatures] = useState<Record<string, ZctaFeature[]>>({});
-
-  const addMetric = async (m: { id: string; label: string }) => {
-    setMetrics(prev => (prev.find(p => p.id === m.id) ? prev : [...prev, m]));
-    setSelectedMetric(m.id);
-    let features = metricFeatures[m.id];
-    if (!features) {
-      const varId = m.id.includes('_') ? m.id : m.id + '_001E';
-      features = await fetchZctaMetric(varId);
-      setMetricFeatures(prev => ({ ...prev, [m.id]: features! }));
-    }
-    setZctaFeatures(features);
-  };
-
-  const handleMetricSelect = async (id: string) => {
-    setSelectedMetric(id);
-    let features = metricFeatures[id];
-    if (!features) {
-      const varId = id.includes('_') ? id : id + '_001E';
-      features = await fetchZctaMetric(varId);
-      setMetricFeatures(prev => ({ ...prev, [id]: features! }));
-    }
-    setZctaFeatures(features);
-  };
+  const { zctaFeatures, addMetric } = useMetrics();
 
   const { data, isLoading, error } = db.useQuery({
     organizations: {
@@ -74,19 +47,11 @@ export default function Home() {
 
   return (
     <div className="h-screen bg-gray-100 flex flex-col overflow-hidden">
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">OKC Non-Profit Map</h1>
-            <p className="text-gray-600">Discover local organizations making a difference</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <a href="/data" className="text-blue-600 underline text-sm">Data</a>
-            <MetricDropdown metrics={metrics} selected={selectedMetric} onSelect={handleMetricSelect} />
-            <CircularAddButton onClick={() => setShowAddForm(true)} />
-          </div>
-        </div>
-      </header>
+      <TopNav
+        linkHref="/data"
+        linkText="Data"
+        onAddOrganization={() => setShowAddForm(true)}
+      />
 
       <div className="flex flex-1 overflow-hidden">
         {selectedOrg && (
@@ -121,7 +86,7 @@ export default function Home() {
                 <div className="space-y-2 text-sm">
                   {selectedOrg.website && (
                     <div>
-                      <span className="font-medium">Website: </span>
+                      <span className="font-medium text-gray-900">Website: </span>
                       <a href={selectedOrg.website} target="_blank" rel="noopener noreferrer" 
                          className="text-blue-600 hover:underline">
                         {selectedOrg.website}
@@ -131,7 +96,7 @@ export default function Home() {
                   
                   {selectedOrg.phone && (
                     <div>
-                      <span className="font-medium">Phone: </span>
+                      <span className="font-medium text-gray-900">Phone: </span>
                       <a href={`tel:${selectedOrg.phone}`} className="text-blue-600">
                         {selectedOrg.phone}
                       </a>
@@ -140,7 +105,7 @@ export default function Home() {
                   
                   {selectedOrg.email && (
                     <div>
-                      <span className="font-medium">Email: </span>
+                      <span className="font-medium text-gray-900">Email: </span>
                       <a href={`mailto:${selectedOrg.email}`} className="text-blue-600">
                         {selectedOrg.email}
                       </a>
