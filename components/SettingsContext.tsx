@@ -21,32 +21,70 @@ interface SettingsContextValue {
 
 const SettingsContext = createContext<SettingsContextValue | undefined>(undefined);
 
+const DB_NAME = 'neproto-cache';
+const STORE_NAME = 'data';
+
+async function openDb(): Promise<IDBDatabase> {
+  if (typeof indexedDB === 'undefined') throw new Error('IndexedDB not supported');
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = () => {
+      req.result.createObjectStore(STORE_NAME);
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function idbGet<T>(key: string): Promise<T | undefined> {
+  try {
+    const db = await openDb();
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readonly');
+      const store = tx.objectStore(STORE_NAME);
+      const req = store.get(key);
+      req.onsuccess = () => resolve(req.result as T);
+      req.onerror = () => reject(req.error);
+    });
+  } catch {
+    return undefined;
+  }
+}
+
+async function idbSet<T>(key: string, value: T): Promise<void> {
+  try {
+    const db = await openDb();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
+      const req = store.put(value, key);
+      req.onsuccess = () => resolve(undefined);
+      req.onerror = () => reject(req.error);
+    });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn('idbSet failed', err);
+  }
+}
+
 async function loadVariables(year: string) {
   const key = `census_vars_${year}`;
-  if (typeof window !== 'undefined') {
-    const cached = window.localStorage.getItem(key);
-    if (cached) return JSON.parse(cached);
-  }
+  const cached = await idbGet<[string, unknown][]>(key);
+  if (cached) return cached;
   const res = await fetch(`https://api.census.gov/data/${year}/acs/acs5/variables.json`);
   const json = await res.json();
   const entries = Object.entries(json.variables as Record<string, unknown>);
-  if (typeof window !== 'undefined') {
-    window.localStorage.setItem(key, JSON.stringify(entries));
-  }
+  await idbSet(key, entries);
   return entries;
 }
 
 async function loadPolygons() {
   const key = 'okc_zcta_polygons';
-  if (typeof window !== 'undefined') {
-    const cached = window.localStorage.getItem(key);
-    if (cached) return JSON.parse(cached);
-  }
+  const cached = await idbGet<unknown>(key);
+  if (cached) return cached;
   const res = await fetch('/okc_zcta.geojson');
   const json = await res.json();
-  if (typeof window !== 'undefined') {
-    window.localStorage.setItem(key, JSON.stringify(json));
-  }
+  await idbSet(key, json);
   return json;
 }
 
@@ -58,11 +96,17 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     setSettings((prev) => ({ ...prev, ...updates }));
 
   const refreshData = async () => {
-    const [vars, polys] = await Promise.all([
-      loadVariables(settings.year),
-      loadPolygons(),
-    ]);
-    setDataStatus({ variablesLoaded: vars.length, polygonsLoaded: polys.features?.length ?? 0 });
+    try {
+      const [vars, polys] = await Promise.all([
+        loadVariables(settings.year),
+        loadPolygons(),
+      ]);
+      setDataStatus({ variablesLoaded: vars.length, polygonsLoaded: polys.features?.length ?? 0 });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to refresh data', err);
+      setDataStatus({ variablesLoaded: null, polygonsLoaded: null });
+    }
   };
 
   useEffect(() => {
