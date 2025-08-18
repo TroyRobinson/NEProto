@@ -17,8 +17,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to fetch variables' }, { status: 500 });
   }
   const json = await res.json();
-  const condensed = Object.entries(json.variables as Record<string, { label?: string; concept?: string }>)
-    .map(([id, meta]) => [id, { label: meta.label, concept: meta.concept }]);
+  const entries = Object.entries(json.variables as Record<string, { label?: string; concept?: string }>);
+  const condensed: [string, { label?: string; concept?: string }][] = entries.map(
+    ([id, meta]) => [id, { label: meta.label, concept: meta.concept }]
+  );
 
   cache[year] = condensed;
   return NextResponse.json(condensed);
