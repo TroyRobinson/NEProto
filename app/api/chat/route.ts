@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { addLog } from '../../../lib/logStore';
+import {
+  CENSUS_VARIABLES,
+  type CensusVariable,
+} from '../../../lib/censusVariables';
 
 interface Message {
   role: 'system' | 'user' | 'assistant' | 'tool';
@@ -7,45 +11,24 @@ interface Message {
   tool_call_id?: string;
 }
 
-interface CensusVariable {
-  id: string;
-  label: string;
-  concept: string;
-}
+type SearchResult = Omit<CensusVariable, 'keywords'>;
+const searchCache = new Map<string, SearchResult[]>();
 
-let variablesCache: Array<[string, { label: string; concept: string }]> | null = null;
-const searchCache = new Map<string, CensusVariable[]>();
-
-async function searchCensus(query: string): Promise<CensusVariable[]> {
+async function searchCensus(query: string): Promise<SearchResult[]> {
   const q = query.toLowerCase();
   if (searchCache.has(q)) return searchCache.get(q)!;
-  if (!variablesCache) {
-    // Load variables from the 2021 ACS 5-year dataset once per process
-    addLog({
-      service: 'US Census',
-      direction: 'request',
-      message: { endpoint: 'variables.json' },
-    });
-    const resp = await fetch('https://api.census.gov/data/2021/acs/acs5/variables.json');
-    const json = await resp.json();
-    addLog({
-      service: 'US Census',
-      direction: 'response',
-      message: { variables: Object.keys(json.variables).length },
-    });
-    variablesCache = Object.entries(
-      json.variables as Record<string, { label: string; concept: string }>
-    );
-  }
   addLog({
     service: 'US Census',
     direction: 'request',
     message: { type: 'search', query },
   });
-  const results = variablesCache
-    .filter(([, info]) => info.label.toLowerCase().includes(q))
+  const results = CENSUS_VARIABLES.filter(
+    (v) =>
+      v.label.toLowerCase().includes(q) ||
+      v.keywords.some((k) => k.includes(q))
+  )
     .slice(0, 5)
-    .map(([id, info]) => ({ id, label: info.label, concept: info.concept }));
+    .map(({ id, label, concept }) => ({ id, label, concept }));
   searchCache.set(q, results);
   addLog({
     service: 'US Census',
@@ -81,7 +64,7 @@ export async function POST(req: NextRequest) {
       function: {
         name: 'search_census',
         description:
-          'Search the US Census ACS 2021 5-year dataset for variables matching a query. Returns a list of matching variable ids and descriptions.',
+          'Search a curated list of US Census ACS 2023 5-year variables matching a query. Returns a list of matching variable ids and descriptions.',
         parameters: {
           type: 'object',
           properties: {
