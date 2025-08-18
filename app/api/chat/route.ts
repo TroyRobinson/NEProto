@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { addLog } from '../../../lib/logStore';
 
 interface Message {
   role: 'system' | 'user' | 'assistant' | 'tool';
@@ -20,21 +21,42 @@ async function searchCensus(query: string): Promise<CensusVariable[]> {
   if (searchCache.has(q)) return searchCache.get(q)!;
   if (!variablesCache) {
     // Load variables from the 2021 ACS 5-year dataset once per process
+    addLog({
+      service: 'US Census',
+      direction: 'request',
+      message: { endpoint: 'variables.json' },
+    });
     const resp = await fetch('https://api.census.gov/data/2021/acs/acs5/variables.json');
     const json = await resp.json();
+    addLog({
+      service: 'US Census',
+      direction: 'response',
+      message: { variables: Object.keys(json.variables).length },
+    });
     variablesCache = Object.entries(
       json.variables as Record<string, { label: string; concept: string }>
     );
   }
+  addLog({
+    service: 'US Census',
+    direction: 'request',
+    message: { type: 'search', query },
+  });
   const results = variablesCache
     .filter(([, info]) => info.label.toLowerCase().includes(q))
     .slice(0, 5)
     .map(([id, info]) => ({ id, label: info.label, concept: info.concept }));
   searchCache.set(q, results);
+  addLog({
+    service: 'US Census',
+    direction: 'response',
+    message: results,
+  });
   return results;
 }
 
 async function callOpenRouter(payload: Record<string, unknown>) {
+  addLog({ service: 'OpenRouter', direction: 'request', message: payload });
   const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -46,7 +68,9 @@ async function callOpenRouter(payload: Record<string, unknown>) {
   if (!res.ok) {
     throw new Error(`OpenRouter error: ${res.status}`);
   }
-  return res.json();
+  const json = await res.json();
+  addLog({ service: 'OpenRouter', direction: 'response', message: json });
+  return json;
 }
 
 export async function POST(req: NextRequest) {
