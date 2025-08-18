@@ -8,7 +8,7 @@ interface Metric {
 interface MetricDropdownProps {
   metrics: Metric[];
   selected: string | null;
-  onSelect: (id: string) => void;
+  onSelect: (id: string) => void | Promise<void>;
 }
 
 export default function MetricDropdown({ metrics, selected, onSelect }: MetricDropdownProps) {
