@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import db from '../lib/db';
 import AddOrganizationForm from '../components/AddOrganizationForm';
 import CircularAddButton from '../components/CircularAddButton';
+import CensusChat from '../components/CensusChat';
 import type { Organization } from '../types/organization';
 
 const OKCMap = dynamic(() => import('../components/OKCMap'), {
@@ -15,6 +16,12 @@ const OKCMap = dynamic(() => import('../components/OKCMap'), {
 export default function Home() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
+  const [metrics, setMetrics] = useState<{ name: string; label: string }[]>([]);
+  const [selectedMetric, setSelectedMetric] = useState('');
+
+  const handleAddMetric = (metric: { name: string; label: string }) => {
+    setMetrics((m) => [...m, metric]);
+  };
 
   const { data, isLoading, error } = db.useQuery({
     organizations: {
@@ -54,9 +61,27 @@ export default function Home() {
         </div>
       </header>
 
+      <div className="max-w-7xl mx-auto p-4 space-y-4">
+        <div>
+          <select
+            value={selectedMetric}
+            onChange={(e) => setSelectedMetric(e.target.value)}
+            className="w-full md:w-80 border rounded px-3 py-2"
+          >
+            <option value="">Select a metric</option>
+            {metrics.map((m) => (
+              <option key={m.name} value={m.name}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <CensusChat onAddMetric={handleAddMetric} />
+      </div>
+
       <div className="flex">
         <div className="flex-1 h-screen relative">
-          <OKCMap 
+          <OKCMap
             organizations={organizations}
             onOrganizationClick={setSelectedOrg}
           />
