@@ -166,7 +166,7 @@ export default function Home() {
         <MetricsTable metrics={metrics} />
       </div>
 
-      <div className="fixed bottom-4 right-4 w-80 h-96 bg-white shadow-lg p-2">
+      <div className="fixed bottom-4 right-4 w-80 h-96 bg-gray-900 text-gray-100 shadow-lg p-2">
         <CensusChat onAddMetric={addMetric} />
       </div>
     </div>

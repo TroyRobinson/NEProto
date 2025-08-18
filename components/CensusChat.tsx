@@ -42,27 +42,29 @@ export default function CensusChat({ onAddMetric }: CensusChatProps) {
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto mb-2 space-y-2 p-2 border rounded">
+    <div className="flex flex-col h-full bg-gray-900 text-gray-100">
+      <div className="flex-1 overflow-y-auto mb-2 space-y-2 p-2 rounded bg-gray-800">
         {messages.map((m, idx) => (
           <div key={idx} className={m.role === 'user' ? 'text-right' : 'text-left'}>
-            <span className="inline-block px-2 py-1 bg-gray-100 rounded">
+            <span
+              className={`inline-block px-2 py-1 rounded ${m.role === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-100'}`}
+            >
               {m.content}
             </span>
           </div>
         ))}
-        {loading && <div className="text-sm text-gray-500">Thinking...</div>}
+        {loading && <div className="text-sm text-gray-400">Thinking...</div>}
       </div>
       <div className="flex">
         <input
-          className="flex-1 border rounded-l p-2"
+          className="flex-1 bg-gray-800 border border-gray-700 rounded-l p-2 text-gray-100"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
           placeholder="Ask about US Census stats..."
         />
         <button
-          className="px-4 py-2 bg-blue-500 text-white rounded-r disabled:opacity-50"
+          className="px-4 py-2 bg-blue-600 text-white rounded-r disabled:opacity-50"
           onClick={sendMessage}
           disabled={loading}
         >

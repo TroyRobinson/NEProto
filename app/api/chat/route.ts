@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
       function: {
         name: 'add_metric',
         description:
-          'Add a Census variable to the user\'s metric selection dropdown. Provide the variable id and a human readable label.',
+          "Add a Census variable to the user's metric selection dropdown. Provide the variable id and a human readable label.",
         parameters: {
           type: 'object',
           properties: {
@@ -73,46 +73,44 @@ export async function POST(req: NextRequest) {
     },
   ];
 
-  const initial = await callOpenRouter({
-    model: 'openai/gpt-5-mini',
-    messages,
-    tools,
-  });
-
-  const first = initial.choices?.[0]?.message;
-  const toolCalls = first?.tool_calls ?? [];
+  const convo: Message[] = [...messages];
   const toolInvocations: { name: string; args: Record<string, unknown> }[] = [];
-  const convo: Message[] = [...messages, first];
 
-  for (const call of toolCalls) {
-    const name = call.function.name;
-    const args = JSON.parse(call.function.arguments || '{}') as Record<string, unknown>;
-    let result: unknown;
-    if (name === 'search_census') {
-      result = await searchCensus(args.query as string);
-    } else if (name === 'add_metric') {
-      result = { ok: true };
-      toolInvocations.push({ name, args });
-    }
-    convo.push({
-      role: 'tool',
-      content: JSON.stringify(result),
-      tool_call_id: call.id,
-    });
-  }
-
-  let finalMessage = first;
-  if (toolCalls.length > 0) {
-    const second = await callOpenRouter({
+  while (true) {
+    const response = await callOpenRouter({
       model: 'openai/gpt-5-mini',
       messages: convo,
+      tools,
+      tool_choice: 'auto',
     });
-    finalMessage = second.choices?.[0]?.message;
-  }
 
-  return NextResponse.json({
-    message: finalMessage,
-    toolInvocations,
-  });
+    const message = response.choices?.[0]?.message;
+    const toolCalls = message?.tool_calls ?? [];
+    convo.push(message as Message);
+
+    if (!toolCalls.length) {
+      return NextResponse.json({
+        message,
+        toolInvocations,
+      });
+    }
+
+    for (const call of toolCalls) {
+      const name = call.function.name;
+      const args = JSON.parse(call.function.arguments || '{}') as Record<string, unknown>;
+      let result: unknown;
+      if (name === 'search_census') {
+        result = await searchCensus(args.query as string);
+      } else if (name === 'add_metric') {
+        result = { ok: true };
+        toolInvocations.push({ name, args });
+      }
+      convo.push({
+        role: 'tool',
+        content: JSON.stringify(result),
+        tool_call_id: call.id,
+      });
+    }
+  }
 }
 
