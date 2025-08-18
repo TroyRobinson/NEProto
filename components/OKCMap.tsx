@@ -107,7 +107,7 @@ export default function OKCMap({ organizations, onOrganizationClick, zctaFeature
             'value' in object.properties && object.properties.value != null) {
             const zcta = (object as any).properties.ZCTA5CE10;
             const val = (object as any).properties.value as number;
-            return { text: `ZIP ${zcta}: $${val.toLocaleString()}` };
+            return { text: `ZIP ${zcta}: ${val.toLocaleString()}` };
           }
           return null;
         }}

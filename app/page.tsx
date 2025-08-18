@@ -22,19 +22,28 @@ export default function Home() {
   const [metrics, setMetrics] = useState<{ id: string; label: string }[]>([]);
   const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
   const [zctaFeatures, setZctaFeatures] = useState<ZctaFeature[] | undefined>();
+  const [metricFeatures, setMetricFeatures] = useState<Record<string, ZctaFeature[]>>({});
 
   const addMetric = async (m: { id: string; label: string }) => {
     setMetrics(prev => (prev.find(p => p.id === m.id) ? prev : [...prev, m]));
     setSelectedMetric(m.id);
-    const varId = m.id.includes('_') ? m.id : m.id + '_001E';
-    const features = await fetchZctaMetric(varId);
+    let features = metricFeatures[m.id];
+    if (!features) {
+      const varId = m.id.includes('_') ? m.id : m.id + '_001E';
+      features = await fetchZctaMetric(varId);
+      setMetricFeatures(prev => ({ ...prev, [m.id]: features! }));
+    }
     setZctaFeatures(features);
   };
 
   const handleMetricSelect = async (id: string) => {
     setSelectedMetric(id);
-    const varId = id.includes('_') ? id : id + '_001E';
-    const features = await fetchZctaMetric(varId);
+    let features = metricFeatures[id];
+    if (!features) {
+      const varId = id.includes('_') ? id : id + '_001E';
+      features = await fetchZctaMetric(varId);
+      setMetricFeatures(prev => ({ ...prev, [id]: features! }));
+    }
     setZctaFeatures(features);
   };
 
