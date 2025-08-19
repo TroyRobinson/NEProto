@@ -16,3 +16,8 @@ export function addLog(entry: Omit<LogEntry, 'id' | 'timestamp'>) {
 export function getLogs() {
   return logs;
 }
+
+export function clearLogs() {
+  logs.length = 0;
+  nextId = 1;
+}
