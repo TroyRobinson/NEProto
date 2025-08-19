@@ -1,10 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import db from '../lib/db';
 import { useConfig } from './ConfigContext';
 import ConfigControls from './ConfigControls';
-import type { Stat } from '../types/stat';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -15,13 +13,17 @@ interface CensusChatProps {
   onAddMetric: (metric: { id: string; label: string }) => void | Promise<void>;
 }
 
+interface ToolInvocation {
+  name: string;
+  args: { id: string; label: string };
+}
+
 export default function CensusChat({ onAddMetric }: CensusChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<'user' | 'admin'>('user');
   const { config } = useConfig();
-  const { data: statData } = db.useQuery({ stats: {} });
 
     const sendMessage = async () => {
       if (!input.trim()) return;
@@ -41,9 +43,6 @@ export default function CensusChat({ onAddMetric }: CensusChatProps) {
           }),
         });
         const data = await res.json();
-        setMessages([...newMessages, { role: 'assistant', content: data.message.content }]);
-        setLoading(false);
-
         if (data.toolInvocations) {
           for (const inv of data.toolInvocations) {
             if (inv.name === 'add_metric') {
@@ -51,24 +50,27 @@ export default function CensusChat({ onAddMetric }: CensusChatProps) {
             }
           }
         }
+        setMessages([...newMessages, { role: 'assistant', content: data.message.content }]);
+        setLoading(false);
       } else {
-      const stats = (statData?.stats || []).filter((s): s is Stat => Boolean(s));
-      const query = input.trim().toLowerCase();
-      const match = stats.find((s) => {
-        const title = s.title?.toLowerCase() || '';
-        const variableId = s.variableId?.toLowerCase();
-        return title.includes(query) || variableId === query;
-      });
-        if (match) {
-        const zctaMap: Record<string, number | null> = JSON.parse(match.data);
-        const lines = Object.entries(zctaMap)
-            .map(([z, v]) => `${z}: ${v}`)
-            .join(', ');
-          const reply = `${match.title} (${match.year} ${match.dataset}) - ${lines}`;
-          setMessages([...newMessages, { role: 'assistant', content: reply }]);
-        } else {
-          setMessages([...newMessages, { role: 'assistant', content: 'No matching stat found.' }]);
+        setLoading(true);
+        const res = await fetch('/api/user-chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messages: newMessages }),
+        });
+        const data: { message: ChatMessage; toolInvocations?: ToolInvocation[] } = await res.json();
+        if (data.toolInvocations) {
+          for (const inv of data.toolInvocations) {
+            if (inv.name === 'add_metric') {
+              await onAddMetric(inv.args);
+            }
+          }
         }
+        const added = data.toolInvocations?.some((inv) => inv.name === 'add_metric');
+        const reply = added ? 'Added to map!' : data.message.content;
+        setMessages([...newMessages, { role: 'assistant', content: reply }]);
+        setLoading(false);
       }
     };
 
@@ -103,7 +105,7 @@ export default function CensusChat({ onAddMetric }: CensusChatProps) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-            placeholder={mode === 'admin' ? 'Ask about US Census stats...' : 'Search stored stats...'}
+            placeholder={mode === 'admin' ? 'Ask about US Census stats...' : 'Ask about saved stats...'}
           />
           <button
             className="px-4 py-2 bg-blue-600 text-white rounded-r disabled:opacity-50"
