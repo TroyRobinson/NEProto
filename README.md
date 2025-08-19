@@ -26,6 +26,11 @@
 - Uses `censusTools` helpers for variable search/validation
 - Called by `CensusChat`
 
+### app/api/insight/route.ts
+- POST handler for free-form statistical analysis
+- Processes stat data through OpenRouter for insights
+- Called by `CensusChat` in insight mode
+
 ### app/api/logs/route.ts
 - In-memory log store for external request debugging
 - Consumed by `/logs` page
@@ -33,6 +38,11 @@
 ### app/logs/page.tsx
 - Client page that polls `api/logs` for latest entries
 - Independent of main map flow
+
+### app/stats/page.tsx
+- Management interface for stored statistics
+- Allows editing, deleting, and refreshing stat data
+- Connected to InstantDB stats entity
 
 ## Components
 ### components/OKCMap.tsx
@@ -45,7 +55,9 @@
 - Populated from map click events
 
 ### components/CensusChat.tsx
-- Chat UI for querying Census metrics through OpenRouter
+- Chat UI with user/admin mode toggle
+- **User mode**: Searches stored stats, provides insights via `/api/insight`
+- **Admin mode**: Live Census API queries, adds new metrics via `/api/chat`
 - Dispatches metrics to `MetricContext`
 
 ### components/MetricContext.tsx
@@ -102,6 +114,10 @@
 ## Types
 ### types/organization.ts
 - `Organization` and `Location` interfaces shared across codebase
+
+### types/stat.ts
+- `Stat` interface for stored statistical data
+- Used by stats management and insight features
 
 ## Data Flow
 - `page.tsx` loads organizations and renders `OKCMap`
