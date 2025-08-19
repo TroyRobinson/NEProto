@@ -25,10 +25,23 @@ export default function LogsPage() {
     return () => clearInterval(id);
   }, []);
 
+  const clearLogs = async () => {
+    await fetch('/api/logs', { method: 'DELETE' });
+    setLogs([]);
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
       <TopNav linkHref="/" linkText="Map" />
       <main className="flex-1 overflow-y-auto p-4 space-y-2">
+        <div className="flex justify-end mb-2">
+          <button
+            onClick={clearLogs}
+            className="px-3 py-1 bg-red-500 text-white rounded text-sm"
+          >
+            Clear logs
+          </button>
+        </div>
         {logs.map((log) => (
           <div key={log.id} className={`flex ${log.direction === 'request' ? 'justify-start' : 'justify-end'}`}>
             <div
