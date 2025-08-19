@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { useConfig } from './ConfigContext';
+import ConfigControls from './ConfigControls';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -15,6 +17,7 @@ export default function CensusChat({ onAddMetric }: CensusChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const { config } = useConfig();
 
   const sendMessage = async () => {
     if (!input.trim()) return;
@@ -23,10 +26,14 @@ export default function CensusChat({ onAddMetric }: CensusChatProps) {
     setInput('');
     setLoading(true);
 
+    const systemPrompt = `You help users find US Census statistics. Limit responses to ${config.region} using ${config.dataset} ${config.year} data for ${config.geography}.`;
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: [{ role: 'system', content: 'You help users find US Census statistics.' }, ...newMessages] }),
+      body: JSON.stringify({
+        messages: [{ role: 'system', content: systemPrompt }, ...newMessages],
+        config,
+      }),
     });
     const data = await res.json();
     setMessages([...newMessages, { role: 'assistant', content: data.message.content }]);
@@ -43,6 +50,7 @@ export default function CensusChat({ onAddMetric }: CensusChatProps) {
 
   return (
     <div className="flex flex-col h-full bg-white text-gray-900">
+      <ConfigControls />
       <div className="flex-1 overflow-y-auto mb-2 space-y-2 p-2 rounded bg-gray-100">
         {messages.map((m, idx) => (
           <div key={idx} className={m.role === 'user' ? 'text-right' : 'text-left'}>
