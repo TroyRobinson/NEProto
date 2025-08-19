@@ -25,6 +25,15 @@ const _schema = i.schema({
       longitude: i.number(),
       isPrimary: i.boolean(),
     }),
+    stats: i.entity({
+      code: i.string().unique().indexed(),
+      description: i.string(),
+      category: i.string(),
+      dataset: i.string(),
+      source: i.string(),
+      year: i.number(),
+      data: i.string(),
+    }),
   },
   links: {
     orgLocations: {
