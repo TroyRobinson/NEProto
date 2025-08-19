@@ -121,3 +121,20 @@ export async function fetchZctaMetric(
   metricCache.set(cacheKey, features);
   return features;
 }
+
+export async function featuresFromZctaMap(
+  zctaMap: Record<string, number | null>
+): Promise<ZctaFeature[]> {
+  const zctas = Object.keys(zctaMap);
+  const boundaries = await loadZctaBoundaries();
+  return boundaries
+    .filter((f) => zctas.includes(String(f.properties['ZCTA5CE10'])))
+    .map((f) => ({
+      type: 'Feature',
+      geometry: f.geometry,
+      properties: {
+        ...f.properties,
+        value: zctaMap[String(f.properties['ZCTA5CE10'])] ?? null,
+      },
+    }));
+}
