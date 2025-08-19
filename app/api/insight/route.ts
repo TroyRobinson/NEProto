@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   const convo: Message[] = [
     {
       role: 'system',
-      content: `You are a helpful data analyst. Use the following statistics with their ZCTA values to answer questions.\n${statLines}`,
+      content: `You are a helpful data analyst. Use the following statistics with their ZCTA values to answer questions. Return a simple conclusion or summary in no more than three sentences using plain text without markdown or formatting.\n${statLines}`,
     },
     ...(messages || []),
   ];

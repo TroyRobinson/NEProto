@@ -19,6 +19,7 @@ interface MetricsContextValue {
   addMetric: (metric: Metric) => Promise<void>;
   loadStatMetric: (stat: Stat) => Promise<void>;
   selectMetric: (id: string) => Promise<void>;
+  clearMetrics: () => void;
 }
 
 const MetricsContext = createContext<MetricsContextValue | undefined>(undefined);
@@ -33,6 +34,33 @@ export function MetricsProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     prefetchZctaBoundaries();
   }, []);
+
+  useEffect(() => {
+    const storedMetrics = localStorage.getItem('metrics');
+    const storedSelected = localStorage.getItem('selectedMetric');
+    if (storedMetrics) {
+      try {
+        setMetrics(JSON.parse(storedMetrics));
+      } catch {}
+    }
+    if (storedSelected) {
+      selectMetric(storedSelected).catch(() => undefined);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('metrics', JSON.stringify(metrics));
+  }, [metrics]);
+
+  useEffect(() => {
+    if (selectedMetric) {
+      localStorage.setItem('selectedMetric', selectedMetric);
+    } else {
+      localStorage.removeItem('selectedMetric');
+      setZctaFeatures(undefined);
+    }
+  }, [selectedMetric]);
 
   const addMetric = async (m: Metric) => {
     setMetrics(prev => (prev.find(p => p.id === m.id) ? prev : [...prev, m]));
@@ -85,6 +113,15 @@ export function MetricsProvider({ children }: { children: React.ReactNode }) {
       setZctaFeatures(features);
     };
 
+  const clearMetrics = () => {
+    setMetrics([]);
+    setSelectedMetric(null);
+    setZctaFeatures(undefined);
+    setMetricFeatures({});
+    localStorage.removeItem('metrics');
+    localStorage.removeItem('selectedMetric');
+  };
+
   const value: MetricsContextValue = {
     metrics,
     selectedMetric,
@@ -92,6 +129,7 @@ export function MetricsProvider({ children }: { children: React.ReactNode }) {
     addMetric,
     loadStatMetric,
     selectMetric,
+    clearMetrics,
   };
 
   return (
