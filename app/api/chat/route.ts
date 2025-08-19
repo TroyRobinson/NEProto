@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { addLog } from '../../../lib/logStore';
 import { CURATED_VARIABLES } from '../../../lib/censusVariables';
+import { COMMON_QUERY_MAP } from '../../../lib/censusQueryMap';
 
 interface Message {
   role: 'system' | 'user' | 'assistant' | 'tool';
@@ -18,13 +19,23 @@ let variablesCache: Array<[string, { label: string; concept: string }]> | null =
 const searchCache = new Map<string, CensusVariable[]>();
 
 async function searchCensus(query: string): Promise<CensusVariable[]> {
-  const q = query.toLowerCase();
+  const q = query.toLowerCase().trim();
   if (searchCache.has(q)) return searchCache.get(q)!;
 
-  const curated = CURATED_VARIABLES.filter(
-    (v) =>
-      v.label.toLowerCase().includes(q) ||
-      v.keywords.some((k) => k.includes(q))
+  if (COMMON_QUERY_MAP[q]) {
+    const { id, label, concept } = COMMON_QUERY_MAP[q];
+    const result = [{ id, label, concept }];
+    searchCache.set(q, result);
+    return result;
+  }
+
+  const tokens = q.split(/\s+/);
+  const curated = CURATED_VARIABLES.filter((v) =>
+    tokens.every(
+      (t) =>
+        v.label.toLowerCase().includes(t) ||
+        v.keywords.some((k) => k.includes(t))
+    )
   ).map(({ id, label, concept }) => ({ id, label, concept }));
 
   if (curated.length) {
