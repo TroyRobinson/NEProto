@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useMetrics } from './MetricContext';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -15,6 +16,12 @@ export default function CensusChat({ onAddMetric }: CensusChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const { config, updateConfig } = useMetrics();
+  const [zctaInput, setZctaInput] = useState(config.zctas.join(','));
+
+  useEffect(() => {
+    setZctaInput(config.zctas.join(','));
+  }, [config.zctas]);
 
   const sendMessage = async () => {
     if (!input.trim()) return;
@@ -23,10 +30,14 @@ export default function CensusChat({ onAddMetric }: CensusChatProps) {
     setInput('');
     setLoading(true);
 
+    const system = `You help users find US Census statistics using the ${config.year} ${config.dataset} dataset for ZCTAs ${config.zctas.join(', ')}`;
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: [{ role: 'system', content: 'You help users find US Census statistics.' }, ...newMessages] }),
+      body: JSON.stringify({
+        messages: [{ role: 'system', content: system }, ...newMessages],
+        config,
+      }),
     });
     const data = await res.json();
     setMessages([...newMessages, { role: 'assistant', content: data.message.content }]);
@@ -43,6 +54,38 @@ export default function CensusChat({ onAddMetric }: CensusChatProps) {
 
   return (
     <div className="flex flex-col h-full bg-white text-gray-900">
+      <div className="p-2 space-y-2">
+        <div className="flex gap-2">
+          <select
+            className="border p-1 text-sm"
+            value={config.dataset}
+            onChange={(e) => updateConfig({ dataset: e.target.value })}
+          >
+            <option value="acs/acs5">ACS 5-year</option>
+            <option value="acs/acs1">ACS 1-year</option>
+          </select>
+          <select
+            className="border p-1 text-sm"
+            value={config.year}
+            onChange={(e) => updateConfig({ year: e.target.value })}
+          >
+            <option value="2023">2023</option>
+            <option value="2022">2022</option>
+            <option value="2021">2021</option>
+          </select>
+        </div>
+        <input
+          className="w-full border p-1 text-sm"
+          value={zctaInput}
+          onChange={(e) => {
+            setZctaInput(e.target.value);
+            const arr = e.target.value.split(',').map((z) => z.trim()).filter(Boolean);
+            updateConfig({ zctas: arr });
+          }}
+          placeholder="ZCTAs comma separated"
+        />
+      </div>
+
       <div className="flex-1 overflow-y-auto mb-2 space-y-2 p-2 rounded bg-gray-100">
         {messages.map((m, idx) => (
           <div key={idx} className={m.role === 'user' ? 'text-right' : 'text-left'}>

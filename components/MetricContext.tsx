@@ -1,7 +1,12 @@
 'use client';
 
 import { createContext, useContext, useState } from 'react';
-import { fetchZctaMetric, type ZctaFeature } from '../lib/census';
+import {
+  fetchZctaMetric,
+  type ZctaFeature,
+  type CensusConfig,
+  DEFAULT_CENSUS_CONFIG,
+} from '../lib/census';
 
 interface Metric {
   id: string;
@@ -14,6 +19,8 @@ interface MetricsContextValue {
   zctaFeatures: ZctaFeature[] | undefined;
   addMetric: (metric: Metric) => Promise<void>;
   selectMetric: (id: string) => Promise<void>;
+  config: CensusConfig;
+  updateConfig: (partial: Partial<CensusConfig>) => void;
 }
 
 const MetricsContext = createContext<MetricsContextValue | undefined>(undefined);
@@ -23,6 +30,7 @@ export function MetricsProvider({ children }: { children: React.ReactNode }) {
   const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
   const [zctaFeatures, setZctaFeatures] = useState<ZctaFeature[] | undefined>();
   const [metricFeatures, setMetricFeatures] = useState<Record<string, ZctaFeature[]>>({});
+  const [config, setConfig] = useState<CensusConfig>(DEFAULT_CENSUS_CONFIG);
 
   const addMetric = async (m: Metric) => {
     setMetrics(prev => (prev.find(p => p.id === m.id) ? prev : [...prev, m]));
@@ -34,10 +42,30 @@ export function MetricsProvider({ children }: { children: React.ReactNode }) {
     let features = metricFeatures[id];
     if (!features) {
       const varId = id.includes('_') ? id : id + '_001E';
-      features = await fetchZctaMetric(varId);
+      features = await fetchZctaMetric(varId, config);
       setMetricFeatures(prev => ({ ...prev, [id]: features! }));
     }
     setZctaFeatures(features);
+  };
+
+  const updateConfig = (partial: Partial<CensusConfig>) => {
+    setConfig(prev => {
+      const next = { ...prev, ...partial };
+      // when configuration changes, refetch current metric
+      if (selectedMetric) {
+        const varId = selectedMetric.includes('_')
+          ? selectedMetric
+          : selectedMetric + '_001E';
+        fetchZctaMetric(varId, next).then(f => {
+          setMetricFeatures({ [selectedMetric]: f });
+          setZctaFeatures(f);
+        });
+      } else {
+        setMetricFeatures({});
+        setZctaFeatures(undefined);
+      }
+      return next;
+    });
   };
 
   const value: MetricsContextValue = {
@@ -46,6 +74,8 @@ export function MetricsProvider({ children }: { children: React.ReactNode }) {
     zctaFeatures,
     addMetric,
     selectMetric,
+    config,
+    updateConfig,
   };
 
   return (
