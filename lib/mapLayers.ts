@@ -1,4 +1,5 @@
 import { ScatterplotLayer, GeoJsonLayer } from '@deck.gl/layers';
+import type { PickingInfo } from '@deck.gl/core';
 import type { Organization } from '../types/organization';
 import type { ZctaFeature } from './census';
 
@@ -49,11 +50,13 @@ export function createOrganizationLayer(
     radiusMinPixels: 8,
     radiusMaxPixels: 20,
     pickable: true,
-    onClick: (info: { object: OrgPoint | null }) => {
+    // Deck.gl's onClick handler includes an event argument that's unused here.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    onClick: ((info: PickingInfo<OrgPoint>, _event: unknown) => {
       if (info.object && onOrganizationClick) {
         onOrganizationClick(info.object.organization);
       }
-    },
+    }) as (info: PickingInfo<OrgPoint>, event: unknown) => void,
   });
 }
 
@@ -93,7 +96,8 @@ export function createZctaMetricLayer(zctaFeatures?: ZctaFeature[]) {
     data: zctaFeatures,
     stroked: true,
     filled: true,
-    getFillColor: (f) => getMetricColor(f.properties.value),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    getFillColor: (f: any) => getMetricColor(f.properties.value),
     getLineColor: [0, 0, 0, 80],
     lineWidthMinPixels: 1,
     pickable: true,
