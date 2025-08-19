@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import CircularAddButton from './CircularAddButton';
 import MetricDropdown from './MetricDropdown';
 import { useMetrics } from './MetricContext';
@@ -9,9 +10,10 @@ interface TopNavProps {
   linkHref: string;
   linkText: string;
   onAddOrganization?: () => void;
+  rightExtra?: ReactNode;
 }
 
-export default function TopNav({ linkHref, linkText, onAddOrganization }: TopNavProps) {
+export default function TopNav({ linkHref, linkText, onAddOrganization, rightExtra }: TopNavProps) {
   const { metrics, selectedMetric, selectMetric } = useMetrics();
 
   return (
@@ -25,6 +27,9 @@ export default function TopNav({ linkHref, linkText, onAddOrganization }: TopNav
           <Link href={linkHref} className="text-blue-600 underline text-sm">
             {linkText}
           </Link>
+          <Link href="/stats" className="text-blue-600 underline text-sm">
+            Stat Management
+          </Link>
           <Link href="/logs" className="text-blue-600 underline text-sm">
             Logs
           </Link>
@@ -34,6 +39,7 @@ export default function TopNav({ linkHref, linkText, onAddOrganization }: TopNav
           {onAddOrganization && (
             <CircularAddButton onClick={onAddOrganization} />
           )}
+          {rightExtra}
         </div>
       </div>
     </header>
