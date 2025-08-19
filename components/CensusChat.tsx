@@ -24,7 +24,7 @@ export default function CensusChat({ onAddMetric, onLoadStat }: CensusChatProps)
   const [mode, setMode] = useState<'user' | 'admin'>('user');
   const { config } = useConfig();
   const { data: statData } = db.useQuery({ stats: {} });
-  const { clearMetrics } = useMetrics();
+  const { metrics, clearMetrics } = useMetrics();
 
   const CHAT_STORAGE_KEY = 'censusChatMessages';
   const MODE_STORAGE_KEY = 'censusChatMode';
@@ -120,12 +120,15 @@ export default function CensusChat({ onAddMetric, onLoadStat }: CensusChatProps)
             setMessages([...newMessages, { role: 'assistant', content: 'No matching stat found.' }]);
           }
         } else {
+          const activeStats = stats.filter(s =>
+            metrics.some(m => m.id === s.code)
+          );
           const res = await fetch('/api/insight', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               messages: newMessages,
-              stats: stats.map(s => ({
+              stats: activeStats.map(s => ({
                 code: s.code,
                 description: s.description,
                 data: JSON.parse(s.data),
