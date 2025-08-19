@@ -3,7 +3,9 @@
 ## Tech Stack
 - Next.js App Router
 - Tailwind CSS v4
+- - See globals.css for theme & design tokens.
 - InstantDB for realtime data
+- - See instant-rules.md for how to use the InstantDB database.
 - MapLibre GL + deck.gl for interactive maps
 - OpenRouter for LLM-powered chat
 
