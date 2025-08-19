@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import db from '../lib/db';
 import { useConfig } from './ConfigContext';
 import ConfigControls from './ConfigControls';
 import type { Stat } from '../types/stat';
+import { useMetrics } from './MetricContext';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -23,6 +24,35 @@ export default function CensusChat({ onAddMetric, onLoadStat }: CensusChatProps)
   const [mode, setMode] = useState<'user' | 'admin'>('user');
   const { config } = useConfig();
   const { data: statData } = db.useQuery({ stats: {} });
+  const { clearMetrics } = useMetrics();
+
+  useEffect(() => {
+    const storedMessages = localStorage.getItem('chatMessages');
+    const storedMode = localStorage.getItem('chatMode');
+    if (storedMessages) {
+      try {
+        setMessages(JSON.parse(storedMessages));
+      } catch {}
+    }
+    if (storedMode === 'user' || storedMode === 'admin') {
+      setMode(storedMode);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('chatMessages', JSON.stringify(messages));
+  }, [messages]);
+
+  useEffect(() => {
+    localStorage.setItem('chatMode', mode);
+  }, [mode]);
+
+  const handleClear = () => {
+    setMessages([]);
+    setInput('');
+    clearMetrics();
+    localStorage.removeItem('chatMessages');
+  };
 
     const sendMessage = async () => {
       if (!input.trim()) return;
@@ -107,7 +137,13 @@ export default function CensusChat({ onAddMetric, onLoadStat }: CensusChatProps)
 
     return (
       <div className="flex flex-col h-full bg-white text-gray-900">
-        <div className="flex justify-end mb-2">
+        <div className="flex justify-end items-center gap-2 mb-2">
+          <button
+            onClick={handleClear}
+            className="text-xs text-gray-500 hover:text-gray-700"
+          >
+            clear
+          </button>
           <select
             className="border border-gray-300 rounded p-1 text-sm"
             value={mode}

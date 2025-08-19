@@ -82,7 +82,7 @@ export default function Home() {
         </div>
       )}
 
-      <div className="fixed bottom-4 right-4 w-80 h-[32rem] bg-white text-gray-900 shadow-lg p-2 border">
+      <div className="fixed bottom-4 right-4 w-[30rem] h-[32rem] bg-white text-gray-900 shadow-lg p-2 border">
         <CensusChat onAddMetric={addMetric} onLoadStat={loadStatMetric} />
       </div>
     </div>
