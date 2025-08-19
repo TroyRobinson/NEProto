@@ -132,4 +132,5 @@
 
 ## Environment Variables
 - `NEXT_PUBLIC_INSTANT_APP_ID` – InstantDB application id
+- `INSTANT_ADMIN_TOKEN` – InstantDB admin token below to authenticate with the backend.
 - `OPENROUTER_KEY` – OpenRouter API key
