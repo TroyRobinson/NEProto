@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import db from '../lib/db';
 import { useConfig } from './ConfigContext';
 import ConfigControls from './ConfigControls';
@@ -23,6 +23,28 @@ export default function CensusChat({ onAddMetric, onLoadStat }: CensusChatProps)
   const [mode, setMode] = useState<'user' | 'admin'>('user');
   const { config } = useConfig();
   const { data: statData } = db.useQuery({ stats: {} });
+
+  useEffect(() => {
+    const stored = localStorage.getItem('censusChat');
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored) as { messages?: ChatMessage[]; mode?: 'user' | 'admin' };
+        if (parsed.messages) setMessages(parsed.messages);
+        if (parsed.mode) setMode(parsed.mode);
+      } catch {
+        // ignore
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('censusChat', JSON.stringify({ messages, mode }));
+  }, [messages, mode]);
+
+  const clearChat = () => {
+    setMessages([]);
+    localStorage.removeItem('censusChat');
+  };
 
     const sendMessage = async () => {
       if (!input.trim()) return;
@@ -107,7 +129,13 @@ export default function CensusChat({ onAddMetric, onLoadStat }: CensusChatProps)
 
     return (
       <div className="flex flex-col h-full bg-white text-gray-900">
-        <div className="flex justify-end mb-2">
+        <div className="flex justify-end items-center mb-2 space-x-2">
+          <button
+            onClick={clearChat}
+            className="text-xs text-gray-500 hover:text-gray-700"
+          >
+            clear
+          </button>
           <select
             className="border border-gray-300 rounded p-1 text-sm"
             value={mode}
