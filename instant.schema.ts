@@ -25,6 +25,12 @@ const _schema = i.schema({
       longitude: i.number(),
       isPrimary: i.boolean(),
     }),
+    acsCache: i.entity({
+      key: i.string().unique().indexed(),
+      rows: i.string(),
+      fetchedAt: i.number().indexed(),
+      source: i.string(),
+    }),
   },
   links: {
     orgLocations: {
