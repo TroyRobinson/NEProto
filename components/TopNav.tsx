@@ -12,7 +12,7 @@ interface TopNavProps {
 }
 
 export default function TopNav({ linkHref, linkText, onAddOrganization }: TopNavProps) {
-  const { metrics, selectedMetric, selectMetric } = useMetrics();
+  const { metrics, selectedMetric, selectMetric, clearMetrics } = useMetrics();
 
   return (
     <header className="bg-white shadow-sm border-b">
@@ -32,7 +32,16 @@ export default function TopNav({ linkHref, linkText, onAddOrganization }: TopNav
             Logs
           </Link>
           {metrics.length > 0 && (
-            <MetricDropdown metrics={metrics} selected={selectedMetric} onSelect={selectMetric} />
+            <div className="flex items-center gap-1">
+              <MetricDropdown metrics={metrics} selected={selectedMetric} onSelect={selectMetric} />
+              <button
+                onClick={clearMetrics}
+                className="px-2 py-1 border rounded text-sm text-gray-600"
+                aria-label="Clear active stats"
+              >
+                ×
+              </button>
+            </div>
           )}
           {onAddOrganization && (
             <CircularAddButton onClick={onAddOrganization} />
