@@ -25,6 +25,20 @@ const _schema = i.schema({
       longitude: i.number(),
       isPrimary: i.boolean(),
     }),
+    stats: i.entity({
+      variable: i.string().unique().indexed(),
+      title: i.string(),
+      description: i.string(),
+      category: i.string(),
+      dataset: i.string(),
+      year: i.string(),
+      source: i.string(),
+      updatedAt: i.number().indexed(),
+    }),
+    statValues: i.entity({
+      zcta: i.string().indexed(),
+      value: i.number().optional(),
+    }),
   },
   links: {
     orgLocations: {
@@ -38,6 +52,10 @@ const _schema = i.schema({
     orgPhotos: {
       forward: { on: 'organizations', has: 'many', label: 'photos' },
       reverse: { on: '$files', has: 'one', label: 'photoOrg' },
+    },
+    statZctaValues: {
+      forward: { on: 'stats', has: 'many', label: 'values' },
+      reverse: { on: 'statValues', has: 'one', label: 'stat' },
     },
   },
 });
