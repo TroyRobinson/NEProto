@@ -7,6 +7,7 @@ import AddOrganizationForm from '../components/AddOrganizationForm';
 import CensusChat from '../components/CensusChat';
 import TopNav from '../components/TopNav';
 import { useMetrics } from '../components/MetricContext';
+import OrganizationDetails from '../components/OrganizationDetails';
 import type { Organization } from '../types/organization';
 
 const OKCMap = dynamic(() => import('../components/OKCMap'), {
@@ -55,80 +56,10 @@ export default function Home() {
 
       <div className="flex flex-1 overflow-hidden">
         {selectedOrg && (
-          <div className="w-96 bg-white shadow-lg overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-start mb-4">
-                <h2 className="text-xl font-bold text-gray-900">{selectedOrg.name}</h2>
-                <button
-                  onClick={() => setSelectedOrg(null)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  ×
-                </button>
-              </div>
-              
-              <div className="space-y-4">
-                <div>
-                  <span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
-                    {selectedOrg.category}
-                  </span>
-                </div>
-                
-                <p className="text-gray-700">{selectedOrg.description}</p>
-                
-                {selectedOrg.statistics && (
-                  <div>
-                    <h3 className="font-semibold text-gray-900 mb-1">Impact & Statistics</h3>
-                    <p className="text-gray-700 text-sm">{selectedOrg.statistics}</p>
-                  </div>
-                )}
-                
-                <div className="space-y-2 text-sm">
-                  {selectedOrg.website && (
-                    <div>
-                      <span className="font-medium text-gray-900">Website: </span>
-                      <a href={selectedOrg.website} target="_blank" rel="noopener noreferrer" 
-                         className="text-blue-600 hover:underline">
-                        {selectedOrg.website}
-                      </a>
-                    </div>
-                  )}
-                  
-                  {selectedOrg.phone && (
-                    <div>
-                      <span className="font-medium text-gray-900">Phone: </span>
-                      <a href={`tel:${selectedOrg.phone}`} className="text-blue-600">
-                        {selectedOrg.phone}
-                      </a>
-                    </div>
-                  )}
-                  
-                  {selectedOrg.email && (
-                    <div>
-                      <span className="font-medium text-gray-900">Email: </span>
-                      <a href={`mailto:${selectedOrg.email}`} className="text-blue-600">
-                        {selectedOrg.email}
-                      </a>
-                    </div>
-                  )}
-                </div>
-                
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Locations</h3>
-                  {selectedOrg.locations.map(location => (
-                    <div key={location.id} className="text-sm text-gray-700 mb-1">
-                      <div className="flex items-start">
-                        {location.isPrimary && (
-                          <span className="text-blue-600 text-xs mr-1">●</span>
-                        )}
-                        {location.address}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
+          <OrganizationDetails
+            organization={selectedOrg}
+            onClose={() => setSelectedOrg(null)}
+          />
         )}
 
         <div className="flex-1 relative">

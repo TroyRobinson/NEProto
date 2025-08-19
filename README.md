@@ -1,44 +1,133 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# NEProto
 
-## Getting Started
+## Tech Stack
+- Next.js App Router
+- Tailwind CSS v4
+- InstantDB for realtime data
+- MapLibre GL + deck.gl for interactive maps
+- OpenRouter for LLM-powered chat
 
-First, run the development server:
+## Architecture Overview
+- React contexts manage map configuration and selected metrics
+- MapLibre map overlaid with deck.gl layers for org markers and ZCTA metrics
+- InstantDB stores organization data; US Census API supplies statistics
+- OpenRouter-powered chat searches Census variables and adds layers
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## App Files
+### app/page.tsx
+- Entry page wrapping children in `ConfigContext` and `MetricContext`
+- Fetches organizations from InstantDB and passes them to `OKCMap`
+- Hosts `CensusChat` and `OrganizationDetails` panel
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### app/api/chat/route.ts
+- POST handler forwarding prompts to OpenRouter
+- Uses `censusTools` helpers for variable search/validation
+- Called by `CensusChat`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### app/api/logs/route.ts
+- In-memory log store for external request debugging
+- Consumed by `/logs` page
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### app/logs/page.tsx
+- Client page that polls `api/logs` for latest entries
+- Independent of main map flow
 
-## Learn More
+## Components
+### components/OKCMap.tsx
+- Composes MapLibre map and deck.gl overlay
+- Builds layers via `createOrganizationLayer` and `createZctaMetricLayer`
+- Emits `onOrganizationClick` callback
 
-To learn more about Next.js, take a look at the following resources:
+### components/OrganizationDetails.tsx
+- Side panel showing selected organization details
+- Populated from map click events
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### components/CensusChat.tsx
+- Chat UI for querying Census metrics through OpenRouter
+- Dispatches metrics to `MetricContext`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### components/MetricContext.tsx
+- React context tracking active ZCTA metrics and geometries
+- API: `addMetric`, `selectMetric`, `metrics`
 
-## Deploy on Vercel
+### components/ConfigContext.tsx
+- Stores dataset/year/region selections
+- API: `config`, `setConfig`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### components/AddOrganizationForm.tsx
+- Form to insert organization records into InstantDB
+- Separate from map display
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### components/TopNav.tsx
+- Minimal navigation bar housing `AddOrganizationForm`
 
-## Local Data
+## Library Modules
+### lib/db.ts
+- Instantiates and exports a configured InstantDB client
 
-- **Oklahoma County ZCTAs** are stored in `lib/okcZctas.ts` and used to batch Census API requests for all ZIP codes in the county.
-- **Common ACS variables** are listed in `lib/censusVariables.ts` for quick lookup and reduced search latency.
-- **Common query phrases** mapping to ACS variable ids live in `lib/censusQueryMap.ts` to bypass dataset searches for frequent requests.
-- **Metric validation** ensures any selected variable id exists in the 2023 ACS dataset before being added.
-- **Chat controls** at the top of the Census chat let you adjust region, dataset, and year (e.g. 2021 vs 2023) used for queries.
+### lib/census.ts
+- `fetchZctaMetric` retrieves ACS data for a ZCTA/variable
+- `prefetchZctaBoundaries` loads and caches GeoJSON polygons
+
+### lib/censusTools.ts
+- Loads Census variable metadata and caches results
+- `searchCensus` and `validateVariableId` helpers
+
+### lib/mapLayers.ts
+- `createOrganizationLayer` for point markers
+- `createZctaMetricLayer` for choropleth metrics
+- Pure functions returning deck.gl layers
+
+### lib/openRouter.ts
+- `callOpenRouter` wrapper centralizing headers and error handling
+
+### lib/logStore.ts
+- In-memory array with `addLog` and `getLogs` APIs
+- Server-only utility used by log route
+
+### lib/censusVariables.ts
+- Curated list of ACS variable IDs and descriptions
+- Imported by `censusTools`
+
+### lib/censusQueryMap.ts
+- Maps chat tool names to Census variable IDs
+- Used during LLM tool execution
+
+### lib/okcZctas.ts
+- Static GeoJSON of Oklahoma City ZCTAs
+- Consumed by `prefetchZctaBoundaries`
+
+## Types
+### types/organization.ts
+- `Organization` and `Location` interfaces shared across codebase
+
+## Data Flow
+- `page.tsx` loads organizations and renders `OKCMap`
+- `OKCMap` layers come from `mapLayers.ts`
+- `CensusChat` requests `/api/chat`; results update `MetricContext`
+- `MetricContext` supplies metric data to `OKCMap` for display
+
+## External Services
+- US Census API for ACS statistics
+- OpenRouter for LLM responses
+- InstantDB for organization storage
+
+## Processes
+- Users pan/zoom map, click markers, view organization info
+- Chat searches Census variables, overlaying metrics on map
+- `/logs` page polls log API for debugging
+
+## Gotchas
+- Append `_001E` to variable IDs for estimate values
+- Census uses large negative numbers for missing data; treat as `null`
+- deck.gl `onClick` handlers receive an unused event parameter
+- Boundary data is cached; call `prefetchZctaBoundaries` early
+
+## Development
+- `npm run dev` – start dev server
+- `npm run lint` – run ESLint
+- `npm run build` – production build
+
+## Environment Variables
+- `NEXT_PUBLIC_INSTANT_APP_ID` – InstantDB application id
+- `OPENROUTER_KEY` – OpenRouter API key
