@@ -56,32 +56,51 @@ export default function CensusChat({ onAddMetric, onLoadStat }: CensusChatProps)
       } else {
         setLoading(true);
         const stats = (statData?.stats || []) as Stat[];
-        const res = await fetch('/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            messages: [userMessage],
-            mode: 'user',
-            stats: stats.map(s => ({ code: s.code, description: s.description })),
-          }),
-        });
-        const data = await res.json();
-        setLoading(false);
-        type ToolInvocation = { name: string; args: Record<string, unknown> };
-        const inv = (data.toolInvocations as ToolInvocation[] | undefined)?.find(
-          (i) => i.name === 'select_stat'
-        );
-        if (inv && typeof inv.args.code === 'string') {
-          const code = inv.args.code as string;
-          const stat = stats.find(s => s.code === code);
-          if (stat) {
-            await onLoadStat(stat);
-            setMessages([...newMessages, { role: 'assistant', content: 'Added to map!' }]);
+        const isAction = /\b(add|show|map)\b/i.test(userMessage.content);
+        if (isAction) {
+          const res = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              messages: [userMessage],
+              mode: 'user',
+              stats: stats.map(s => ({ code: s.code, description: s.description })),
+            }),
+          });
+          const data = await res.json();
+          setLoading(false);
+          type ToolInvocation = { name: string; args: Record<string, unknown> };
+          const inv = (data.toolInvocations as ToolInvocation[] | undefined)?.find(
+            (i) => i.name === 'select_stat'
+          );
+          if (inv && typeof inv.args.code === 'string') {
+            const code = inv.args.code as string;
+            const stat = stats.find(s => s.code === code);
+            if (stat) {
+              await onLoadStat(stat);
+              setMessages([...newMessages, { role: 'assistant', content: 'Added to map!' }]);
+            } else {
+              setMessages([...newMessages, { role: 'assistant', content: 'No matching stat found.' }]);
+            }
           } else {
             setMessages([...newMessages, { role: 'assistant', content: 'No matching stat found.' }]);
           }
         } else {
-          setMessages([...newMessages, { role: 'assistant', content: 'No matching stat found.' }]);
+          const res = await fetch('/api/insight', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              messages: newMessages,
+              stats: stats.map(s => ({
+                code: s.code,
+                description: s.description,
+                data: JSON.parse(s.data),
+              })),
+            }),
+          });
+          const data = await res.json();
+          setLoading(false);
+          setMessages([...newMessages, { role: 'assistant', content: data.message.content }]);
         }
       }
     };
