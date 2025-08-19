@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import db from '../lib/db';
 import { useConfig } from './ConfigContext';
 import ConfigControls from './ConfigControls';
 import type { Stat } from '../types/stat';
+import { useMetrics } from './MetricContext';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -23,6 +24,39 @@ export default function CensusChat({ onAddMetric, onLoadStat }: CensusChatProps)
   const [mode, setMode] = useState<'user' | 'admin'>('user');
   const { config } = useConfig();
   const { data: statData } = db.useQuery({ stats: {} });
+  const { metrics, clearMetrics } = useMetrics();
+
+  const CHAT_STORAGE_KEY = 'censusChatMessages';
+  const MODE_STORAGE_KEY = 'censusChatMode';
+
+  useEffect(() => {
+    const stored = localStorage.getItem(CHAT_STORAGE_KEY);
+    if (stored) {
+      try {
+        setMessages(JSON.parse(stored));
+      } catch {
+        /* ignore */
+      }
+    }
+    const storedMode = localStorage.getItem(MODE_STORAGE_KEY);
+    if (storedMode === 'user' || storedMode === 'admin') {
+      setMode(storedMode);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages));
+  }, [messages]);
+
+  useEffect(() => {
+    localStorage.setItem(MODE_STORAGE_KEY, mode);
+  }, [mode]);
+
+  const clearChat = () => {
+    setMessages([]);
+    localStorage.removeItem(CHAT_STORAGE_KEY);
+    clearMetrics();
+  };
 
     const sendMessage = async () => {
       if (!input.trim()) return;
@@ -86,12 +120,15 @@ export default function CensusChat({ onAddMetric, onLoadStat }: CensusChatProps)
             setMessages([...newMessages, { role: 'assistant', content: 'No matching stat found.' }]);
           }
         } else {
+          const activeStats = stats.filter(s =>
+            metrics.some(m => m.id === s.code)
+          );
           const res = await fetch('/api/insight', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               messages: newMessages,
-              stats: stats.map(s => ({
+              stats: activeStats.map(s => ({
                 code: s.code,
                 description: s.description,
                 data: JSON.parse(s.data),
@@ -107,7 +144,14 @@ export default function CensusChat({ onAddMetric, onLoadStat }: CensusChatProps)
 
     return (
       <div className="flex flex-col h-full bg-white text-gray-900">
-        <div className="flex justify-end mb-2">
+        <div className="flex justify-end mb-2 gap-2">
+          <button
+            onClick={clearChat}
+            className="px-2 py-1 border rounded text-xs text-gray-600"
+            aria-label="Clear chat"
+          >
+            Clear
+          </button>
           <select
             className="border border-gray-300 rounded p-1 text-sm"
             value={mode}
