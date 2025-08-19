@@ -28,6 +28,41 @@ export interface ZctaFeature extends Feature {
 
 const metricCache = new Map<string, ZctaFeature[]>();
 
+interface ZctaBoundary extends Feature {
+  geometry: Geometry;
+  properties: {
+    ZCTA5CE10: string;
+    [key: string]: unknown;
+  };
+}
+
+let zctaBoundaryPromise: Promise<ZctaBoundary[]> | null = null;
+
+async function loadZctaBoundaries(): Promise<ZctaBoundary[]> {
+  if (!zctaBoundaryPromise) {
+    zctaBoundaryPromise = fetch(
+      'https://raw.githubusercontent.com/OpenDataDE/State-zip-code-GeoJSON/master/ok_oklahoma_zip_codes_geo.min.json'
+    )
+      .then((res) => res.json())
+      .then((geoJson) =>
+        (geoJson.features as Array<{ geometry: Geometry; properties: Record<string, unknown> }>)
+          .map((f) => ({
+            type: 'Feature',
+            geometry: f.geometry,
+            properties: {
+              ...(f.properties as Record<string, unknown>),
+              ZCTA5CE10: String(f.properties['ZCTA5CE10']),
+            },
+          }))
+      );
+  }
+  return zctaBoundaryPromise;
+}
+
+export function prefetchZctaBoundaries() {
+  loadZctaBoundaries().catch(() => {});
+}
+
 interface MetricOptions {
   year?: string;
   dataset?: string;
@@ -64,22 +99,15 @@ export async function fetchZctaMetric(
     values.set(zcta, val);
   }
 
-  const geoRes = await fetch(
-    'https://raw.githubusercontent.com/OpenDataDE/State-zip-code-GeoJSON/master/ok_oklahoma_zip_codes_geo.min.json'
-  );
-  const geoJson = await geoRes.json();
+  const boundaries = await loadZctaBoundaries();
 
-  const features: ZctaFeature[] = (geoJson.features as Array<{
-    geometry: Geometry;
-    properties: Record<string, unknown>;
-  }>)
+  const features: ZctaFeature[] = boundaries
     .filter((f) => zctas.includes(String(f.properties['ZCTA5CE10'])))
     .map((f) => ({
       type: 'Feature',
       geometry: f.geometry,
       properties: {
-        ...(f.properties as Record<string, unknown>),
-        ZCTA5CE10: String(f.properties['ZCTA5CE10']),
+        ...f.properties,
         value: values.get(String(f.properties['ZCTA5CE10'])) ?? null,
       },
     }));

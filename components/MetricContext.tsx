@@ -1,7 +1,7 @@
 'use client';
 
-import { createContext, useContext, useState } from 'react';
-import { fetchZctaMetric, type ZctaFeature } from '../lib/census';
+import { createContext, useContext, useState, useEffect } from 'react';
+import { fetchZctaMetric, type ZctaFeature, prefetchZctaBoundaries } from '../lib/census';
 import { useConfig } from './ConfigContext';
 
 interface Metric {
@@ -25,6 +25,10 @@ export function MetricsProvider({ children }: { children: React.ReactNode }) {
   const [zctaFeatures, setZctaFeatures] = useState<ZctaFeature[] | undefined>();
   const [metricFeatures, setMetricFeatures] = useState<Record<string, ZctaFeature[]>>({});
   const { config } = useConfig();
+
+  useEffect(() => {
+    prefetchZctaBoundaries();
+  }, []);
 
   const addMetric = async (m: Metric) => {
     setMetrics(prev => (prev.find(p => p.id === m.id) ? prev : [...prev, m]));
