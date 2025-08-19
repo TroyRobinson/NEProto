@@ -25,6 +25,9 @@ export default function TopNav({ linkHref, linkText, onAddOrganization }: TopNav
           <Link href={linkHref} className="text-blue-600 underline text-sm">
             {linkText}
           </Link>
+          <Link href="/stats" className="text-blue-600 underline text-sm">
+            Stat Management
+          </Link>
           <Link href="/logs" className="text-blue-600 underline text-sm">
             Logs
           </Link>
