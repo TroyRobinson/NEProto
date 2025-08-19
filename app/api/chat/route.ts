@@ -36,40 +36,37 @@ export async function POST(req: NextRequest) {
       { role: 'system', content: `You know about these stats:\n${list}` },
       ...messages,
     ];
+    const response = await callOpenRouter({
+      model: 'openai/gpt-oss-120b:nitro',
+      messages: convo,
+      tools,
+      tool_choice: 'auto',
+      max_output_tokens: 100,
+    });
+    const message = response.choices?.[0]?.message;
+    const toolCalls = message?.tool_calls ?? [];
     const toolInvocations: { name: string; args: Record<string, unknown> }[] = [];
-    while (true) {
-      const response = await callOpenRouter({
-        model: 'openai/gpt-5-nano',
-        messages: convo,
-        tools,
-        tool_choice: 'auto',
-        reasoning: { effort: 'low' },
-        text: { verbosity: 'low' },
-      });
-      const message = response.choices?.[0]?.message;
-      const toolCalls = message?.tool_calls ?? [];
-      convo.push(message as Message);
-      if (!toolCalls.length) {
-        return NextResponse.json({ message, toolInvocations });
-      }
-      for (const call of toolCalls) {
-        const args = JSON.parse(call.function.arguments || '{}') as Record<string, unknown>;
-        const code = args.code as string;
-        const exists = (stats || []).some((s: { code: string }) => s.code === code);
-        let result: unknown;
-        if (exists) {
-          result = { ok: true };
-          toolInvocations.push({ name: 'select_stat', args: { code } });
-        } else {
-          result = { ok: false, error: 'Unknown code' };
-        }
-        convo.push({
-          role: 'tool',
-          content: JSON.stringify(result),
-          tool_call_id: call.id,
-        });
+    for (const call of toolCalls) {
+      const args = JSON.parse(call.function.arguments || '{}') as Record<string, unknown>;
+      const code = args.code as string;
+      const exists = (stats || []).some((s: { code: string }) => s.code === code);
+      if (exists) {
+        toolInvocations.push({ name: 'select_stat', args: { code } });
       }
     }
+    if (toolInvocations.length) {
+      return NextResponse.json({
+        message: { role: 'assistant', content: 'Added to map!' },
+        toolInvocations,
+      });
+    }
+    if (toolCalls.length) {
+      return NextResponse.json({
+        message: { role: 'assistant', content: 'No matching stat found.' },
+        toolInvocations: [],
+      });
+    }
+    return NextResponse.json({ message, toolInvocations: [] });
   }
 
   const { year = '2023', dataset = 'acs/acs5' } = config || {};
@@ -116,12 +113,11 @@ export async function POST(req: NextRequest) {
 
   while (true) {
     const response = await callOpenRouter({
-      model: 'openai/gpt-5-mini',
+      model: 'openai/gpt-oss-120b:nitro',
       messages: convo,
       tools,
       tool_choice: 'auto',
-      reasoning: { effort: "low" },
-      text: { verbosity: "low" },
+      max_output_tokens: 300,
     });
 
     const message = response.choices?.[0]?.message;
