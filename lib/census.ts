@@ -28,11 +28,18 @@ export interface ZctaFeature extends Feature {
 
 const metricCache = new Map<string, ZctaFeature[]>();
 
+interface MetricOptions {
+  year?: string;
+  dataset?: string;
+  zctas?: string[];
+}
+
 export async function fetchZctaMetric(
   variable: string,
-  year = '2023'
+  options: MetricOptions = {}
 ): Promise<ZctaFeature[]> {
-  const cacheKey = `${variable}-${year}`;
+  const { year = '2023', dataset = 'acs/acs5', zctas = OKC_ZCTAS } = options;
+  const cacheKey = `${dataset}-${year}-${variable}-${zctas.join(',')}`;
   if (metricCache.has(cacheKey)) {
     return metricCache.get(cacheKey)!;
   }
@@ -42,11 +49,11 @@ export async function fetchZctaMetric(
   await log({
     service: 'US Census',
     direction: 'request',
-    message: { type: 'metric', variable, year },
+    message: { type: 'metric', variable, year, dataset },
   });
 
   const res = await fetch(
-    `https://api.census.gov/data/${year}/acs/acs5?get=${variable}&for=zip%20code%20tabulation%20area:${OKC_ZCTAS.join(',')}`
+    `https://api.census.gov/data/${year}/${dataset}?get=${variable}&for=zip%20code%20tabulation%20area:${zctas.join(',')}`
   );
   const json = await res.json();
   for (let i = 1; i < json.length; i++) {
@@ -66,7 +73,7 @@ export async function fetchZctaMetric(
     geometry: Geometry;
     properties: Record<string, unknown>;
   }>)
-    .filter((f) => OKC_ZCTAS.includes(String(f.properties['ZCTA5CE10'])))
+    .filter((f) => zctas.includes(String(f.properties['ZCTA5CE10'])))
     .map((f) => ({
       type: 'Feature',
       geometry: f.geometry,
