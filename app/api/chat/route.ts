@@ -18,6 +18,35 @@ interface CensusVariable {
 let variablesCache: Array<[string, { label: string; concept: string }]> | null = null;
 const searchCache = new Map<string, CensusVariable[]>();
 
+async function loadVariables() {
+  if (!variablesCache) {
+    addLog({
+      service: 'US Census',
+      direction: 'request',
+      message: { endpoint: 'variables.json' },
+    });
+    const resp = await fetch(
+      'https://api.census.gov/data/2023/acs/acs5/variables.json'
+    );
+    const json = await resp.json();
+    addLog({
+      service: 'US Census',
+      direction: 'response',
+      message: { variables: Object.keys(json.variables).length },
+    });
+    variablesCache = Object.entries(
+      json.variables as Record<string, { label: string; concept: string }>
+    );
+  }
+  return variablesCache;
+}
+
+async function validateVariableId(id: string) {
+  if (CURATED_VARIABLES.some((v) => v.id === id)) return true;
+  const vars = await loadVariables();
+  return vars.some(([vid]) => vid === id);
+}
+
 async function searchCensus(query: string): Promise<CensusVariable[]> {
   const q = query.toLowerCase().trim();
   if (searchCache.has(q)) return searchCache.get(q)!;
@@ -43,32 +72,13 @@ async function searchCensus(query: string): Promise<CensusVariable[]> {
     return curated;
   }
 
-  if (!variablesCache) {
-    // Load variables from the 2023 ACS 5-year dataset once per process
-    addLog({
-      service: 'US Census',
-      direction: 'request',
-      message: { endpoint: 'variables.json' },
-    });
-    const resp = await fetch(
-      'https://api.census.gov/data/2023/acs/acs5/variables.json'
-    );
-    const json = await resp.json();
-    addLog({
-      service: 'US Census',
-      direction: 'response',
-      message: { variables: Object.keys(json.variables).length },
-    });
-    variablesCache = Object.entries(
-      json.variables as Record<string, { label: string; concept: string }>
-    );
-  }
+  const vars = await loadVariables();
   addLog({
     service: 'US Census',
     direction: 'request',
     message: { type: 'search', query },
   });
-  const results = variablesCache
+  const results = vars
     .filter(([, info]) => info.label.toLowerCase().includes(q))
     .slice(0, 5)
     .map(([id, info]) => ({ id, label: info.label, concept: info.concept }));
@@ -169,8 +179,13 @@ export async function POST(req: NextRequest) {
       if (name === 'search_census') {
         result = await searchCensus(args.query as string);
       } else if (name === 'add_metric') {
-        result = { ok: true };
-        toolInvocations.push({ name, args });
+        const id = args.id as string;
+        if (await validateVariableId(id)) {
+          result = { ok: true };
+          toolInvocations.push({ name, args });
+        } else {
+          result = { ok: false, error: 'Unknown variable id' };
+        }
       }
       convo.push({
         role: 'tool',

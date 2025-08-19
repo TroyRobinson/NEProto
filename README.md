@@ -40,3 +40,4 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 - **Oklahoma County ZCTAs** are stored in `lib/okcZctas.ts` and used to batch Census API requests for all ZIP codes in the county.
 - **Common ACS variables** are listed in `lib/censusVariables.ts` for quick lookup and reduced search latency.
 - **Common query phrases** mapping to ACS variable ids live in `lib/censusQueryMap.ts` to bypass dataset searches for frequent requests.
+- **Metric validation** ensures any selected variable id exists in the 2023 ACS dataset before being added.
