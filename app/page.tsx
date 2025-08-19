@@ -18,7 +18,7 @@ const OKCMap = dynamic(() => import('../components/OKCMap'), {
 export default function Home() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
-  const { zctaFeatures, addMetric } = useMetrics();
+  const { zctaFeatures, addMetric, loadStatMetric } = useMetrics();
 
   const { data, isLoading, error } = db.useQuery({
     organizations: {
@@ -83,7 +83,7 @@ export default function Home() {
       )}
 
       <div className="fixed bottom-4 right-4 w-80 h-[32rem] bg-white text-gray-900 shadow-lg p-2 border">
-        <CensusChat onAddMetric={addMetric} />
+        <CensusChat onAddMetric={addMetric} onLoadStat={loadStatMetric} />
       </div>
     </div>
   );
