@@ -1,44 +1,63 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# NEProto
 
-## Getting Started
+## Tech Stack
+- Next.js App Router
+- Tailwind CSS v4
+- InstantDB for realtime data
+- MapLibre GL + deck.gl for interactive maps
+- OpenRouter for LLM-powered chat
 
-First, run the development server:
+## Directory Overview
+- `app/`
+  - `page.tsx` – main page combining map, org panel, and chat
+  - `api/chat/route.ts` – AI-assisted Census chat endpoint
+  - `api/logs/route.ts` – in-memory request log API
+  - `logs/page.tsx` – live log viewer
+- `components/`
+  - `OKCMap.tsx` – renders MapLibre + deck.gl layers
+  - `OrganizationDetails.tsx` – side panel for organization info
+  - `CensusChat.tsx` – chat UI that adds Census metrics
+  - `MetricContext.tsx` – tracks selected metrics & ZCTA features
+  - `ConfigContext.tsx` – stores dataset/year/region selections
+  - `AddOrganizationForm.tsx`, `TopNav.tsx` – UI helpers
+- `lib/`
+  - `db.ts` – InstantDB client setup
+  - `census.ts` – `fetchZctaMetric`, `prefetchZctaBoundaries`
+  - `censusTools.ts` – `loadVariables`, `searchCensus`, `validateVariableId`
+  - `mapLayers.ts` – `createOrganizationLayer`, `createZctaMetricLayer`
+  - `openRouter.ts` – `callOpenRouter` wrapper
+  - `logStore.ts` – `addLog` & `getLogs`
+  - `censusVariables.ts`, `censusQueryMap.ts`, `okcZctas.ts` – curated data sets
+- `types/organization.ts` – `Organization` and `Location` interfaces
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Data Flow
+- `page.tsx` queries organizations from InstantDB and passes them to `OKCMap`
+- `OKCMap` assembles deck.gl layers via helpers in `mapLayers.ts`
+- Clicking a marker triggers `OrganizationDetails` to show org data
+- `CensusChat` talks to `/api/chat`; on tool calls `MetricContext.addMetric`
+- `MetricContext.selectMetric` pulls data via `fetchZctaMetric` and feeds `OKCMap`
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## External Services
+- US Census API for ACS statistics
+- OpenRouter gateway for LLM responses
+- InstantDB for persistent organization records
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Processes
+- Users pan/zoom map, click markers, view org details
+- Chat searches Census variables and adds ZCTA metrics to the map
+- `/logs` page polls the log API for debugging external calls
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Gotchas
+- Census variable IDs often need a `_001E` suffix for estimate values
+- Census responses use large negative numbers for missing data; treat as `null`
+- deck.gl `onClick` handlers receive an unused event argument
+- ZCTA boundaries are fetched once and cached; `prefetchZctaBoundaries` hides latency
 
-## Learn More
+## Development
+- `npm run dev` – start dev server
+- `npm run lint` – run ESLint
+- `npm run build` – production build
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-
-## Local Data
-
-- **Oklahoma County ZCTAs** are stored in `lib/okcZctas.ts` and used to batch Census API requests for all ZIP codes in the county.
-- **Common ACS variables** are listed in `lib/censusVariables.ts` for quick lookup and reduced search latency.
-- **Common query phrases** mapping to ACS variable ids live in `lib/censusQueryMap.ts` to bypass dataset searches for frequent requests.
-- **Metric validation** ensures any selected variable id exists in the 2023 ACS dataset before being added.
-- **Chat controls** at the top of the Census chat let you adjust region, dataset, and year (e.g. 2021 vs 2023) used for queries.
+## Environment Variables
+- `NEXT_PUBLIC_INSTANT_APP_ID` – InstantDB application id
+- `OPENROUTER_KEY` – OpenRouter API key
