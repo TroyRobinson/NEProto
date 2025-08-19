@@ -18,6 +18,7 @@ export default function CensusChat({ onAddMetric }: CensusChatProps) {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const { config } = useConfig();
+  const [mode, setMode] = useState<'user' | 'admin'>('user');
 
   const sendMessage = async () => {
     if (!input.trim()) return;
@@ -26,13 +27,17 @@ export default function CensusChat({ onAddMetric }: CensusChatProps) {
     setInput('');
     setLoading(true);
 
-    const systemPrompt = `You help users find US Census statistics. Limit responses to ${config.region} using ${config.dataset} ${config.year} data for ${config.geography}.`;
+    const systemPrompt =
+      mode === 'admin'
+        ? `You help users find US Census statistics. Limit responses to ${config.region} using ${config.dataset} ${config.year} data for ${config.geography}.`
+        : 'You help users explore preloaded statistics.';
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         messages: [{ role: 'system', content: systemPrompt }, ...newMessages],
         config,
+        mode,
       }),
     });
     const data = await res.json();
@@ -50,7 +55,17 @@ export default function CensusChat({ onAddMetric }: CensusChatProps) {
 
   return (
     <div className="flex flex-col h-full bg-white text-gray-900">
-      <ConfigControls />
+      <div className="flex justify-end mb-2">
+        <select
+          className="border border-gray-300 rounded p-1 text-sm"
+          value={mode}
+          onChange={e => setMode(e.target.value as 'user' | 'admin')}
+        >
+          <option value="user">User Mode</option>
+          <option value="admin">Admin Mode</option>
+        </select>
+      </div>
+      {mode === 'admin' && <ConfigControls />}
       <div className="flex-1 overflow-y-auto mb-2 space-y-2 p-2 rounded bg-gray-100">
         {messages.map((m, idx) => (
           <div key={idx} className={m.role === 'user' ? 'text-right' : 'text-left'}>
@@ -69,7 +84,7 @@ export default function CensusChat({ onAddMetric }: CensusChatProps) {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-          placeholder="Ask about US Census stats..."
+          placeholder={mode === 'admin' ? 'Ask about US Census stats...' : 'Ask about stored stats...'}
         />
         <button
           className="px-4 py-2 bg-blue-600 text-white rounded-r disabled:opacity-50"
