@@ -5,6 +5,7 @@ export interface ZctaFeature extends Feature {
   properties: {
     ZCTA5CE10: string;
     value: number | null;
+    moe: number | null;
     [key: string]: unknown;
   };
 }
