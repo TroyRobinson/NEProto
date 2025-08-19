@@ -17,6 +17,7 @@ export default function CensusChat({ onAddMetric }: CensusChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [mode, setMode] = useState<'user' | 'admin'>('user');
   const { config } = useConfig();
 
   const sendMessage = async () => {
@@ -26,8 +27,13 @@ export default function CensusChat({ onAddMetric }: CensusChatProps) {
     setInput('');
     setLoading(true);
 
-    const systemPrompt = `You help users find US Census statistics. Limit responses to ${config.region} using ${config.dataset} ${config.year} data for ${config.geography}.`;
-    const res = await fetch('/api/chat', {
+    const systemPrompt =
+      mode === 'admin'
+        ? `You help users find US Census statistics. Limit responses to ${config.region} using ${config.dataset} ${config.year} data for ${config.geography}.`
+        : 'You help users find statistics that have been preloaded into our database. Only reference available stats.';
+
+    const endpoint = mode === 'admin' ? '/api/chat' : '/api/user-chat';
+    const res = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -50,7 +56,21 @@ export default function CensusChat({ onAddMetric }: CensusChatProps) {
 
   return (
     <div className="flex flex-col h-full bg-white text-gray-900">
-      <ConfigControls />
+      <div className="flex mb-2">
+        <button
+          className={`flex-1 px-2 py-1 border ${mode === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'}`}
+          onClick={() => setMode('user')}
+        >
+          User Mode
+        </button>
+        <button
+          className={`flex-1 px-2 py-1 border ${mode === 'admin' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'}`}
+          onClick={() => setMode('admin')}
+        >
+          Admin Mode
+        </button>
+      </div>
+      {mode === 'admin' && <ConfigControls />}
       <div className="flex-1 overflow-y-auto mb-2 space-y-2 p-2 rounded bg-gray-100">
         {messages.map((m, idx) => (
           <div key={idx} className={m.role === 'user' ? 'text-right' : 'text-left'}>
@@ -69,7 +89,7 @@ export default function CensusChat({ onAddMetric }: CensusChatProps) {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-          placeholder="Ask about US Census stats..."
+          placeholder={mode === 'admin' ? 'Ask about US Census stats...' : 'Ask about available stats...'}
         />
         <button
           className="px-4 py-2 bg-blue-600 text-white rounded-r disabled:opacity-50"

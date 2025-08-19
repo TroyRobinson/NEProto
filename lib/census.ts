@@ -63,6 +63,10 @@ export function prefetchZctaBoundaries() {
   loadZctaBoundaries().catch(() => {});
 }
 
+export async function getZctaBoundaries() {
+  return loadZctaBoundaries();
+}
+
 interface MetricOptions {
   year?: string;
   dataset?: string;
