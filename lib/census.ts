@@ -26,7 +26,27 @@ export interface ZctaFeature extends Feature {
   };
 }
 
+type BoundaryFeature = { geometry: Geometry; properties: Record<string, unknown> };
+
 const metricCache = new Map<string, ZctaFeature[]>();
+let boundaryCache: BoundaryFeature[] | null = null;
+let boundaryPromise: Promise<BoundaryFeature[]> | null = null;
+
+async function loadZctaBoundaries(): Promise<BoundaryFeature[]> {
+  if (boundaryCache) return boundaryCache;
+  if (!boundaryPromise) {
+    boundaryPromise = fetch(
+      'https://raw.githubusercontent.com/OpenDataDE/State-zip-code-GeoJSON/master/ok_oklahoma_zip_codes_geo.min.json',
+    )
+      .then((res) => res.json())
+      .then((json) => (boundaryCache = json.features as BoundaryFeature[]));
+  }
+  return boundaryPromise;
+}
+
+export function preloadZctaBoundaries(): void {
+  void loadZctaBoundaries();
+}
 
 interface MetricOptions {
   year?: string;
@@ -64,15 +84,9 @@ export async function fetchZctaMetric(
     values.set(zcta, val);
   }
 
-  const geoRes = await fetch(
-    'https://raw.githubusercontent.com/OpenDataDE/State-zip-code-GeoJSON/master/ok_oklahoma_zip_codes_geo.min.json'
-  );
-  const geoJson = await geoRes.json();
+  const boundaries = await loadZctaBoundaries();
 
-  const features: ZctaFeature[] = (geoJson.features as Array<{
-    geometry: Geometry;
-    properties: Record<string, unknown>;
-  }>)
+  const features: ZctaFeature[] = boundaries
     .filter((f) => zctas.includes(String(f.properties['ZCTA5CE10'])))
     .map((f) => ({
       type: 'Feature',
