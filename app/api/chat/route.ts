@@ -44,7 +44,9 @@ async function loadVariables(year: string, dataset: string) {
 }
 
 async function validateVariableId(id: string, year: string, dataset: string) {
-  if (CURATED_VARIABLES.some((v) => v.id === id)) return true;
+  if (dataset.startsWith('acs/') && CURATED_VARIABLES.some((v) => v.id === id)) {
+    return true;
+  }
   const vars = await loadVariables(year, dataset);
   return vars.some(([vid]) => vid === id);
 }
@@ -58,7 +60,7 @@ async function searchCensus(
   const cacheKey = `${dataset}-${year}-${q}`;
   if (searchCache.has(cacheKey)) return searchCache.get(cacheKey)!;
 
-  if (COMMON_QUERY_MAP[q]) {
+  if (dataset.startsWith('acs/') && COMMON_QUERY_MAP[q]) {
     const { id, label, concept } = COMMON_QUERY_MAP[q];
     const result = [{ id, label, concept }];
     searchCache.set(cacheKey, result);
@@ -66,13 +68,15 @@ async function searchCensus(
   }
 
   const tokens = q.split(/\s+/);
-  const curated = CURATED_VARIABLES.filter((v) =>
-    tokens.every(
-      (t) =>
-        v.label.toLowerCase().includes(t) ||
-        v.keywords.some((k) => k.includes(t))
-    )
-  ).map(({ id, label, concept }) => ({ id, label, concept }));
+  const curated = dataset.startsWith('acs/')
+    ? CURATED_VARIABLES.filter((v) =>
+        tokens.every(
+          (t) =>
+            v.label.toLowerCase().includes(t) ||
+            v.keywords.some((k) => k.includes(t))
+        )
+      ).map(({ id, label, concept }) => ({ id, label, concept }))
+    : [];
 
   if (curated.length) {
     searchCache.set(cacheKey, curated);

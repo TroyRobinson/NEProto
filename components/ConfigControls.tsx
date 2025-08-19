@@ -1,9 +1,27 @@
 'use client';
 
+import type { ChangeEvent } from 'react';
 import { useConfig } from './ConfigContext';
+
+const DATASETS = [
+  { value: 'acs/acs5', label: 'ACS 5-year', years: ['2023', '2022', '2021'] },
+  { value: 'acs/acs1', label: 'ACS 1-year', years: ['2023', '2022', '2021'] },
+  { value: 'dec/pl', label: 'Decennial 2020 PL', years: ['2020'] },
+  { value: 'dec/sf1', label: 'Decennial 2010 SF1', years: ['2010'] },
+  { value: 'ecnbasic', label: 'Economic Census 2017', years: ['2017'] },
+];
 
 export default function ConfigControls() {
   const { config, updateConfig } = useConfig();
+  const datasetCfg =
+    DATASETS.find((d) => d.value === config.dataset) ?? DATASETS[0];
+
+  const onDatasetChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    const dataset = e.target.value;
+    const info = DATASETS.find((d) => d.value === dataset);
+    const year = info?.years.includes(config.year) ? config.year : info?.years[0];
+    updateConfig({ dataset, year });
+  };
 
   return (
     <div className="grid grid-cols-2 gap-2 mb-2">
@@ -19,17 +37,22 @@ export default function ConfigControls() {
         value={config.year}
         onChange={(e) => updateConfig({ year: e.target.value })}
       >
-        <option value="2023">2023</option>
-        <option value="2022">2022</option>
-        <option value="2021">2021</option>
+        {datasetCfg.years.map((y) => (
+          <option key={y} value={y}>
+            {y}
+          </option>
+        ))}
       </select>
       <select
         className="border border-gray-300 rounded p-1 text-sm w-full"
         value={config.dataset}
-        onChange={(e) => updateConfig({ dataset: e.target.value })}
+        onChange={onDatasetChange}
       >
-        <option value="acs/acs5">ACS 5-year</option>
-        <option value="acs/acs1">ACS 1-year</option>
+        {DATASETS.map((d) => (
+          <option key={d.value} value={d.value}>
+            {d.label}
+          </option>
+        ))}
       </select>
       <select
         className="border border-gray-300 rounded p-1 text-sm w-full"
