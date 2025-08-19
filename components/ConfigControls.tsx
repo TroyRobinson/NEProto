@@ -22,6 +22,8 @@ export default function ConfigControls() {
         <option value="2023">2023</option>
         <option value="2022">2022</option>
         <option value="2021">2021</option>
+        <option value="2020">2020</option>
+        <option value="2010">2010</option>
       </select>
       <select
         className="border border-gray-300 rounded p-1 text-sm w-full"
@@ -30,6 +32,8 @@ export default function ConfigControls() {
       >
         <option value="acs/acs5">ACS 5-year</option>
         <option value="acs/acs1">ACS 1-year</option>
+        <option value="dec/pl">Decennial Census PL</option>
+        <option value="cbp">County Business Patterns</option>
       </select>
       <select
         className="border border-gray-300 rounded p-1 text-sm w-full"
