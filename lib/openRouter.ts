@@ -14,6 +14,11 @@ export async function callOpenRouter(payload: Record<string, unknown>) {
     throw new Error(`OpenRouter error: ${res.status}`);
   }
   const json = await res.json();
-  addLog({ service: 'OpenRouter', direction: 'response', message: json });
+  const cleaned = JSON.parse(
+    JSON.stringify(json, (key, value) =>
+      key === 'reasoning' || key === 'reasoning_details' ? undefined : value
+    )
+  );
+  addLog({ service: 'OpenRouter', direction: 'response', message: cleaned });
   return json;
 }
