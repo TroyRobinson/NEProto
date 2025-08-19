@@ -7,51 +7,121 @@
 - MapLibre GL + deck.gl for interactive maps
 - OpenRouter for LLM-powered chat
 
-## Directory Overview
-- `app/`
-  - `page.tsx` – main page combining map, org panel, and chat
-  - `api/chat/route.ts` – AI-assisted Census chat endpoint
-  - `api/logs/route.ts` – in-memory request log API
-  - `logs/page.tsx` – live log viewer
-- `components/`
-  - `OKCMap.tsx` – renders MapLibre + deck.gl layers
-  - `OrganizationDetails.tsx` – side panel for organization info
-  - `CensusChat.tsx` – chat UI that adds Census metrics
-  - `MetricContext.tsx` – tracks selected metrics & ZCTA features
-  - `ConfigContext.tsx` – stores dataset/year/region selections
-  - `AddOrganizationForm.tsx`, `TopNav.tsx` – UI helpers
-- `lib/`
-  - `db.ts` – InstantDB client setup
-  - `census.ts` – `fetchZctaMetric`, `prefetchZctaBoundaries`
-  - `censusTools.ts` – `loadVariables`, `searchCensus`, `validateVariableId`
-  - `mapLayers.ts` – `createOrganizationLayer`, `createZctaMetricLayer`
-  - `openRouter.ts` – `callOpenRouter` wrapper
-  - `logStore.ts` – `addLog` & `getLogs`
-  - `censusVariables.ts`, `censusQueryMap.ts`, `okcZctas.ts` – curated data sets
-- `types/organization.ts` – `Organization` and `Location` interfaces
+## Architecture Overview
+- React contexts manage map configuration and selected metrics
+- MapLibre map overlaid with deck.gl layers for org markers and ZCTA metrics
+- InstantDB stores organization data; US Census API supplies statistics
+- OpenRouter-powered chat searches Census variables and adds layers
+
+## App Files
+### app/page.tsx
+- Entry page wrapping children in `ConfigContext` and `MetricContext`
+- Fetches organizations from InstantDB and passes them to `OKCMap`
+- Hosts `CensusChat` and `OrganizationDetails` panel
+
+### app/api/chat/route.ts
+- POST handler forwarding prompts to OpenRouter
+- Uses `censusTools` helpers for variable search/validation
+- Called by `CensusChat`
+
+### app/api/logs/route.ts
+- In-memory log store for external request debugging
+- Consumed by `/logs` page
+
+### app/logs/page.tsx
+- Client page that polls `api/logs` for latest entries
+- Independent of main map flow
+
+## Components
+### components/OKCMap.tsx
+- Composes MapLibre map and deck.gl overlay
+- Builds layers via `createOrganizationLayer` and `createZctaMetricLayer`
+- Emits `onOrganizationClick` callback
+
+### components/OrganizationDetails.tsx
+- Side panel showing selected organization details
+- Populated from map click events
+
+### components/CensusChat.tsx
+- Chat UI for querying Census metrics through OpenRouter
+- Dispatches metrics to `MetricContext`
+
+### components/MetricContext.tsx
+- React context tracking active ZCTA metrics and geometries
+- API: `addMetric`, `selectMetric`, `metrics`
+
+### components/ConfigContext.tsx
+- Stores dataset/year/region selections
+- API: `config`, `setConfig`
+
+### components/AddOrganizationForm.tsx
+- Form to insert organization records into InstantDB
+- Separate from map display
+
+### components/TopNav.tsx
+- Minimal navigation bar housing `AddOrganizationForm`
+
+## Library Modules
+### lib/db.ts
+- Instantiates and exports a configured InstantDB client
+
+### lib/census.ts
+- `fetchZctaMetric` retrieves ACS data for a ZCTA/variable
+- `prefetchZctaBoundaries` loads and caches GeoJSON polygons
+
+### lib/censusTools.ts
+- Loads Census variable metadata and caches results
+- `searchCensus` and `validateVariableId` helpers
+
+### lib/mapLayers.ts
+- `createOrganizationLayer` for point markers
+- `createZctaMetricLayer` for choropleth metrics
+- Pure functions returning deck.gl layers
+
+### lib/openRouter.ts
+- `callOpenRouter` wrapper centralizing headers and error handling
+
+### lib/logStore.ts
+- In-memory array with `addLog` and `getLogs` APIs
+- Server-only utility used by log route
+
+### lib/censusVariables.ts
+- Curated list of ACS variable IDs and descriptions
+- Imported by `censusTools`
+
+### lib/censusQueryMap.ts
+- Maps chat tool names to Census variable IDs
+- Used during LLM tool execution
+
+### lib/okcZctas.ts
+- Static GeoJSON of Oklahoma City ZCTAs
+- Consumed by `prefetchZctaBoundaries`
+
+## Types
+### types/organization.ts
+- `Organization` and `Location` interfaces shared across codebase
 
 ## Data Flow
-- `page.tsx` queries organizations from InstantDB and passes them to `OKCMap`
-- `OKCMap` assembles deck.gl layers via helpers in `mapLayers.ts`
-- Clicking a marker triggers `OrganizationDetails` to show org data
-- `CensusChat` talks to `/api/chat`; on tool calls `MetricContext.addMetric`
-- `MetricContext.selectMetric` pulls data via `fetchZctaMetric` and feeds `OKCMap`
+- `page.tsx` loads organizations and renders `OKCMap`
+- `OKCMap` layers come from `mapLayers.ts`
+- `CensusChat` requests `/api/chat`; results update `MetricContext`
+- `MetricContext` supplies metric data to `OKCMap` for display
 
 ## External Services
 - US Census API for ACS statistics
-- OpenRouter gateway for LLM responses
-- InstantDB for persistent organization records
+- OpenRouter for LLM responses
+- InstantDB for organization storage
 
 ## Processes
-- Users pan/zoom map, click markers, view org details
-- Chat searches Census variables and adds ZCTA metrics to the map
-- `/logs` page polls the log API for debugging external calls
+- Users pan/zoom map, click markers, view organization info
+- Chat searches Census variables, overlaying metrics on map
+- `/logs` page polls log API for debugging
 
 ## Gotchas
-- Census variable IDs often need a `_001E` suffix for estimate values
-- Census responses use large negative numbers for missing data; treat as `null`
-- deck.gl `onClick` handlers receive an unused event argument
-- ZCTA boundaries are fetched once and cached; `prefetchZctaBoundaries` hides latency
+- Append `_001E` to variable IDs for estimate values
+- Census uses large negative numbers for missing data; treat as `null`
+- deck.gl `onClick` handlers receive an unused event parameter
+- Boundary data is cached; call `prefetchZctaBoundaries` early
 
 ## Development
 - `npm run dev` – start dev server
