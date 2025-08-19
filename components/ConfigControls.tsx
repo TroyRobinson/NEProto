@@ -6,16 +6,16 @@ export default function ConfigControls() {
   const { config, updateConfig } = useConfig();
 
   return (
-    <div className="flex gap-2 mb-2">
+    <div className="grid grid-cols-2 gap-2 mb-2">
       <select
-        className="border border-gray-300 rounded p-1 text-sm"
+        className="border border-gray-300 rounded p-1 text-sm w-full"
         value={config.region}
         onChange={(e) => updateConfig({ region: e.target.value })}
       >
         <option value="Oklahoma County ZCTAs">Oklahoma County ZCTAs</option>
       </select>
       <select
-        className="border border-gray-300 rounded p-1 text-sm"
+        className="border border-gray-300 rounded p-1 text-sm w-full"
         value={config.year}
         onChange={(e) => updateConfig({ year: e.target.value })}
       >
@@ -24,7 +24,7 @@ export default function ConfigControls() {
         <option value="2021">2021</option>
       </select>
       <select
-        className="border border-gray-300 rounded p-1 text-sm"
+        className="border border-gray-300 rounded p-1 text-sm w-full"
         value={config.dataset}
         onChange={(e) => updateConfig({ dataset: e.target.value })}
       >
@@ -32,7 +32,7 @@ export default function ConfigControls() {
         <option value="acs/acs1">ACS 1-year</option>
       </select>
       <select
-        className="border border-gray-300 rounded p-1 text-sm"
+        className="border border-gray-300 rounded p-1 text-sm w-full"
         value={config.geography}
         onChange={(e) => updateConfig({ geography: e.target.value })}
       >
