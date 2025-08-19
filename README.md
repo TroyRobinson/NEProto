@@ -34,3 +34,11 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Local Data
+
+- **Oklahoma County ZCTAs** are stored in `lib/okcZctas.ts` and used to batch Census API requests for all ZIP codes in the county.
+- **Common ACS variables** are listed in `lib/censusVariables.ts` for quick lookup and reduced search latency.
+- **Common query phrases** mapping to ACS variable ids live in `lib/censusQueryMap.ts` to bypass dataset searches for frequent requests.
+- **Metric validation** ensures any selected variable id exists in the 2023 ACS dataset before being added.
+- **Chat controls** at the top of the Census chat let you adjust region, dataset, and year (e.g. 2021 vs 2023) used for queries.
