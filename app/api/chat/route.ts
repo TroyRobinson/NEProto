@@ -10,7 +10,107 @@ interface Message {
 
 
 export async function POST(req: NextRequest) {
-  const { messages, config } = await req.json();
+  const { messages, config, mode, stats, action } = await req.json();
+
+  if (mode === 'user') {
+    if (action === 'analyze') {
+      const statLines = (stats || [])
+        .map((s: { code: string; description: string }) => `${s.code}: ${s.description}`)
+        .join('\n');
+      const dataLines = (stats || [])
+        .map((s: { code: string; data: string }) => {
+          try {
+            const obj = JSON.parse(s.data || '{}');
+            const pairs = Object.entries(obj)
+              .map(([zip, val]) => `${zip}: ${val}`)
+              .join(', ');
+            return `${s.code} -> ${pairs}`;
+          } catch {
+            return `${s.code}`;
+          }
+        })
+        .join('\n');
+      const convo: Message[] = [
+        { role: 'system', content: `You know about these stats:\n${statLines}\nData:\n${dataLines}` },
+        ...(messages ? messages.slice(-1) : []),
+      ];
+      const response = await callOpenRouter({
+        model: 'openai/gpt-oss-120b:nitro',
+        messages: convo,
+        reasoning: { effort: 'low' },
+        text: { verbosity: 'low' },
+        max_output_tokens: 300,
+      });
+      const message = response.choices?.[0]?.message;
+      if (message && 'reasoning' in (message as Record<string, unknown>)) {
+        delete (message as Record<string, unknown>).reasoning;
+      }
+      return NextResponse.json({ message, toolInvocations: [] });
+    }
+
+    const tools = [
+      {
+        type: 'function',
+        function: {
+          name: 'select_stat',
+          description: 'Select the best matching statistic code from the provided list.',
+          parameters: {
+            type: 'object',
+            properties: {
+              code: { type: 'string', description: 'Statistic code' },
+            },
+            required: ['code'],
+          },
+        },
+      },
+    ];
+    const list = (stats || [])
+      .map((s: { code: string; description: string }) => `${s.code}: ${s.description}`)
+      .join('\n');
+    const convo: Message[] = [
+      { role: 'system', content: `You know about these stats:\n${list}` },
+      ...(messages ? messages.slice(-1) : []),
+    ];
+    const toolInvocations: { name: string; args: Record<string, unknown> }[] = [];
+    while (true) {
+      const response = await callOpenRouter({
+        model: 'openai/gpt-5-nano',
+        messages: convo,
+        tools,
+        tool_choice: 'auto',
+        reasoning: { effort: 'low' },
+        text: { verbosity: 'low' },
+        max_output_tokens: 100,
+      });
+      const message = response.choices?.[0]?.message;
+      const toolCalls = message?.tool_calls ?? [];
+      convo.push(message as Message);
+      if (!toolCalls.length) {
+        if (message && 'reasoning' in (message as Record<string, unknown>)) {
+          delete (message as Record<string, unknown>).reasoning;
+        }
+        return NextResponse.json({ message, toolInvocations });
+      }
+      for (const call of toolCalls) {
+        const args = JSON.parse(call.function.arguments || '{}') as Record<string, unknown>;
+        const code = args.code as string;
+        const exists = (stats || []).some((s: { code: string }) => s.code === code);
+        let result: unknown;
+        if (exists) {
+          result = { ok: true };
+          toolInvocations.push({ name: 'select_stat', args: { code } });
+        } else {
+          result = { ok: false, error: 'Unknown code' };
+        }
+        convo.push({
+          role: 'tool',
+          content: JSON.stringify(result),
+          tool_call_id: call.id,
+        });
+      }
+    }
+  }
+
   const { year = '2023', dataset = 'acs/acs5' } = config || {};
 
   const tools = [
@@ -68,6 +168,9 @@ export async function POST(req: NextRequest) {
     convo.push(message as Message);
 
     if (!toolCalls.length) {
+      if (message && 'reasoning' in (message as Record<string, unknown>)) {
+        delete (message as Record<string, unknown>).reasoning;
+      }
       return NextResponse.json({
         message,
         toolInvocations,
