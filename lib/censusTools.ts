@@ -34,6 +34,14 @@ export async function loadVariables(year: string, dataset: string) {
   return variablesCache.get(key)!;
 }
 
+export async function getVariableInfo(id: string, year: string, dataset: string) {
+  const vars = await loadVariables(year, dataset);
+  const entry = vars.find(([vid]) => vid === id);
+  if (!entry) return null;
+  const info = entry[1];
+  return { id, label: info.label, concept: info.concept };
+}
+
 export async function validateVariableId(id: string, year: string, dataset: string) {
   if (CURATED_VARIABLES.some((v) => v.id === id)) return true;
   const vars = await loadVariables(year, dataset);

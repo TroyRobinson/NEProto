@@ -7,6 +7,7 @@ import { useConfig } from './ConfigContext';
 interface Metric {
   id: string;
   label: string;
+  features?: ZctaFeature[];
 }
 
 interface MetricsContextValue {
@@ -14,7 +15,7 @@ interface MetricsContextValue {
   selectedMetric: string | null;
   zctaFeatures: ZctaFeature[] | undefined;
   addMetric: (metric: Metric) => Promise<void>;
-  selectMetric: (id: string) => Promise<void>;
+  selectMetric: (id: string, features?: ZctaFeature[]) => Promise<void>;
 }
 
 const MetricsContext = createContext<MetricsContextValue | undefined>(undefined);
@@ -31,14 +32,14 @@ export function MetricsProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const addMetric = async (m: Metric) => {
-    setMetrics(prev => (prev.find(p => p.id === m.id) ? prev : [...prev, m]));
-    await selectMetric(m.id);
+    setMetrics(prev => (prev.find(p => p.id === m.id) ? prev : [...prev, { id: m.id, label: m.label }]));
+    await selectMetric(m.id, m.features);
   };
 
-  const selectMetric = async (id: string) => {
+  const selectMetric = async (id: string, featuresOverride?: ZctaFeature[]) => {
     setSelectedMetric(id);
     const key = `${config.dataset}-${config.year}-${id}`;
-    let features = metricFeatures[key];
+    let features = featuresOverride || metricFeatures[key];
     if (!features) {
       const varId = id.includes('_') ? id : id + '_001E';
       features = await fetchZctaMetric(varId, { year: config.year, dataset: config.dataset });
