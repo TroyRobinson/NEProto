@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import db from '../lib/db';
 import AddOrganizationForm from '../components/AddOrganizationForm';
@@ -47,6 +47,18 @@ export default function Home() {
 
   const organizations = data?.organizations || [];
 
+  // Close Add Organization modal on Escape key
+  useEffect(() => {
+    if (!showAddForm) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowAddForm(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [showAddForm]);
+
   return (
     <div className="h-screen bg-gray-100 flex flex-col overflow-hidden">
       <NavBar onAddOrganization={() => setShowAddForm(true)} />
@@ -69,8 +81,8 @@ export default function Home() {
       </div>
 
       {showAddForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4 overflow-hidden" onClick={() => setShowAddForm(false)}>
+          <div className="max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <AddOrganizationForm
               onSuccess={() => setShowAddForm(false)}
               onCancel={() => setShowAddForm(false)}

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMetrics } from './MetricContext';
 import MetricDropdown from './MetricDropdown';
 import {
@@ -34,6 +34,18 @@ export default function NavBar({ onAddOrganization }: NavBarProps) {
   const pathname = usePathname();
   const { metrics, selectedMetric, selectMetric, clearMetrics } = useMetrics();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Close mobile menu with Escape key
+  useEffect(() => {
+    if (!isMobileMenuOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsMobileMenuOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isMobileMenuOpen]);
 
   const menuItems = [
     { href: '/', label: 'Map', icon: MapIcon, iconSolid: MapIconSolid },
@@ -241,9 +253,9 @@ export default function NavBar({ onAddOrganization }: NavBarProps) {
 
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
-        <div className="lg:hidden fixed inset-0 z-50 bg-black bg-opacity-30" onClick={() => setIsMobileMenuOpen(false)}>
+        <div className="lg:hidden fixed inset-0 z-50 bg-black/30" onClick={() => setIsMobileMenuOpen(false)}>
           <div 
-            className="fixed top-0 right-0 h-full w-full sm:w-80 md:w-96 overflow-y-auto"
+            className="fixed top-0 right-0 h-full w-[85vw] sm:w-80 md:w-96 overflow-y-auto"
             style={{
               backgroundColor: 'var(--color-base-100)',
               paddingLeft: 'var(--spacing-6)',
