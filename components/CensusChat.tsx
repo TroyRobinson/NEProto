@@ -21,7 +21,7 @@ export default function CensusChat({ onAddMetric, onLoadStat }: CensusChatProps)
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState<'user' | 'admin'>('user');
+  const [mode, setMode] = useState<'user' | 'admin' | 'fast-admin'>('user');
   const { config } = useConfig();
   const { data: statData } = db.useQuery({ stats: {} });
   const { metrics, clearMetrics } = useMetrics();
@@ -39,7 +39,7 @@ export default function CensusChat({ onAddMetric, onLoadStat }: CensusChatProps)
       }
     }
     const storedMode = localStorage.getItem(MODE_STORAGE_KEY);
-    if (storedMode === 'user' || storedMode === 'admin') {
+    if (storedMode === 'user' || storedMode === 'admin' || storedMode === 'fast-admin') {
       setMode(storedMode);
     }
   }, []);
@@ -65,15 +65,20 @@ export default function CensusChat({ onAddMetric, onLoadStat }: CensusChatProps)
       setMessages(newMessages);
       setInput('');
 
-      if (mode === 'admin') {
+      if (mode === 'admin' || mode === 'fast-admin') {
         setLoading(true);
         const systemPrompt = `You help users find US Census statistics. Limit responses to ${config.region} using ${config.dataset} ${config.year} data for ${config.geography}.`;
+        const payloadMessages =
+          mode === 'fast-admin'
+            ? [{ role: 'system', content: systemPrompt }, userMessage]
+            : [{ role: 'system', content: systemPrompt }, ...newMessages];
         const res = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            messages: [{ role: 'system', content: systemPrompt }, ...newMessages],
+            messages: payloadMessages,
             config,
+            mode: mode === 'fast-admin' ? 'fast-admin' : undefined,
           }),
         });
         const data = await res.json();
@@ -155,13 +160,14 @@ export default function CensusChat({ onAddMetric, onLoadStat }: CensusChatProps)
           <select
             className="border border-gray-300 rounded p-1 text-sm"
             value={mode}
-            onChange={e => setMode(e.target.value as 'user' | 'admin')}
+            onChange={e => setMode(e.target.value as 'user' | 'admin' | 'fast-admin')}
           >
             <option value="user">User Mode</option>
             <option value="admin">Admin Mode</option>
+            <option value="fast-admin">Fast Admin Mode</option>
           </select>
         </div>
-        {mode === 'admin' && <ConfigControls />}
+        {(mode === 'admin' || mode === 'fast-admin') && <ConfigControls />}
         <div className="flex-1 overflow-y-auto mb-2 space-y-2 p-2 rounded bg-gray-100">
         {messages.map((m, idx) => (
           <div key={idx} className={m.role === 'user' ? 'text-right' : 'text-left'}>
@@ -180,7 +186,11 @@ export default function CensusChat({ onAddMetric, onLoadStat }: CensusChatProps)
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-            placeholder={mode === 'admin' ? 'Ask about US Census stats...' : 'Search stored stats...'}
+            placeholder={
+              mode === 'admin' || mode === 'fast-admin'
+                ? 'Ask about US Census stats...'
+                : 'Search stored stats...'
+            }
           />
           <button
             className="px-4 py-2 bg-blue-600 text-white rounded-r disabled:opacity-50"

@@ -11,6 +11,7 @@ interface Message {
 
 export async function POST(req: NextRequest) {
   const { messages, config, mode, stats } = await req.json();
+  const fastAdmin = mode === 'fast-admin';
 
   if (mode === 'user') {
     const tools = [
@@ -120,12 +121,13 @@ export async function POST(req: NextRequest) {
 
   while (true) {
     const response = await callOpenRouter({
-      model: 'openai/gpt-5-mini',
+      model: fastAdmin ? 'openai/gpt-4o-mini' : 'openai/gpt-5-mini',
       messages: convo,
       tools,
       tool_choice: 'auto',
       reasoning: { effort: "low" },
       text: { verbosity: "low" },
+      ...(fastAdmin ? { max_output_tokens: 200 } : {}),
     });
 
     const message = response.choices?.[0]?.message;
