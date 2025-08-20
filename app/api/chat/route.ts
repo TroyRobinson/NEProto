@@ -75,7 +75,6 @@ export async function POST(req: NextRequest) {
       }
     }
   }
-
   const { year = '2023', dataset = 'acs/acs5' } = config || {};
 
   const tools = [
@@ -114,6 +113,52 @@ export async function POST(req: NextRequest) {
       },
     },
   ];
+
+  if (mode === 'fast-admin') {
+    const convo: Message[] = [...messages];
+    const toolInvocations: { name: string; args: Record<string, unknown> }[] = [];
+    while (true) {
+      const response = await callOpenRouter({
+        model: 'openai/gpt-oss-120b:nitro',
+        messages: convo,
+        tools,
+        tool_choice: 'auto',
+        reasoning: { effort: 'low' },
+        text: { verbosity: 'low' },
+        max_output_tokens: 100,
+      });
+      const message = response.choices?.[0]?.message;
+      const toolCalls = message?.tool_calls ?? [];
+      convo.push(message as Message);
+      if (!toolCalls.length) {
+        if (message && 'reasoning' in (message as Record<string, unknown>)) {
+          delete (message as Record<string, unknown>).reasoning;
+        }
+        return NextResponse.json({ message, toolInvocations });
+      }
+      for (const call of toolCalls) {
+        const name = call.function.name;
+        const args = JSON.parse(call.function.arguments || '{}') as Record<string, unknown>;
+        let result: unknown;
+        if (name === 'search_census') {
+          result = await searchCensus(args.query as string, year, dataset);
+        } else if (name === 'add_metric') {
+          const id = args.id as string;
+          if (await validateVariableId(id, year, dataset)) {
+            result = { ok: true };
+            toolInvocations.push({ name, args });
+          } else {
+            result = { ok: false, error: 'Unknown variable id' };
+          }
+        }
+        convo.push({
+          role: 'tool',
+          content: JSON.stringify(result),
+          tool_call_id: call.id,
+        });
+      }
+    }
+  }
 
   const convo: Message[] = [...messages];
   const toolInvocations: { name: string; args: Record<string, unknown> }[] = [];
