@@ -7,7 +7,7 @@ interface OrganizationDetailsProps {
 
 export default function OrganizationDetails({ organization, onClose }: OrganizationDetailsProps) {
   return (
-    <div className="w-96 bg-white shadow-lg overflow-y-auto">
+    <div className="w-96 ml-4 mt-14 bg-white shadow-lg overflow-y-auto h-[calc(100%-3.5rem)]">
       <div className="p-6">
         <div className="flex justify-between items-start mb-4">
           <h2 className="text-xl font-bold text-gray-900">{organization.name}</h2>
