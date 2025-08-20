@@ -90,7 +90,7 @@ export default function AddOrganizationForm({ onSuccess, onCancel }: AddOrganiza
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-lg max-w-2xl mx-auto">
+    <div className="bg-white p-6 rounded-lg shadow-lg max-w-2xl mx-auto max-h-[90vh] overflow-y-auto modal-scroll">
       <h2 className="text-2xl font-bold mb-6">Add Non-Profit Organization</h2>
       
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -104,7 +104,7 @@ export default function AddOrganizationForm({ onSuccess, onCancel }: AddOrganiza
             value={formData.name}
             onChange={handleChange}
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
           />
         </div>
 
@@ -118,7 +118,7 @@ export default function AddOrganizationForm({ onSuccess, onCancel }: AddOrganiza
             onChange={handleChange}
             required
             rows={3}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
           />
         </div>
 
@@ -131,7 +131,7 @@ export default function AddOrganizationForm({ onSuccess, onCancel }: AddOrganiza
             value={formData.category}
             onChange={handleChange}
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
           >
             <option value="">Select a category</option>
             {ORG_CATEGORIES.map(category => (
@@ -150,7 +150,7 @@ export default function AddOrganizationForm({ onSuccess, onCancel }: AddOrganiza
               name="website"
               value={formData.website}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
             />
           </div>
 
@@ -163,7 +163,7 @@ export default function AddOrganizationForm({ onSuccess, onCancel }: AddOrganiza
               name="phone"
               value={formData.phone}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
             />
           </div>
         </div>
@@ -177,7 +177,7 @@ export default function AddOrganizationForm({ onSuccess, onCancel }: AddOrganiza
             name="email"
             value={formData.email}
             onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
           />
         </div>
 
@@ -191,7 +191,7 @@ export default function AddOrganizationForm({ onSuccess, onCancel }: AddOrganiza
             onChange={handleChange}
             rows={2}
             placeholder="e.g., Serves 500 families monthly, Reduced homelessness by 15%"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
           />
         </div>
 
@@ -205,7 +205,7 @@ export default function AddOrganizationForm({ onSuccess, onCancel }: AddOrganiza
             value={formData.address}
             onChange={handleChange}
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
           />
         </div>
 
@@ -221,7 +221,7 @@ export default function AddOrganizationForm({ onSuccess, onCancel }: AddOrganiza
               onChange={handleChange}
               step="any"
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
             />
           </div>
 
@@ -236,7 +236,7 @@ export default function AddOrganizationForm({ onSuccess, onCancel }: AddOrganiza
               onChange={handleChange}
               step="any"
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)]"
             />
           </div>
         </div>
@@ -245,7 +245,7 @@ export default function AddOrganizationForm({ onSuccess, onCancel }: AddOrganiza
           <button
             type="submit"
             disabled={isSubmitting}
-            className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 bg-[var(--color-accent)] text-white py-2 px-4 rounded-md hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-[var(--color-accent)] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? 'Adding...' : 'Add Organization'}
           </button>

@@ -3,8 +3,6 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { useMetrics } from './MetricContext';
-import MetricDropdown from './MetricDropdown';
 import {
   MapIcon,
   ChartBarIcon,
@@ -32,7 +30,7 @@ interface NavBarProps {
 
 export default function NavBar({ onAddOrganization }: NavBarProps) {
   const pathname = usePathname();
-  const { metrics, selectedMetric, selectMetric, clearMetrics } = useMetrics();
+  
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Close mobile menu with Escape key
@@ -145,34 +143,34 @@ export default function NavBar({ onAddOrganization }: NavBarProps) {
           className="flex flex-row items-center justify-start shrink-0 relative"
           style={{ gap: 'var(--spacing-3)' }} // 12px
         >
-          {/* Desktop Add Button */}
+          {/* Desktop Add Button (accent) */}
           <button
             onClick={onAddOrganization}
             className="hidden lg:flex items-center justify-center shrink-0 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
-              width: 'var(--spacing-8)', // 32px
-              height: 'var(--spacing-8)', // 32px
-              borderRadius: '50%', // Make it perfectly circular
-              backgroundColor: 'var(--color-neutral)',
-              color: 'var(--color-neutral-content)',
-              padding: 0, // Remove default padding
+              width: 'var(--spacing-8)',
+              height: 'var(--spacing-8)',
+              borderRadius: '50%',
+              backgroundColor: 'var(--color-accent)',
+              color: 'var(--color-accent-content)',
+              padding: 0,
             }}
             onMouseEnter={(e) => {
               if (!e.currentTarget.disabled) {
-                e.currentTarget.style.backgroundColor = 'var(--color-gray-700)';
+                e.currentTarget.style.backgroundColor = 'color-mix(in srgb, var(--color-accent) 88%, white 12%)';
               }
             }}
             onMouseLeave={(e) => {
               if (!e.currentTarget.disabled) {
-                e.currentTarget.style.backgroundColor = 'var(--color-neutral)';
+                e.currentTarget.style.backgroundColor = 'var(--color-accent)';
               }
             }}
             aria-label="Add Organization"
             disabled={!onAddOrganization}
           >
             <PlusIcon 
-              className="w-3 h-3" // Smaller icon
-              style={{ strokeWidth: 2 }} // Thicker lines
+              className="w-3 h-3"
+              style={{ strokeWidth: 2 }}
             />
           </button>
 
@@ -203,53 +201,7 @@ export default function NavBar({ onAddOrganization }: NavBarProps) {
         </div>
       </div>
 
-      {/* Secondary Metrics Bar */}
-      {metrics.length > 0 && (
-        <div 
-          className="w-full border-b"
-          style={{
-            backgroundColor: 'var(--color-base-200)',
-            paddingLeft: 'var(--spacing-10)',
-            paddingRight: 'var(--spacing-10)',
-            paddingTop: 'var(--spacing-2)',
-            paddingBottom: 'var(--spacing-2)',
-            borderBottomColor: 'var(--color-base-300)'
-          }}
-        >
-          <div 
-            className="flex items-center justify-start"
-            style={{ gap: 'var(--spacing-2)' }}
-          >
-            <MetricDropdown metrics={metrics} selected={selectedMetric} onSelect={selectMetric} />
-            <button
-              onClick={clearMetrics}
-              className="border transition-colors"
-              style={{
-                paddingLeft: 'var(--spacing-2)',
-                paddingRight: 'var(--spacing-2)',
-                paddingTop: 'var(--spacing-1)',
-                paddingBottom: 'var(--spacing-1)',
-                borderRadius: 'var(--radius-field)',
-                fontSize: 'var(--font-size-sm)',
-                color: 'var(--color-error)',
-                borderColor: 'var(--color-error)',
-                backgroundColor: 'var(--color-base-100)'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--color-error-50)';
-                e.currentTarget.style.color = 'var(--color-error-600)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--color-base-100)';
-                e.currentTarget.style.color = 'var(--color-error)';
-              }}
-              aria-label="Clear active stats"
-            >
-              ×
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Secondary Metrics Bar moved to app/page.tsx overlay */}
 
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
@@ -339,11 +291,11 @@ export default function NavBar({ onAddOrganization }: NavBarProps) {
                   paddingLeft: 'var(--spacing-4)',
                   paddingRight: 'var(--spacing-4)',
                   gap: 'var(--spacing-3)',
-                  color: 'var(--color-base-content)'
+                  color: 'var(--color-accent)'
                 }}
                 onMouseEnter={(e) => {
                   if (!e.currentTarget.disabled) {
-                    e.currentTarget.style.backgroundColor = 'var(--color-base-200)';
+                    e.currentTarget.style.backgroundColor = 'color-mix(in srgb, var(--color-accent) 10%, transparent)';
                   }
                 }}
                 onMouseLeave={(e) => {

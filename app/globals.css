@@ -151,3 +151,23 @@ body {
   font-size: var(--font-size-md);
   line-height: 1.5;
 }
+
+/* Minimal scrollbar for modal content */
+.modal-scroll {
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+}
+
+.modal-scroll::-webkit-scrollbar {
+  width: 8px; /* slim */
+}
+
+.modal-scroll::-webkit-scrollbar-track {
+  background: transparent; /* no visible track */
+}
+
+.modal-scroll::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.15); /* lighter minimal thumb */
+  border-radius: 8px;
+}
