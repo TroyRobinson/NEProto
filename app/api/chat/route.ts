@@ -78,6 +78,22 @@ export async function POST(req: NextRequest) {
 
   const { year = '2023', dataset = 'acs/acs5' } = config || {};
 
+  if (mode === 'fast-admin') {
+    const last = messages?.[messages.length - 1];
+    const query = last?.content || '';
+    const results = await searchCensus(query, year, dataset);
+    if (!results.length) {
+      return NextResponse.json({
+        message: { role: 'assistant', content: 'No matching variable found.' },
+      });
+    }
+    const top = results[0];
+    return NextResponse.json({
+      message: { role: 'assistant', content: `Added ${top.label}` },
+      toolInvocations: [{ name: 'add_metric', args: { id: top.id, label: top.label } }],
+    });
+  }
+
   const tools = [
     {
       type: 'function',
