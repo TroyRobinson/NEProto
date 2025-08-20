@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import db from '../lib/db';
 import AddOrganizationForm from '../components/AddOrganizationForm';
 import CensusChat from '../components/CensusChat';
-import TopNav from '../components/TopNav';
+import NavBar from '../components/NavBar';
 import { useMetrics } from '../components/MetricContext';
 import OrganizationDetails from '../components/OrganizationDetails';
 import type { Organization } from '../types/organization';
@@ -48,11 +48,7 @@ export default function Home() {
 
   return (
     <div className="h-screen bg-gray-100 flex flex-col overflow-hidden">
-      <TopNav
-        linkHref="/data"
-        linkText="Data"
-        onAddOrganization={() => setShowAddForm(true)}
-      />
+      <NavBar onAddOrganization={() => setShowAddForm(true)} />
 
       <div className="flex flex-1 overflow-hidden">
         {selectedOrg && (

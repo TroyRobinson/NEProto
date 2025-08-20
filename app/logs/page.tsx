@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import TopNav from '../../components/TopNav';
+import NavBar from '../../components/NavBar';
 
 interface LogEntry {
   id: number;
@@ -32,7 +32,7 @@ export default function LogsPage() {
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
-      <TopNav linkHref="/" linkText="Map" />
+      <NavBar />
       <main className="flex-1 overflow-y-auto p-4 space-y-2">
         <div className="flex justify-end mb-2">
           <button

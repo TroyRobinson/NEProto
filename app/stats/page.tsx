@@ -1,6 +1,6 @@
 'use client';
 
-import TopNav from '../../components/TopNav';
+import NavBar from '../../components/NavBar';
 import db from '../../lib/db';
 import { fetchZctaMetric, type ZctaFeature } from '../../lib/census';
 import type { Stat } from '../../types/stat';
@@ -31,7 +31,7 @@ export default function StatsPage() {
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
-      <TopNav linkHref="/" linkText="Map" />
+      <NavBar />
       <main className="flex-1 max-w-4xl mx-auto p-4 w-full overflow-x-auto">
         <h2 className="text-xl mb-4">Stat Management</h2>
         {isLoading && <div>Loading stats...</div>}

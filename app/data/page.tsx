@@ -1,6 +1,6 @@
 'use client';
 
-import TopNav from '../../components/TopNav';
+import NavBar from '../../components/NavBar';
 import { useMetrics } from '../../components/MetricContext';
 
 export default function DataPage() {
@@ -9,7 +9,7 @@ export default function DataPage() {
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
-      <TopNav linkHref="/" linkText="Map" />
+      <NavBar />
       <main className="flex-1 max-w-4xl mx-auto p-4 w-full overflow-x-auto">
         <p className="text-gray-700 mb-4">add a metric to see on table and map</p>
         {selectedMetric && zctaFeatures ? (

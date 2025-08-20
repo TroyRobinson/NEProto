@@ -15,6 +15,7 @@
     "@deck.gl/layers": "^9.1.14",
     "@deck.gl/mapbox": "^9.1.14",
     "@deck.gl/react": "^9.1.14",
+    "@heroicons/react": "^2.2.0",
     "@instantdb/admin": "^0.20.28",
     "@instantdb/react": "^0.20.28",
     "dotenv": "^17.2.1",

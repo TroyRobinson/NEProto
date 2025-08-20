@@ -3,6 +3,13 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  
+  /* Design Tokens */
+  --color-black: #000000;
+  --color-white: #ffffff;
+  --color-blue-accent-dark: #171ec7;
+  --color-blue-accent-faded: #666be9;
+  
 }
 
 @theme inline {
@@ -10,6 +17,8 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  
+
 }
 
 body {
