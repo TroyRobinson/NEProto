@@ -18,6 +18,9 @@ const OKCMap = dynamic(() => import('../components/OKCMap'), {
 export default function Home() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState<Organization[] | null>(null);
+  const [hoveredOrgId, setHoveredOrgId] = useState<string | null>(null);
   const { zctaFeatures, addMetric, loadStatMetric } = useMetrics();
 
   const { data, isLoading, error } = db.useQuery({
@@ -45,6 +48,22 @@ export default function Home() {
   }
 
   const organizations = data?.organizations || [];
+  const handleSearch = () => {
+    const term = searchTerm.trim().toLowerCase();
+    setSelectedOrg(null);
+    if (!term) {
+      setSearchResults(null);
+      return;
+    }
+    const results = organizations.filter(
+      (org) =>
+        org.name.toLowerCase().includes(term) ||
+        org.category.toLowerCase().includes(term) ||
+        org.description?.toLowerCase().includes(term)
+    );
+    setSearchResults(results);
+  };
+  const mapOrganizations = searchResults ?? organizations;
 
   return (
     <div className="h-screen bg-gray-100 flex flex-col overflow-hidden">
@@ -54,19 +73,59 @@ export default function Home() {
         onAddOrganization={() => setShowAddForm(true)}
       />
 
+      <input
+        type="text"
+        placeholder="Search organizations..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') handleSearch();
+        }}
+        className="fixed top-24 left-4 z-50 bg-white border rounded px-3 py-2 shadow w-64 text-gray-900"
+      />
+
       <div className="flex flex-1 overflow-hidden">
-        {selectedOrg && (
+        {selectedOrg ? (
           <OrganizationDetails
             organization={selectedOrg}
             onClose={() => setSelectedOrg(null)}
           />
+        ) : (
+          searchResults && (
+            <div className="w-96 bg-white overflow-y-auto border-r">
+              {searchResults.map((org) => (
+                <div
+                  key={org.id}
+                  className="p-4 border-b hover:bg-gray-50 cursor-pointer"
+                  onMouseEnter={() => setHoveredOrgId(org.id)}
+                  onMouseLeave={() => setHoveredOrgId(null)}
+                  onClick={() => {
+                    setSelectedOrg(org);
+                    setHoveredOrgId(null);
+                  }}
+                >
+                  <div className="font-semibold">{org.name}</div>
+                  <div className="text-sm text-gray-600">{org.category}</div>
+                  {org.description && (
+                    <div className="text-xs text-gray-500 line-clamp-2">
+                      {org.description}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )
         )}
 
         <div className="flex-1 relative">
           <OKCMap
-            organizations={organizations}
-            onOrganizationClick={setSelectedOrg}
+            organizations={mapOrganizations}
+            onOrganizationClick={(org) => {
+              setSelectedOrg(org);
+              setHoveredOrgId(null);
+            }}
             zctaFeatures={zctaFeatures}
+            highlightedOrgId={hoveredOrgId}
           />
         </div>
       </div>
