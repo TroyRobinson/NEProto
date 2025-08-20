@@ -59,10 +59,13 @@
 - **User mode**: Searches stored stats, provides insights via `/api/insight`
 - **Admin mode**: Live Census API queries, adds new metrics via `/api/chat`
 - Dispatches metrics to `MetricContext`
+- Persists chat messages and mode selection to localStorage
+- Clear button to reset chat and active metrics
 
 ### components/MetricContext.tsx
 - React context tracking active ZCTA metrics and geometries
-- API: `addMetric`, `selectMetric`, `metrics`
+- API: `addMetric`, `selectMetric`, `metrics`, `clearMetrics`
+- Persists active metrics and selected metric to localStorage
 
 ### components/ConfigContext.tsx
 - Stores dataset/year/region selections
@@ -74,6 +77,7 @@
 
 ### components/TopNav.tsx
 - Minimal navigation bar housing `AddOrganizationForm`
+- Clear button (×) to reset active metrics when metrics are loaded
 
 ## Library Modules
 ### lib/db.ts
