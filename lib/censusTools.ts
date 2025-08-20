@@ -56,7 +56,9 @@ export async function searchCensus(
     return result;
   }
 
-  const tokens = q.split(/\s+/);
+  const STOPWORDS = new Set(['the', 'of', 'and', 'or', 'population', 'total', 'estimate']);
+  const tokens = q.split(/\s+/).filter((t) => t && !STOPWORDS.has(t));
+
   const curated = CURATED_VARIABLES.filter((v) =>
     tokens.every(
       (t) =>
@@ -76,10 +78,19 @@ export async function searchCensus(
     direction: 'request',
     message: { type: 'search', query, year, dataset },
   });
-  const results = vars
-    .filter(([, info]) => info.label.toLowerCase().includes(q))
-    .slice(0, 5)
-    .map(([id, info]) => ({ id, label: info.label, concept: info.concept }));
+  const results =
+    tokens.length === 0
+      ? []
+      : vars
+          .filter(([, info]) =>
+            tokens.every((t) => info.label.toLowerCase().includes(t))
+          )
+          .slice(0, 5)
+          .map(([id, info]) => ({
+            id,
+            label: info.label,
+            concept: info.concept,
+          }));
   searchCache.set(cacheKey, results);
   addLog({
     service: 'US Census',
