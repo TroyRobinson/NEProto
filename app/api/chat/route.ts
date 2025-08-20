@@ -139,7 +139,11 @@ export async function POST(req: NextRequest) {
         if (message && 'reasoning' in (message as Record<string, unknown>)) {
           delete (message as Record<string, unknown>).reasoning;
         }
-        return NextResponse.json({ message, toolInvocations });
+        const finalMessage: Message = {
+          role: 'assistant',
+          content: message?.content?.trim() || 'No matching stats found.',
+        };
+        return NextResponse.json({ message: finalMessage, toolInvocations });
       }
 
       for (const call of toolCalls) {

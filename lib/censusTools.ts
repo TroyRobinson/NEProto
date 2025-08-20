@@ -11,6 +11,16 @@ export interface CensusVariable {
 const variablesCache = new Map<string, Array<[string, { label: string; concept: string }]>>();
 const searchCache = new Map<string, CensusVariable[]>();
 
+const STOP_WORDS = new Set([
+  'or',
+  'and',
+  'the',
+  'a',
+  'an',
+  'population',
+  'pop',
+]);
+
 export async function loadVariables(year: string, dataset: string) {
   const key = `${dataset}-${year}`;
   if (!variablesCache.has(key)) {
@@ -56,7 +66,7 @@ export async function searchCensus(
     return result;
   }
 
-  const tokens = q.split(/\s+/);
+  const tokens = q.split(/\s+/).filter((t) => !STOP_WORDS.has(t));
   const curated = CURATED_VARIABLES.filter((v) =>
     tokens.every(
       (t) =>
@@ -77,7 +87,9 @@ export async function searchCensus(
     message: { type: 'search', query, year, dataset },
   });
   const results = vars
-    .filter(([, info]) => info.label.toLowerCase().includes(q))
+    .filter(([, info]) =>
+      tokens.every((t) => info.label.toLowerCase().includes(t))
+    )
     .slice(0, 5)
     .map(([id, info]) => ({ id, label: info.label, concept: info.concept }));
   searchCache.set(cacheKey, results);
