@@ -16,6 +16,13 @@ interface SearchResult {
   org: Organization;
 }
 
+interface ProPublicaSearchOrg {
+  ein: number;
+  name: string;
+  city: string;
+  state: string;
+}
+
 export default function OrgSearchSidebar({ existingOrgs, onResults, onSelect }: OrgSearchSidebarProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -28,31 +35,36 @@ export default function OrgSearchSidebar({ existingOrgs, onResults, onSelect }: 
     try {
       const res = await fetch(`/api/propublica/search?q=${encodeURIComponent(query)}`);
       const data = await res.json();
-      const items: SearchResult[] = [];
-      for (const o of data.organizations || []) {
-        const address = `${o.city}, ${o.state}`;
-        const coords = await geocode(address);
-        if (!coords) continue;
-        items.push({
-          ein: o.ein,
-          org: {
-            id: `search-${o.ein}`,
-            name: o.name,
-            description: '',
-            category: 'Other',
-            createdAt: Date.now(),
-            locations: [
-              {
-                id: `loc-${o.ein}`,
-                address,
-                latitude: coords.latitude,
-                longitude: coords.longitude,
-                isPrimary: true,
-              },
-            ],
-          },
-        });
-      }
+      const orgs: ProPublicaSearchOrg[] = (data.organizations || []).slice(0, 10);
+
+      const geocoded = await Promise.all(
+        orgs.map(async (o) => {
+          const address = `${o.city}, ${o.state}`;
+          const coords = await geocode(address);
+          if (!coords) return null;
+          return {
+            ein: o.ein,
+            org: {
+              id: `search-${o.ein}`,
+              name: o.name,
+              description: '',
+              category: 'Other',
+              createdAt: Date.now(),
+              locations: [
+                {
+                  id: `loc-${o.ein}`,
+                  address,
+                  latitude: coords.latitude,
+                  longitude: coords.longitude,
+                  isPrimary: true,
+                },
+              ],
+            },
+          } as SearchResult;
+        })
+      );
+
+      const items = geocoded.filter((r): r is SearchResult => r !== null);
       setResults(items);
       onResults(items.map(i => i.org));
     } catch (err) {
