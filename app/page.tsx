@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import db from '../lib/db';
 import AddOrganizationForm from '../components/AddOrganizationForm';
@@ -9,6 +9,8 @@ import TopNav from '../components/TopNav';
 import { useMetrics } from '../components/MetricContext';
 import OrganizationDetails from '../components/OrganizationDetails';
 import type { Organization } from '../types/organization';
+import OrgSearchSidebar from '../components/OrgSearchSidebar';
+import { addOrgFromProPublica } from '../lib/propublica';
 
 const OKCMap = dynamic(() => import('../components/OKCMap'), {
   ssr: false,
@@ -18,6 +20,7 @@ const OKCMap = dynamic(() => import('../components/OKCMap'), {
 export default function Home() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
+  const [searchResults, setSearchResults] = useState<Organization[]>([]);
   const { zctaFeatures, addMetric, loadStatMetric } = useMetrics();
 
   const { data, isLoading, error } = db.useQuery({
@@ -27,6 +30,26 @@ export default function Home() {
       photos: {}
     }
   });
+
+  const organizations = useMemo(() => data?.organizations || [], [data]);
+
+  const allOrganizations = useMemo(() => {
+    const existing = new Set(organizations.map(o => o.name.toLowerCase()));
+    return [...organizations, ...searchResults.filter(o => !existing.has(o.name.toLowerCase()))];
+  }, [organizations, searchResults]);
+
+  const handleOrganizationClick = async (org: Organization) => {
+    if (org.id.startsWith('search-')) {
+      const ein = parseInt(org.id.replace('search-', ''), 10);
+      const saved = await addOrgFromProPublica(ein);
+      if (saved) {
+        setSelectedOrg(saved);
+        setSearchResults(prev => prev.filter(o => o.id !== org.id));
+        return;
+      }
+    }
+    setSelectedOrg(org);
+  };
 
   if (isLoading) {
     return (
@@ -44,8 +67,6 @@ export default function Home() {
     );
   }
 
-  const organizations = data?.organizations || [];
-
   return (
     <div className="h-screen bg-gray-100 flex flex-col overflow-hidden">
       <TopNav
@@ -55,6 +76,12 @@ export default function Home() {
       />
 
       <div className="flex flex-1 overflow-hidden">
+        <OrgSearchSidebar
+          existingOrgs={organizations}
+          onResults={setSearchResults}
+          onSelect={handleOrganizationClick}
+        />
+
         {selectedOrg && (
           <OrganizationDetails
             organization={selectedOrg}
@@ -64,8 +91,8 @@ export default function Home() {
 
         <div className="flex-1 relative">
           <OKCMap
-            organizations={organizations}
-            onOrganizationClick={setSelectedOrg}
+            organizations={allOrganizations}
+            onOrganizationClick={handleOrganizationClick}
             zctaFeatures={zctaFeatures}
           />
         </div>
