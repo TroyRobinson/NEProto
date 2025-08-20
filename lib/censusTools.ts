@@ -2,6 +2,8 @@ import { addLog } from './logStore';
 import { CURATED_VARIABLES } from './censusVariables';
 import { COMMON_QUERY_MAP } from './censusQueryMap';
 
+const STOP_WORDS = new Set(['and', 'or', 'of', 'the', 'in', 'for', 'population']);
+
 export interface CensusVariable {
   id: string;
   label: string;
@@ -56,7 +58,9 @@ export async function searchCensus(
     return result;
   }
 
-  const tokens = q.split(/\s+/);
+  const tokens = q
+    .split(/\s+/)
+    .filter((t) => t && !STOP_WORDS.has(t));
   const curated = CURATED_VARIABLES.filter((v) =>
     tokens.every(
       (t) =>
@@ -77,7 +81,9 @@ export async function searchCensus(
     message: { type: 'search', query, year, dataset },
   });
   const results = vars
-    .filter(([, info]) => info.label.toLowerCase().includes(q))
+    .filter(([, info]) =>
+      tokens.every((t) => info.label.toLowerCase().includes(t))
+    )
     .slice(0, 5)
     .map(([id, info]) => ({ id, label: info.label, concept: info.concept }));
   searchCache.set(cacheKey, results);
