@@ -1,10 +1,9 @@
 export async function geocode(address: string): Promise<{ latitude: number; longitude: number } | null> {
-  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address)}`;
-  const res = await fetch(url, { headers: { 'User-Agent': 'NEProto' } });
+  const res = await fetch(`/api/geocode?q=${encodeURIComponent(address)}`);
   if (!res.ok) {
     return null;
   }
-  const data = await res.json() as Array<{ lat: string; lon: string }>;
+  const data = (await res.json()) as Array<{ lat: string; lon: string }>;
   if (!Array.isArray(data) || data.length === 0) {
     return null;
   }
