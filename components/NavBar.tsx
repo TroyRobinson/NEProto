@@ -162,7 +162,7 @@ export default function NavBar({ onAddOrganization }: NavBarProps) {
             }}
             onMouseLeave={(e) => {
               if (!e.currentTarget.disabled) {
-                e.currentTarget.style.backgroundColor = 'var(--color-accent)';
+                e.currentTarget.style.backgroundColor = 'var(--foreground)';
               }
             }}
             aria-label="Add Organization"

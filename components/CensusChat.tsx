@@ -284,9 +284,12 @@ export default function CensusChat({ onAddMetric, onLoadStat, onClose }: CensusC
             `}
           />
           <button
-            className="px-4 py-2 rounded-r-[var(--radius-field)] disabled:opacity-50 transition-colors bg-black text-white hover:bg-gray-700 hover:text-white"
+            className="px-4 py-2 rounded-r-[var(--radius-field)] disabled:opacity-50 transition-colors"
+            style={{ backgroundColor: 'var(--color-accent)', color: 'var(--color-accent-content)' }}
             onClick={sendMessage}
             disabled={loading}
+            onMouseOver={e => (e.currentTarget.style.backgroundColor = '#3539e0')}
+            onMouseOut={e => (e.currentTarget.style.backgroundColor = 'var(--color-accent)')}
           >
             Send
           </button>
