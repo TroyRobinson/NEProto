@@ -176,14 +176,36 @@ export default function CensusChat({ onAddMetric, onLoadStat }: CensusChatProps)
       </div>
         <div className="flex">
           <input
-            className="flex-1 bg-white border border-gray-300 rounded-l p-2 text-gray-900"
+            className="flex-1 border p-2"
+            style={{
+              backgroundColor: 'var(--color-base-100)',
+              borderColor: 'var(--color-base-300)',
+              color: 'var(--color-base-content)',
+              borderRadius: 'var(--radius-field) 0 0 var(--radius-field)',
+              padding: 'var(--spacing-2)'
+            }}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
             placeholder={mode === 'admin' ? 'Ask about US Census stats...' : 'Search stored stats...'}
           />
           <button
-            className="px-4 py-2 bg-blue-600 text-white rounded-r disabled:opacity-50"
+            className="px-4 py-2 rounded-r disabled:opacity-50 transition-colors"
+            style={{
+              backgroundColor: 'var(--color-primary)',
+              color: 'var(--color-primary-content)',
+              borderRadius: '0 var(--radius-field) var(--radius-field) 0'
+            }}
+            onMouseEnter={(e) => {
+              if (!loading) {
+                e.currentTarget.style.backgroundColor = 'var(--color-primary-600)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!loading) {
+                e.currentTarget.style.backgroundColor = 'var(--color-primary)';
+              }
+            }}
             onClick={sendMessage}
             disabled={loading}
           >

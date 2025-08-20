@@ -4,17 +4,18 @@ import type { Organization } from '../types/organization';
 import type { ZctaFeature } from './census';
 
 function getCategoryColor(category: string): [number, number, number, number] {
+  // Using design system colors for organization categories
   const colors: Record<string, [number, number, number, number]> = {
-    'Food Security': [220, 53, 69, 200],
-    'Housing & Shelter': [13, 110, 253, 200],
-    Education: [25, 135, 84, 200],
-    Healthcare: [220, 53, 133, 200],
-    'Youth Development': [255, 193, 7, 200],
-    'Senior Services': [108, 117, 125, 200],
-    Environmental: [32, 201, 151, 200],
-    'Arts & Culture': [111, 66, 193, 200],
-    'Community Development': [253, 126, 20, 200],
-    Other: [134, 142, 150, 200],
+    'Food Security': [184, 0, 107, 200], // var(--color-error) - #B8006B
+    'Housing & Shelter': [23, 30, 199, 200], // var(--color-primary) - #171EC7  
+    Education: [0, 169, 157, 200], // var(--color-success) - #00A99D
+    Healthcare: [184, 0, 107, 200], // var(--color-error) - #B8006B
+    'Youth Development': [215, 168, 0, 200], // var(--color-warning) - #D7A800
+    'Senior Services': [75, 85, 99, 200], // var(--color-gray-600)
+    Environmental: [0, 169, 157, 200], // var(--color-success) - #00A99D
+    'Arts & Culture': [129, 132, 227, 200], // var(--color-secondary) - #8184E3
+    'Community Development': [23, 30, 199, 200], // var(--color-accent) - #171EC7
+    Other: [107, 114, 128, 200], // var(--color-gray-500)
   };
 
   return colors[category] || colors['Other'];

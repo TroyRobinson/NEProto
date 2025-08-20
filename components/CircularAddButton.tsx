@@ -15,10 +15,11 @@ export default function CircularAddButton({
   className = '', 
   disabled = false 
 }: CircularAddButtonProps) {
-  const sizeClasses = {
-    sm: 'w-8 h-8',
-    md: 'w-12 h-12', 
-    lg: 'w-16 h-16'
+  // Using design system spacing for sizes - 8px units
+  const sizes = {
+    sm: { width: 'var(--spacing-10)', height: 'var(--spacing-10)' }, // 40px
+    md: { width: 'var(--spacing-12)', height: 'var(--spacing-12)' }, // 48px
+    lg: { width: 'var(--spacing-14)', height: 'var(--spacing-14)' }  // 56px
   };
 
   const iconSizes = {
@@ -32,18 +33,41 @@ export default function CircularAddButton({
       onClick={onClick}
       disabled={disabled}
       className={`
-        ${sizeClasses[size]}
-        bg-foreground text-background 
         rounded-full 
         flex items-center justify-center
-        hover:bg-foreground/80 
-        active:bg-foreground/70
         transition-colors
         disabled:opacity-50 
         disabled:cursor-not-allowed
         shadow-lg hover:shadow-xl
         ${className}
       `}
+      style={{
+        width: sizes[size].width,
+        height: sizes[size].height,
+        backgroundColor: 'var(--color-primary)',
+        color: 'var(--color-primary-content)',
+        borderRadius: 'var(--radius-selector)' // 32px for full circle
+      }}
+      onMouseEnter={(e) => {
+        if (!disabled) {
+          e.currentTarget.style.backgroundColor = 'var(--color-primary-600)';
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!disabled) {
+          e.currentTarget.style.backgroundColor = 'var(--color-primary)';
+        }
+      }}
+      onMouseDown={(e) => {
+        if (!disabled) {
+          e.currentTarget.style.backgroundColor = 'var(--color-primary-700)';
+        }
+      }}
+      onMouseUp={(e) => {
+        if (!disabled) {
+          e.currentTarget.style.backgroundColor = 'var(--color-primary-600)';
+        }
+      }}
     >
       <svg
         className={iconSizes[size]}

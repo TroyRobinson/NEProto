@@ -3,7 +3,7 @@
 ## Tech Stack
 - Next.js App Router
 - Tailwind CSS v4
-- - See globals.css for theme & design tokens.
+- - See globals.css for design system: Montserrat font, 8px spacing units, color scheme (blue accent, yellow secondary, red, green, etc.)
 - InstantDB for realtime data
 - - See instant-rules.md for how to use the InstantDB database.
 - MapLibre GL + deck.gl for interactive maps

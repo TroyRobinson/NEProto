@@ -13,11 +13,30 @@ interface MetricDropdownProps {
 
 export default function MetricDropdown({ metrics, selected, onSelect }: MetricDropdownProps) {
   if (metrics.length === 0) {
-    return <div className="p-2 text-sm text-gray-600">No metrics selected.</div>;
+    return (
+      <div 
+        className="text-sm"
+        style={{
+          padding: 'var(--spacing-2)', // 8px
+          fontSize: 'var(--font-size-sm)', // 14px
+          color: 'var(--color-gray-600)'
+        }}
+      >
+        No metrics selected.
+      </div>
+    );
   }
   return (
     <select
-      className="p-2 border rounded bg-white text-gray-900"
+      className="border transition-colors"
+      style={{
+        padding: 'var(--spacing-2)', // 8px
+        borderRadius: 'var(--radius-field)', // 8px
+        backgroundColor: 'var(--color-base-100)',
+        color: 'var(--color-base-content)',
+        borderColor: 'var(--color-base-300)',
+        fontSize: 'var(--font-size-sm)' // 14px
+      }}
       value={selected ?? ''}
       onChange={(e) => onSelect(e.target.value)}
     >

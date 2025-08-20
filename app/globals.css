@@ -1,28 +1,153 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@100;200;300;400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
 :root {
   --background: #ffffff;
   --foreground: #171717;
   
-  /* Design Tokens */
-  --color-black: #000000;
-  --color-white: #ffffff;
-  --color-blue-accent-dark: #171ec7;
-  --color-blue-accent-faded: #666be9;
+  /* Design System Colors - Based on "Neighborhood" theme */
+  --color-base-100: oklch(100% 0 0); /* White */
+  --color-base-200: #F7F7F7; /* Light gray */
+  --color-base-300: #EBEBEB; /* Medium gray */
+  --color-base-content: oklch(0% 0 0); /* Black */
   
+  /* Primary = Blue/Indigo (our design system accent color) */
+  --color-primary: oklch(12% 0.042 264.695); /* Dark indigo */
+  --color-primary-content: oklch(100% 0 0); /* White text on primary */
+  
+  /* Secondary = Yellow (our secondary color) */
+  --color-secondary: #8184E3; /* Light purple-blue */
+  --color-secondary-content: oklch(100% 0 0); /* White text on secondary */
+  
+  /* Accent = Blue/Indigo (same as primary for consistency) */
+  --color-accent: #171EC7; /* Bright indigo */
+  --color-accent-content: oklch(100% 0 0); /* White text on accent */
+  
+  /* Neutral = Black */
+  --color-neutral: oklch(0% 0 0); /* Black */
+  --color-neutral-content: oklch(100% 0 0); /* White text on neutral */
+  
+  /* Success = Green/Turquoise (good stats, success) */
+  --color-success: #00A99D; /* Turquoise */
+  --color-success-content: oklch(98% 0.003 247.858); /* Light text */
+  
+  /* Warning = Yellow */
+  --color-warning: #D7A800; /* Golden yellow */
+  --color-warning-content: oklch(98% 0.003 247.858); /* Dark text */
+  
+  /* Error = Red/Pink (bad stats, warning) */
+  --color-error: #B8006B; /* Pinkish red */
+  --color-error-content: oklch(98% 0.003 247.858); /* Light text */
+  
+  /* Info = Blue */
+  --color-info: #171EC7; /* Bright indigo */
+  --color-info-content: oklch(98% 0.003 247.858); /* Light text */
+  
+  /* Border Radius */
+  --radius-selector: 2rem; /* 32px */
+  --radius-field: 0.5rem; /* 8px */
+  --radius-box: 1rem; /* 16px */
+  
+  /* Border Sizes */
+  --size-selector: 0.21875rem; /* ~3.5px */
+  --size-field: 0.28125rem; /* ~4.5px */
+  --border: 2px;
+  
+  /* Spacing System - 8px units */
+  --spacing-0: 0px;
+  --spacing-1: 4px;   /* 0.25rem */
+  --spacing-2: 8px;   /* 0.5rem */
+  --spacing-3: 12px;  /* 0.75rem */
+  --spacing-4: 16px;  /* 1rem */
+  --spacing-5: 20px;  /* 1.25rem */
+  --spacing-6: 24px;  /* 1.5rem */
+  --spacing-7: 30px;  /* 1.875rem */
+  --spacing-8: 32px;  /* 2rem */
+  --spacing-10: 40px; /* 2.5rem */
+  --spacing-12: 48px; /* 3rem */
+  --spacing-14: 56px; /* 3.5rem */
+  --spacing-16: 64px; /* 4rem */
+  
+  /* Typography Scale - Base 16px/1rem */
+  --font-size-xs: 0.75rem;   /* 12px - Caption, overline */
+  --font-size-sm: 0.875rem;  /* 14px - Secondary text */
+  --font-size-md: 1rem;      /* 16px - Body text */
+  --font-size-lg: 1.25rem;   /* 20px - Subheadings, CTA buttons */
+  --font-size-xl: 1.5rem;    /* 24px - Section headings */
+  --font-size-2xl: 2rem;     /* 32px - Page headings */
+  --font-size-3xl: 2.5rem;   /* 40px - Hero titles */
+  
+  /* Legacy compatibility */
+  --color-blue-accent-dark: var(--color-accent);
+  --color-blue-accent-faded: var(--color-secondary);
+  --color-black: var(--color-base-content);
+  --color-white: var(--color-base-100);
+  
+  --depth: 0;
+  --noise: 0;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --color-background: var(--color-base-100);
+  --color-foreground: var(--color-base-content);
+  --font-sans: var(--font-montserrat), 'Montserrat', var(--font-geist-sans), sans-serif;
   --font-mono: var(--font-geist-mono);
   
-
+  /* Tailwind Custom Spacing - 8px units */
+  --spacing-0_5: var(--spacing-1); /* 4px */
+  --spacing-1: var(--spacing-2);   /* 8px */
+  --spacing-1_5: var(--spacing-3); /* 12px */
+  --spacing-2: var(--spacing-4);   /* 16px */
+  --spacing-2_5: var(--spacing-5); /* 20px */
+  --spacing-3: var(--spacing-6);   /* 24px */
+  --spacing-3_75: var(--spacing-7); /* 30px */
+  --spacing-4: var(--spacing-8);   /* 32px */
+  --spacing-5: var(--spacing-10);  /* 40px */
+  --spacing-6: var(--spacing-12);  /* 48px */
+  --spacing-7: var(--spacing-14);  /* 56px */
+  --spacing-8: var(--spacing-16);  /* 64px */
+  
+  /* Tailwind Custom Colors */
+  --color-primary-50: color-mix(in srgb, var(--color-primary) 10%, white 90%);
+  --color-primary-100: color-mix(in srgb, var(--color-primary) 20%, white 80%);
+  --color-primary-500: var(--color-primary);
+  --color-primary-600: color-mix(in srgb, var(--color-primary) 120%, black 20%);
+  --color-primary-700: color-mix(in srgb, var(--color-primary) 140%, black 40%);
+  
+  --color-secondary-50: color-mix(in srgb, var(--color-secondary) 10%, white 90%);
+  --color-secondary-100: color-mix(in srgb, var(--color-secondary) 20%, white 80%);
+  --color-secondary-500: var(--color-secondary);
+  --color-secondary-600: color-mix(in srgb, var(--color-secondary) 120%, black 20%);
+  
+  --color-success-50: color-mix(in srgb, var(--color-success) 10%, white 90%);
+  --color-success-500: var(--color-success);
+  --color-success-600: color-mix(in srgb, var(--color-success) 120%, black 20%);
+  
+  --color-warning-50: color-mix(in srgb, var(--color-warning) 10%, white 90%);
+  --color-warning-500: var(--color-warning);
+  --color-warning-600: color-mix(in srgb, var(--color-warning) 120%, black 20%);
+  
+  --color-error-50: color-mix(in srgb, var(--color-error) 10%, white 90%);
+  --color-error-500: var(--color-error);
+  --color-error-600: color-mix(in srgb, var(--color-error) 120%, black 20%);
+  
+  /* Gray Scale */
+  --color-gray-50: var(--color-base-100);
+  --color-gray-100: var(--color-base-200);
+  --color-gray-200: var(--color-base-300);
+  --color-gray-300: #D1D5DB;
+  --color-gray-400: #9CA3AF;
+  --color-gray-500: #6B7280;
+  --color-gray-600: #4B5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #1F2937;
+  --color-gray-900: var(--color-base-content);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-montserrat), 'Montserrat', sans-serif;
+  font-size: var(--font-size-md);
+  line-height: 1.5;
 }
