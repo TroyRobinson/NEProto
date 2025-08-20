@@ -1,4 +1,5 @@
 import type { Organization } from '../types/organization';
+import { XMarkIcon } from '@heroicons/react/24/outline';
 
 interface OrganizationDetailsProps {
   organization: Organization;
@@ -11,8 +12,17 @@ export default function OrganizationDetails({ organization, onClose }: Organizat
       <div className="p-6">
         <div className="flex justify-between items-start mb-4">
           <h2 className="text-xl font-bold text-gray-900">{organization.name}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            ×
+          <button
+            onClick={onClose}
+            className="w-6 h-6 flex items-center justify-center rounded-full text-gray-500 hover:text-gray-700 transition-colors hover:bg-gray-100"
+            aria-label="Close details"
+            style={{
+              transition: 'background-color 0.2s, color 0.2s',
+            }}
+          >
+            <span className="flex items-center justify-center w-6 h-6 rounded-full">
+              <XMarkIcon className="w-3 h-3" />
+            </span>
           </button>
         </div>
 
@@ -32,7 +42,7 @@ export default function OrganizationDetails({ organization, onClose }: Organizat
             </div>
           )}
 
-          <div className="space-y-2 text-sm">
+          <div className="space-y-1 text-sm">
             {organization.website && (
               <div>
                 <span className="font-medium text-gray-900">Website: </span>
@@ -71,7 +81,12 @@ export default function OrganizationDetails({ organization, onClose }: Organizat
             {organization.locations.map((location) => (
               <div key={location.id} className="text-sm text-gray-700 mb-1">
                 <div className="flex items-start">
-                  {location.isPrimary && <span className="text-blue-600 text-xs mr-1">●</span>}
+                  <span
+                    className={`${location.isPrimary ? 'text-blue-600' : 'text-gray-400'} text-xs mr-1`}
+                    aria-hidden="true"
+                  >
+                    ●
+                  </span>
                   {location.address}
                 </div>
               </div>
