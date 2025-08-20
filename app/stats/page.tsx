@@ -59,9 +59,27 @@ export default function StatsPage() {
                   <td className="border px-2 py-1">{stat.source}</td>
                   <td className="border px-2 py-1">{stat.year}</td>
                   <td className="border px-2 py-1 space-x-2">
-                    <button className="text-blue-600 underline" onClick={() => handleEdit(stat)}>Edit</button>
-                    <button className="text-red-600 underline" onClick={() => handleDelete(stat.id)}>Delete</button>
-                    <button className="text-green-600 underline" onClick={() => handleRefresh(stat)}>Refresh</button>
+                    <button
+                      className="underline"
+                      style={{ color: 'var(--color-info)' }}
+                      onClick={() => handleEdit(stat)}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className="underline"
+                      style={{ color: 'var(--color-error)' }}
+                      onClick={() => handleDelete(stat.id)}
+                    >
+                      Delete
+                    </button>
+                    <button
+                      className="underline"
+                      style={{ color: 'var(--color-success)' }}
+                      onClick={() => handleRefresh(stat)}
+                    >
+                      Refresh
+                    </button>
                   </td>
                 </tr>
               ))}

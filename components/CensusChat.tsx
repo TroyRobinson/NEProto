@@ -15,9 +15,10 @@ interface ChatMessage {
 interface CensusChatProps {
   onAddMetric: (metric: { id: string; label: string }) => void | Promise<void>;
   onLoadStat: (stat: Stat) => void | Promise<void>;
+  onClose?: () => void;
 }
 
-export default function CensusChat({ onAddMetric, onLoadStat }: CensusChatProps) {
+export default function CensusChat({ onAddMetric, onLoadStat, onClose }: CensusChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -144,22 +145,35 @@ export default function CensusChat({ onAddMetric, onLoadStat }: CensusChatProps)
 
     return (
       <div className="flex flex-col h-full bg-white text-gray-900">
-        <div className="flex justify-end mb-2 gap-2">
-          <button
-            onClick={clearChat}
-            className="px-2 py-1 border rounded text-xs text-gray-600"
-            aria-label="Clear chat"
-          >
-            Clear
-          </button>
-          <select
-            className="border border-gray-300 rounded p-1 text-sm"
-            value={mode}
-            onChange={e => setMode(e.target.value as 'user' | 'admin')}
-          >
-            <option value="user">User Mode</option>
-            <option value="admin">Admin Mode</option>
-          </select>
+        <div className="flex justify-between items-center mb-2">
+          <div className="flex gap-2">
+            <select
+              className="border border-gray-300 rounded p-1 text-sm"
+              value={mode}
+              onChange={e => setMode(e.target.value as 'user' | 'admin')}
+            >
+              <option value="user">User Mode</option>
+              <option value="admin">Admin Mode</option>
+            </select>
+            <button
+              onClick={clearChat}
+              className="px-2 py-1 border rounded text-xs text-gray-600"
+              aria-label="Clear chat"
+            >
+              Clear
+            </button>
+          </div>
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+              aria-label="Close chat"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
         </div>
         {mode === 'admin' && <ConfigControls />}
         <div className="flex-1 overflow-y-auto mb-2 space-y-2 p-2 rounded bg-gray-100">

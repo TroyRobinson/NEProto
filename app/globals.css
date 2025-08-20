@@ -27,15 +27,15 @@
   --color-neutral: oklch(0% 0 0); /* Black */
   --color-neutral-content: oklch(100% 0 0); /* White text on neutral */
   
-  /* Success = Green/Turquoise (good stats, success) */
+  /* Success or posititive_connotation = Green/Turquoise (good stats, success) */
   --color-success: #00A99D; /* Turquoise */
   --color-success-content: oklch(98% 0.003 247.858); /* Light text */
   
-  /* Warning = Yellow */
+  /* Warning or Org-related = Yellow */
   --color-warning: #D7A800; /* Golden yellow */
   --color-warning-content: oklch(98% 0.003 247.858); /* Dark text */
   
-  /* Error = Red/Pink (bad stats, warning) */
+  /* Error-Negative_Connotation = Red/Pink (bad stats, warning, misc usage) */
   --color-error: #B8006B; /* Pinkish red */
   --color-error-content: oklch(98% 0.003 247.858); /* Light text */
   

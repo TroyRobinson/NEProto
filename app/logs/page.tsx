@@ -37,18 +37,19 @@ export default function LogsPage() {
         <div className="flex justify-end mb-2">
           <button
             onClick={clearLogs}
-            className="px-3 py-1 bg-red-500 text-white rounded text-sm"
+            className="px-3 py-1 rounded text-sm"
+            style={{ backgroundColor: 'var(--color-error)', color: 'var(--color-error-content)' }}
           >
             Clear logs
           </button>
         </div>
         {logs.map((log) => (
-          <div key={log.id} className={`flex ${log.direction === 'request' ? 'justify-start' : 'justify-end'}`}>
+          <div key={log.id} className="flex justify-center">
             <div
               className={`max-w-xl px-3 py-2 rounded ${
                 log.direction === 'request'
-                  ? 'bg-gray-200 text-gray-900'
-                  : 'bg-blue-100 text-blue-800'
+                  ? 'bg-gray-200 text-gray-900 mr-8'
+                  : 'bg-blue-100 text-blue-800 ml-8'
               }`}
             >
               <div className="text-xs text-gray-500 mb-1">
