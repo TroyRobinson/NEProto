@@ -77,25 +77,29 @@ export default function Home() {
       />
 
       <div className="flex flex-1 overflow-hidden relative">
-        {selectedOrg ? (
-          <OrganizationDetails
-            organization={selectedOrg}
-            onClose={() => {
-              setSelectedOrg(null);
-              setHoveredOrgId(null);
-            }}
-          />
-        ) : (
-          searchResults && (
-            <SearchResults
-              results={searchResults}
-              onSelect={(org) => {
-                setSelectedOrg(org);
-                setHoveredOrgId(null);
-              }}
-              onHover={(org) => setHoveredOrgId(org ? org.id : null)}
-            />
-          )
+        {(selectedOrg || searchResults) && (
+          <div className="w-96 ml-4 mt-16">
+            {selectedOrg ? (
+              <OrganizationDetails
+                organization={selectedOrg}
+                onClose={() => {
+                  setSelectedOrg(null);
+                  setHoveredOrgId(null);
+                }}
+              />
+            ) : (
+              searchResults && (
+                <SearchResults
+                  results={searchResults}
+                  onSelect={(org) => {
+                    setSelectedOrg(org);
+                    setHoveredOrgId(null);
+                  }}
+                  onHover={(org) => setHoveredOrgId(org ? org.id : null)}
+                />
+              )
+            )}
+          </div>
         )}
 
         <div className="flex-1 relative">
@@ -107,11 +111,25 @@ export default function Home() {
           />
         </div>
 
-        <div className="absolute top-4 left-4 z-10">
+        <div className="absolute top-4 left-4 z-10 w-96">
           <SearchBar
             value={searchQuery}
-            onChange={setSearchQuery}
+            onChange={(val) => {
+              setSearchQuery(val);
+              if (val.trim() === '') {
+                setSearchResults(null);
+                setSelectedOrg(null);
+                setHoveredOrgId(null);
+              }
+            }}
             onSubmit={handleSearch}
+            onClear={() => {
+              setSearchQuery('');
+              setSearchResults(null);
+              setSelectedOrg(null);
+              setHoveredOrgId(null);
+            }}
+            showClear={searchResults !== null}
           />
         </div>
       </div>
