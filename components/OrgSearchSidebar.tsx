@@ -26,7 +26,7 @@ export default function OrgSearchSidebar({ existingOrgs, onResults, onSelect }: 
     if (!query.trim()) return;
     setLoading(true);
     try {
-      const res = await fetch(`https://projects.propublica.org/nonprofits/api/v2/search.json?q=${encodeURIComponent(query)}`);
+      const res = await fetch(`/api/propublica/search?q=${encodeURIComponent(query)}`);
       const data = await res.json();
       const items: SearchResult[] = [];
       for (const o of data.organizations || []) {

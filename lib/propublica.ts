@@ -6,7 +6,7 @@ import type { Organization } from '../types/organization';
 import { geocode } from './geocode';
 
 export async function addOrgFromProPublica(ein: number): Promise<Organization | null> {
-  const res = await fetch(`https://projects.propublica.org/nonprofits/api/v2/organizations/${ein}.json`);
+  const res = await fetch(`/api/propublica/organizations/${ein}`);
   if (!res.ok) {
     return null;
   }
