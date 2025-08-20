@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import db from '../lib/db';
 import { useConfig } from './ConfigContext';
 import ConfigControls from './ConfigControls';
@@ -26,6 +26,8 @@ export default function CensusChat({ onAddMetric, onLoadStat, onClose }: CensusC
   const { config } = useConfig();
   const { data: statData } = db.useQuery({ stats: {} });
   const { metrics, clearMetrics } = useMetrics();
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
   const CHAT_STORAGE_KEY = 'censusChatMessages';
   const MODE_STORAGE_KEY = 'censusChatMode';
@@ -49,9 +51,27 @@ export default function CensusChat({ onAddMetric, onLoadStat, onClose }: CensusC
     localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(messages));
   }, [messages]);
 
+  // Auto scroll to bottom when messages update or loading state changes
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    // Use rAF to ensure DOM is painted before measuring
+    requestAnimationFrame(() => {
+      el.scrollTop = el.scrollHeight;
+    });
+  }, [messages, loading]);
+
   useEffect(() => {
     localStorage.setItem(MODE_STORAGE_KEY, mode);
   }, [mode]);
+
+  // Auto-resize input area based on content
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [input]);
 
   const clearChat = () => {
     setMessages([]);
@@ -146,7 +166,16 @@ export default function CensusChat({ onAddMetric, onLoadStat, onClose }: CensusC
     return (
       <div className="flex flex-col h-full bg-white text-gray-900">
         <div className="flex justify-between items-center mb-2">
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
+            <span
+              className="font-semibold text-lg text-gray-800"
+              style={{ minWidth: '6.5rem' }}
+            >
+              Ask Anything
+              <div className="text-xs text-gray-500 font-normal leading-tight" style={{ marginTop: 2 }}>
+                add map data &amp; chat
+              </div>
+            </span>
             <div
               className="relative"
               style={{ display: 'inline-block' }}
@@ -210,7 +239,10 @@ export default function CensusChat({ onAddMetric, onLoadStat, onClose }: CensusC
           )}
         </div>
         {mode === 'admin' && <ConfigControls />}
-        <div className="flex-1 overflow-y-auto mb-2 space-y-2 p-2 rounded bg-gray-100">
+        <div
+          ref={scrollContainerRef}
+          className="flex-1 overflow-y-auto mb-2 space-y-2 p-2 rounded bg-gray-100"
+        >
         {messages.map((m, idx) => (
           <div key={idx} className={m.role === 'user' ? 'text-right' : 'text-left'}>
             <span
@@ -223,37 +255,36 @@ export default function CensusChat({ onAddMetric, onLoadStat, onClose }: CensusC
         {loading && <div className="text-sm text-gray-500">Thinking...</div>}
       </div>
         <div className="flex">
-          <input
-            className="flex-1 border p-2"
+          <textarea
+            ref={inputRef}
+            className="flex-1 border border-[--color-base-300] bg-[--color-base-100] text-[--color-base-content] rounded-l-[var(--radius-field)] py-2 px-3 leading-normal"
+            rows={1}
             style={{
-              backgroundColor: 'var(--color-base-100)',
-              borderColor: 'var(--color-base-300)',
-              color: 'var(--color-base-content)',
-              borderRadius: 'var(--radius-field) 0 0 var(--radius-field)',
-              padding: 'var(--spacing-2)'
+              resize: 'none',
+              overflowY: 'auto',
+              maxHeight: '40vh',
+              height: 'auto',
+              scrollbarWidth: 'none', // Firefox
+              msOverflowStyle: 'none', // IE 10+
             }}
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-            placeholder={mode === 'admin' ? 'Ask about US Census stats...' : 'Search stored stats...'}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+              }
+            }}
+            placeholder={mode === 'admin' ? 'Ask about US Census stats... (Shift+Enter for newline)' : 'Search stored stats...'}
+            // Hide scrollbar for Webkit browsers
+            css={`
+              &::-webkit-scrollbar {
+                display: none;
+              }
+            `}
           />
           <button
-            className="px-4 py-2 rounded-r disabled:opacity-50 transition-colors"
-            style={{
-              backgroundColor: 'var(--color-primary)',
-              color: 'var(--color-primary-content)',
-              borderRadius: '0 var(--radius-field) var(--radius-field) 0'
-            }}
-            onMouseEnter={(e) => {
-              if (!loading) {
-                e.currentTarget.style.backgroundColor = 'var(--color-primary-600)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!loading) {
-                e.currentTarget.style.backgroundColor = 'var(--color-primary)';
-              }
-            }}
+            className="px-4 py-2 rounded-r-[var(--radius-field)] disabled:opacity-50 transition-colors bg-black text-white hover:bg-gray-700 hover:text-white"
             onClick={sendMessage}
             disabled={loading}
           >
