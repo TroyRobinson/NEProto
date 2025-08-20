@@ -24,4 +24,10 @@ export const CURATED_VARIABLES: CensusVariableInfo[] = [
     concept: 'INCOME IN THE PAST 12 MONTHS (IN 2023 INFLATION-ADJUSTED DOLLARS)',
     keywords: ['per', 'capita', 'income'],
   },
+  {
+    id: 'B03003_003E',
+    label: 'Hispanic or Latino population',
+    concept: 'Hispanic or Latino Origin',
+    keywords: ['hispanic', 'latino'],
+  },
 ];
