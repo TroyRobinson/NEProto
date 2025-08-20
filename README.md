@@ -55,9 +55,10 @@
 - Populated from map click events
 
 ### components/CensusChat.tsx
-- Chat UI with user/admin mode toggle
+- Chat UI with user/admin/fast-admin mode toggle
 - **User mode**: Searches stored stats, provides insights via `/api/insight`
 - **Admin mode**: Live Census API queries, adds new metrics via `/api/chat`
+- **Fast admin mode**: Uses `openai/gpt-oss-120b:nitro` with extra guardrails for quick metric additions
 - Dispatches metrics to `MetricContext`
 - Persists chat messages and mode selection to localStorage
 - Clear button to reset chat and active metrics
@@ -89,7 +90,7 @@
 
 ### lib/censusTools.ts
 - Loads Census variable metadata and caches results
-- `searchCensus` and `validateVariableId` helpers
+- `searchCensus` and `validateVariableId` helpers with tokenized search for loose queries
 
 ### lib/mapLayers.ts
 - `createOrganizationLayer` for point markers
