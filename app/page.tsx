@@ -8,6 +8,7 @@ import CensusChat from '../components/CensusChat';
 import TopNav from '../components/TopNav';
 import { useMetrics } from '../components/MetricContext';
 import OrganizationDetails from '../components/OrganizationDetails';
+import { SearchBar, SearchResults } from '../components/OrganizationSearch';
 import type { Organization } from '../types/organization';
 
 const OKCMap = dynamic(() => import('../components/OKCMap'), {
@@ -18,6 +19,9 @@ const OKCMap = dynamic(() => import('../components/OKCMap'), {
 export default function Home() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
+  const [query, setQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<Organization[] | null>(null);
+  const [hoveredOrgId, setHoveredOrgId] = useState<string | null>(null);
   const { zctaFeatures, addMetric, loadStatMetric } = useMetrics();
 
   const { data, isLoading, error } = db.useQuery({
@@ -46,6 +50,29 @@ export default function Home() {
 
   const organizations = data?.organizations || [];
 
+  const handleSearch = () => {
+    const term = query.trim().toLowerCase();
+    if (term === '') {
+      setSearchResults(null);
+      return;
+    }
+    const results = organizations.filter(
+      (org) =>
+        org.name.toLowerCase().includes(term) ||
+        org.description.toLowerCase().includes(term),
+    );
+    setSearchResults(results);
+    setSelectedOrg(null);
+    setHoveredOrgId(null);
+  };
+
+  const handleSelectOrg = (org: Organization) => {
+    setSelectedOrg(org);
+    setHoveredOrgId(null);
+  };
+
+  const displayedOrgs = searchResults ?? organizations;
+
   return (
     <div className="h-screen bg-gray-100 flex flex-col overflow-hidden">
       <TopNav
@@ -54,19 +81,30 @@ export default function Home() {
         onAddOrganization={() => setShowAddForm(true)}
       />
 
-      <div className="flex flex-1 overflow-hidden">
-        {selectedOrg && (
+      <div className="flex flex-1 overflow-hidden relative">
+        <div className="absolute top-4 left-4 z-20">
+          <SearchBar query={query} onQueryChange={setQuery} onSubmit={handleSearch} />
+        </div>
+
+        {selectedOrg ? (
           <OrganizationDetails
             organization={selectedOrg}
             onClose={() => setSelectedOrg(null)}
           />
-        )}
+        ) : searchResults ? (
+          <SearchResults
+            results={searchResults}
+            onSelect={handleSelectOrg}
+            onHover={setHoveredOrgId}
+          />
+        ) : null}
 
         <div className="flex-1 relative">
           <OKCMap
-            organizations={organizations}
-            onOrganizationClick={setSelectedOrg}
+            organizations={displayedOrgs}
+            onOrganizationClick={handleSelectOrg}
             zctaFeatures={zctaFeatures}
+            highlightedOrgId={hoveredOrgId}
           />
         </div>
       </div>

@@ -28,7 +28,8 @@ interface OrgPoint {
 
 export function createOrganizationLayer(
   organizations: Organization[],
-  onOrganizationClick?: (org: Organization) => void
+  onOrganizationClick?: (org: Organization) => void,
+  highlightedOrgId?: string | null,
 ) {
   const orgData: OrgPoint[] = organizations.flatMap((org) =>
     org.locations.map((location) => ({
@@ -42,10 +43,10 @@ export function createOrganizationLayer(
     id: 'organizations',
     data: orgData,
     getPosition: (d) => d.coordinates,
-    getRadius: 200,
+    getRadius: (d) => (d.organization.id === highlightedOrgId ? 300 : 200),
     getFillColor: (d) => d.color,
     getLineColor: [0, 0, 0, 100],
-    getLineWidth: 2,
+    getLineWidth: (d) => (d.organization.id === highlightedOrgId ? 4 : 2),
     radiusScale: 1,
     radiusMinPixels: 8,
     radiusMaxPixels: 20,
