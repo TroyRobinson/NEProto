@@ -257,7 +257,7 @@ export default function CensusChat({ onAddMetric, onLoadStat, onClose }: CensusC
         <div className="flex">
           <textarea
             ref={inputRef}
-            className="flex-1 border border-[--color-base-300] bg-[--color-base-100] text-[--color-base-content] rounded-l-[var(--radius-field)] py-2 px-3 leading-normal"
+            className="flex-1 border border-[--color-base-300] bg-[--color-base-100] text-[--color-base-content] rounded-l-[var(--radius-field)] py-2 px-3 leading-normal no-scrollbar"
             rows={1}
             style={{
               resize: 'none',
@@ -276,13 +276,13 @@ export default function CensusChat({ onAddMetric, onLoadStat, onClose }: CensusC
               }
             }}
             placeholder={mode === 'admin' ? 'Ask about US Census stats... (Shift+Enter for newline)' : 'Search stored stats...'}
-            // Hide scrollbar for Webkit browsers
-            css={`
-              &::-webkit-scrollbar {
-                display: none;
-              }
-            `}
           />
+          {/* Hide scrollbar for Webkit browsers */}
+          <style jsx>{`
+            .no-scrollbar::-webkit-scrollbar {
+              display: none;
+            }
+          `}</style>
           <button
             className="px-4 py-2 rounded-r-[var(--radius-field)] disabled:opacity-50 transition-colors"
             style={{ backgroundColor: 'var(--color-accent)', color: 'var(--color-accent-content)' }}
