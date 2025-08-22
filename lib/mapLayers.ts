@@ -1,64 +1,79 @@
-import { ScatterplotLayer, GeoJsonLayer } from '@deck.gl/layers';
+import { ScatterplotLayer, GeoJsonLayer, IconLayer } from '@deck.gl/layers';
 import type { PickingInfo } from '@deck.gl/core';
 import type { Organization } from '../types/organization';
 import type { ZctaFeature } from './census';
 
-function getCategoryColor(category: string): [number, number, number, number] {
-  // Using design system colors for organization categories
-  const colors: Record<string, [number, number, number, number]> = {
-    'Food Security': [184, 0, 107, 200], // var(--color-error) - #B8006B
-    'Housing & Shelter': [23, 30, 199, 200], // var(--color-primary) - #171EC7  
-    Education: [0, 169, 157, 200], // var(--color-success) - #00A99D
-    Healthcare: [184, 0, 107, 200], // var(--color-error) - #B8006B
-    'Youth Development': [215, 168, 0, 200], // var(--color-warning) - #D7A800
-    'Senior Services': [75, 85, 99, 200], // var(--color-gray-600)
-    Environmental: [0, 169, 157, 200], // var(--color-success) - #00A99D
-    'Arts & Culture': [129, 132, 227, 200], // var(--color-secondary) - #8184E3
-    'Community Development': [23, 30, 199, 200], // var(--color-accent) - #171EC7
-    Other: [107, 114, 128, 200], // var(--color-gray-500)
-  };
-
-  return colors[category] || colors['Other'];
-}
+// Faded accent and vivid accent colors from design system
+const FADED_ACCENT: [number, number, number, number] = [129, 132, 227, 160]; // --color-blue-accent-faded (#8184E3)
+const VIVID_ACCENT: [number, number, number, number] = [23, 30, 199, 255]; // --color-accent (#171EC7)
 
 interface OrgPoint {
   coordinates: [number, number];
   organization: Organization;
-  color: [number, number, number, number];
 }
 
-export function createOrganizationLayer(
+export function createOrganizationLayers(
   organizations: Organization[],
-  onOrganizationClick?: (org: Organization) => void
+  onOrganizationClick?: (org: Organization) => void,
+  selectedOrgId?: string | null,
+  hoveredOrgId?: string | null,
+  onOrganizationHover?: (org: Organization | null) => void
 ) {
   const orgData: OrgPoint[] = organizations.flatMap((org) =>
     org.locations.map((location) => ({
       coordinates: [location.longitude, location.latitude],
       organization: org,
-      color: getCategoryColor(org.category),
     }))
   );
-
-  return new ScatterplotLayer<OrgPoint>({
+  const baseLayer = new ScatterplotLayer<OrgPoint>({
     id: 'organizations',
     data: orgData,
     getPosition: (d) => d.coordinates,
-    getRadius: 200,
-    getFillColor: (d) => d.color,
-    getLineColor: [0, 0, 0, 100],
+    getRadius: 400,
+    getFillColor: FADED_ACCENT,
+    getLineColor: [0, 0, 0, 80],
     getLineWidth: 2,
     radiusScale: 1,
     radiusMinPixels: 8,
     radiusMaxPixels: 20,
     pickable: true,
-    // Deck.gl's onClick handler includes an event argument that's unused here.
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     onClick: ((info: PickingInfo<OrgPoint>, _event: unknown) => {
       if (info.object && onOrganizationClick) {
         onOrganizationClick(info.object.organization);
       }
     }) as (info: PickingInfo<OrgPoint>, event: unknown) => void,
+    onHover: ((info: PickingInfo<OrgPoint>) => {
+      if (onOrganizationHover) {
+        onOrganizationHover(info.object ? info.object.organization : null);
+      }
+    }) as (info: PickingInfo<OrgPoint>) => void,
   });
+
+  const highlighted = orgData.filter(
+    (d) => d.organization.id === selectedOrgId || d.organization.id === hoveredOrgId
+  );
+
+  const pinLayer =
+    highlighted.length > 0
+      ? new IconLayer<OrgPoint>({
+          id: 'organization-pins',
+          data: highlighted,
+          iconAtlas:
+            'https://raw.githubusercontent.com/visgl/deck.gl-data/master/website/icon-atlas.png',
+          iconMapping: {
+            marker: { x: 0, y: 0, width: 128, height: 128, anchorY: 128, mask: true },
+          },
+          getIcon: () => 'marker',
+          sizeScale: 1,
+          getSize: 40,
+          getPosition: (d) => d.coordinates,
+          getColor: VIVID_ACCENT,
+          pickable: false,
+        })
+      : null;
+
+  return pinLayer ? [baseLayer, pinLayer] : [baseLayer];
 }
 
 export function createZctaMetricLayer(zctaFeatures?: ZctaFeature[]) {
