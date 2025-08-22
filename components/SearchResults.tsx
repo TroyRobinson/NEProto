@@ -11,7 +11,7 @@ interface SearchResultsProps {
 
 export default function SearchResults({ results, onSelect, onHover }: SearchResultsProps) {
   return (
-    <div className="w-full bg-white shadow-lg overflow-y-auto">
+    <div className="w-full overflow-y-auto">
       <div className="p-4 space-y-3">
         {results.length === 0 && (
           <div className="text-sm text-gray-500">No results found</div>
