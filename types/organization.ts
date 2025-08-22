@@ -3,6 +3,7 @@ export interface Organization {
   name: string;
   description: string;
   category: string;
+  ein?: number;
   website?: string;
   phone?: string;
   email?: string;
