@@ -1,21 +1,6 @@
 import type { Feature, Geometry } from 'geojson';
 import { OKC_ZCTAS } from './okcZctas';
-
-async function log(entry: {
-  service: string;
-  direction: 'request' | 'response';
-  message: unknown;
-}) {
-  try {
-    await fetch('/api/logs', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(entry),
-    });
-  } catch {
-    // ignore logging errors on client
-  }
-}
+import { log } from './logClient';
 
 export interface ZctaFeature extends Feature {
   geometry: Geometry;

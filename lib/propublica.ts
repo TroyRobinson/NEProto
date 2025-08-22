@@ -5,6 +5,7 @@ import db from './db';
 import type { Organization } from '../types/organization';
 import { geocode } from './geocode';
 import type { OrgCategory } from '../types/organization';
+import { log } from './logClient';
 
 const NTEE_CATEGORY_MAP: Record<string, OrgCategory> = {
   A: 'Arts & Culture',
@@ -78,7 +79,7 @@ export async function addOrgFromProPublica(ein: number): Promise<Organization | 
   }
   const orgId = id();
   const locId = id();
-  await db.transact([
+  const tx = [
     db.tx.organizations[orgId].update({
       name: orgData.name,
       description: `NTEE ${orgData.ntee_code || 'Unknown'}`,
@@ -94,7 +95,10 @@ export async function addOrgFromProPublica(ein: number): Promise<Organization | 
         isPrimary: true,
       })
       .link({ organization: orgId }),
-  ]);
+  ];
+  await log({ service: 'InstantDB', direction: 'request', message: tx });
+  await db.transact(tx);
+  await log({ service: 'InstantDB', direction: 'response', message: { organization: orgId } });
   return {
     id: orgId,
     name: orgData.name,
