@@ -30,7 +30,8 @@ export function createOrganizationLayer(
   organizations: Organization[],
   onOrganizationClick?: (org: Organization) => void,
   selectedOrgId?: string | null,
-  hoveredOrgId?: string | null
+  hoveredOrgId?: string | null,
+  onOrganizationHover?: (org: Organization | null) => void
 ) {
   const orgData: OrgPoint[] = organizations.flatMap((org) =>
     org.locations.map((location) => ({
@@ -45,24 +46,27 @@ export function createOrganizationLayer(
     data: orgData,
     getPosition: (d) => d.coordinates,
     getRadius: (d) => {
-      if (d.organization.id === selectedOrgId) return 400;
-      if (d.organization.id === hoveredOrgId) return 300;
-      return 200;
+      if (d.organization.id === selectedOrgId) return 800;
+      if (d.organization.id === hoveredOrgId) return 600;
+      return 400;
     },
     getFillColor: (d) =>
-      d.organization.id === selectedOrgId ? [255, 255, 255, 255] : d.color,
-    getLineColor: (d) =>
       d.organization.id === selectedOrgId || d.organization.id === hoveredOrgId
-        ? [0, 0, 0, 255]
-        : [0, 0, 0, 100],
+        ? [255, 255, 255, 255]
+        : d.color,
+    getLineColor: (d) => {
+      if (d.organization.id === selectedOrgId) return [0, 0, 0, 255];
+      if (d.organization.id === hoveredOrgId) return [0, 0, 0, 200];
+      return [0, 0, 0, 100];
+    },
     getLineWidth: (d) => {
-      if (d.organization.id === selectedOrgId) return 4;
-      if (d.organization.id === hoveredOrgId) return 3;
+      if (d.organization.id === selectedOrgId) return 6;
+      if (d.organization.id === hoveredOrgId) return 4;
       return 2;
     },
     radiusScale: 1,
     radiusMinPixels: 8,
-    radiusMaxPixels: 20,
+    radiusMaxPixels: 40,
     pickable: true,
     // Deck.gl's onClick handler includes an event argument that's unused here.
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -71,6 +75,11 @@ export function createOrganizationLayer(
         onOrganizationClick(info.object.organization);
       }
     }) as (info: PickingInfo<OrgPoint>, event: unknown) => void,
+    onHover: ((info: PickingInfo<OrgPoint>) => {
+      if (onOrganizationHover) {
+        onOrganizationHover(info.object ? info.object.organization : null);
+      }
+    }) as (info: PickingInfo<OrgPoint>) => void,
   });
 }
 

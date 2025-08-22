@@ -83,6 +83,7 @@ export async function addOrgFromProPublica(ein: number): Promise<Organization | 
       name: orgData.name,
       description: `NTEE ${orgData.ntee_code || 'Unknown'}`,
       category: nteeToCategory(orgData.ntee_code),
+      ein: orgData.ein,
       createdAt: Date.now(),
     }),
     db.tx.locations[locId]
@@ -99,6 +100,7 @@ export async function addOrgFromProPublica(ein: number): Promise<Organization | 
     name: orgData.name,
     description: `NTEE ${orgData.ntee_code || 'Unknown'}`,
     category: nteeToCategory(orgData.ntee_code),
+    ein: orgData.ein,
     createdAt: Date.now(),
     locations: [
       {

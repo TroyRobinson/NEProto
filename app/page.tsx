@@ -41,13 +41,19 @@ export default function Home() {
   }, [dbOrgs, addedOrgs]);
 
   const allOrganizations = useMemo(() => {
-    const existing = new Set(organizations.map(o => o.name.toLowerCase()));
-    return [...organizations, ...searchResults.filter(o => !existing.has(o.name.toLowerCase()))];
+    const existingNames = new Set(organizations.map(o => o.name.toLowerCase()));
+    const existingEins = new Set(organizations.map(o => o.ein).filter(Boolean) as number[]);
+    return [
+      ...organizations,
+      ...searchResults.filter(
+        (o) => (!o.ein || !existingEins.has(o.ein)) && !existingNames.has(o.name.toLowerCase())
+      ),
+    ];
   }, [organizations, searchResults]);
 
   const handleOrganizationClick = async (org: Organization) => {
     if (org.id.startsWith('search-')) {
-      const ein = parseInt(org.id.replace('search-', ''), 10);
+      const ein = org.ein || parseInt(org.id.replace('search-', ''), 10);
       const saved = await addOrgFromProPublica(ein);
       if (saved) {
         setAddedOrgs(prev => [...prev, saved]);
@@ -106,6 +112,7 @@ export default function Home() {
             selectedOrgId={selectedOrg?.id || null}
             hoveredOrgId={hoveredOrgId}
             onOrganizationClick={handleOrganizationClick}
+            onOrganizationHover={setHoveredOrgId}
             zctaFeatures={zctaFeatures}
           />
         </div>

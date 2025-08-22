@@ -52,6 +52,7 @@ export default function OrgSearchSidebar({ existingOrgs, onResults, onSelect, on
               name: o.name,
               description: '',
               category: nteeToCategory(o.ntee_code),
+              ein: o.ein,
               createdAt: Date.now(),
               locations: [
                 {
@@ -79,7 +80,7 @@ export default function OrgSearchSidebar({ existingOrgs, onResults, onSelect, on
 
   const handleSelect = async (item: SearchResult) => {
     const existing = existingOrgs.find(
-      (o) => o.name.toLowerCase() === item.org.name.toLowerCase()
+      (o) => o.ein === item.ein || o.name.toLowerCase() === item.org.name.toLowerCase()
     );
     if (existing) {
       onSelect(existing);

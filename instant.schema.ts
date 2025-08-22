@@ -13,6 +13,7 @@ const _schema = i.schema({
       name: i.string(),
       description: i.string(),
       category: i.string(),
+      ein: i.number().optional().indexed(),
       website: i.string().optional(),
       phone: i.string().optional(),
       email: i.string().optional(),
