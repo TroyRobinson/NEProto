@@ -34,7 +34,7 @@
 ### app/api/insight/route.ts
 - POST handler for free-form statistical analysis
 - Processes stat data through OpenRouter for insights
-- Called by `CensusChat` in insight mode
+- Used internally for advanced analytics
 
 ### app/api/logs/route.ts
 - In-memory log store for external request debugging
@@ -73,11 +73,12 @@
 - Populated from map click events
 
 ### components/CensusChat.tsx
-- Chat UI with user/admin mode toggle
-- **User mode**: Searches stored stats, provides insights via `/api/insight`
-- **Admin mode**: Live Census API queries, adds new metrics via `/api/chat`
+- Chat UI that automatically interprets commands
+- Heuristic fast path adds metrics when input looks like variable IDs or short `add/map` requests
+- Otherwise streams conversation to `/api/chat` which searches and answers via OpenRouter
+- Escalates missing data searches to `openai/gpt-5-mini`
 - Dispatches metrics to `MetricContext`
-- Persists chat messages and mode selection to localStorage
+- Persists chat messages to localStorage
 - Collapsible container with reopen button; clear controls for chat and active metrics
 
 ### components/MetricContext.tsx
@@ -117,7 +118,7 @@
 
 ### lib/censusTools.ts
 - Loads Census variable metadata and caches results
-- `searchCensus` and `validateVariableId` helpers
+- `searchCensus` and `validateVariableId` helpers with tokenized search for loose queries
 
 ### lib/mapLayers.ts
 - `createOrganizationLayer` for point markers

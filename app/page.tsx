@@ -20,7 +20,7 @@ export default function Home() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
   const [isChatCollapsed, setIsChatCollapsed] = useState(false);
-  const { metrics, selectedMetric, selectMetric, clearMetrics, zctaFeatures, addMetric, loadStatMetric } = useMetrics();
+  const { metrics, selectedMetric, selectMetric, clearMetrics, zctaFeatures, addMetric } = useMetrics();
 
   // Close Add Organization modal on Escape key
   useEffect(() => {
@@ -142,7 +142,7 @@ export default function Home() {
 
       {!isChatCollapsed ? (
         <div className="fixed bottom-4 right-4 w-[30rem] h-[32rem] bg-white text-gray-900 shadow-lg p-2 border rounded-lg">
-          <CensusChat onAddMetric={addMetric} onLoadStat={loadStatMetric} onClose={() => setIsChatCollapsed(true)} />
+          <CensusChat onAddMetric={addMetric} onClose={() => setIsChatCollapsed(true)} />
         </div>
       ) : (
         <button
