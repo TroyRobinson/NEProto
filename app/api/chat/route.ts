@@ -174,6 +174,16 @@ export async function POST(req: NextRequest) {
     messages[0] = { ...messages[0], content: `${messages[0].content} Be brief, a few sentences, plain text only.` };
   }
 
+  if (stats && stats.length) {
+    const summary = stats
+      .map((s) => `${s.code}: ${s.description}`)
+      .join('\n');
+    messages.splice(1, 0, {
+      role: 'assistant',
+      content: `Active metrics:\n${summary}`,
+    });
+  }
+
   const lastUser = [...messages]
     .reverse()
     .find((m: Message) => m.role === 'user')?.content || '';
