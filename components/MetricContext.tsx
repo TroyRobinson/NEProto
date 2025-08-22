@@ -16,7 +16,7 @@ interface MetricsContextValue {
   metrics: Metric[];
   selectedMetric: string | null;
   zctaFeatures: ZctaFeature[] | undefined;
-  addMetric: (metric: Metric) => Promise<void>;
+  addMetric: (metric: Metric) => Promise<boolean>;
   loadStatMetric: (stat: Stat) => Promise<void>;
   selectMetric: (id: string) => Promise<void>;
   clearMetrics: () => void;
@@ -38,28 +38,37 @@ export function MetricsProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const addMetric = async (m: Metric) => {
-    setMetrics(prev => (prev.find(p => p.id === m.id) ? prev : [...prev, m]));
-    await selectMetric(m.id);
     const varId = m.id.includes('_') ? m.id : m.id + '_001E';
-    const features = await fetchZctaMetric(varId, { year: config.year, dataset: config.dataset });
-    if (features) {
-      const statId = id();
-      const zctaMap: Record<string, number | null> = {};
-      features.forEach(f => {
-        zctaMap[f.properties.ZCTA5CE10] = f.properties.value ?? null;
-      });
-      await db.transact([
-        db.tx.stats[statId].update({
-          code: m.id,
-          description: m.label,
-          category: 'General',
-          dataset: config.dataset,
-          source: 'US Census',
-          year: Number(config.year),
-          data: JSON.stringify(zctaMap),
-        }),
-      ]);
+    const features = await fetchZctaMetric(varId, {
+      year: config.year,
+      dataset: config.dataset,
+    });
+    const hasData = features.some((f) => f.properties.value !== null);
+    if (!hasData) {
+      return false;
     }
+    const key = `${config.dataset}-${config.year}-${m.id}`;
+    setMetrics((prev) => (prev.find((p) => p.id === m.id) ? prev : [...prev, m]));
+    setMetricFeatures((prev) => ({ ...prev, [key]: features }));
+    setSelectedMetric(m.id);
+    setZctaFeatures(features);
+    const statId = id();
+    const zctaMap: Record<string, number | null> = {};
+    features.forEach((f) => {
+      zctaMap[f.properties.ZCTA5CE10] = f.properties.value ?? null;
+    });
+    await db.transact([
+      db.tx.stats[statId].update({
+        code: m.id,
+        description: m.label,
+        category: 'General',
+        dataset: config.dataset,
+        source: 'US Census',
+        year: Number(config.year),
+        data: JSON.stringify(zctaMap),
+      }),
+    ]);
+    return true;
   };
 
   const loadStatMetric = async (stat: Stat) => {
