@@ -28,8 +28,9 @@
 
 ### app/api/chat/route.ts
 - POST handler orchestrating chat responses and Census lookups
+- Embeds active metric data so models can answer locally
 - Heuristically adds metrics for plain ID lists or short action commands
-- Falls back to OpenRouter models for reasoning and deeper searches
+- Falls back to a smarter model only when needed and reports when it does
 
 ### app/api/insight/route.ts
 - POST handler for free-form statistical analysis
@@ -74,7 +75,8 @@
 ### components/CensusChat.tsx
 - Single chat interface for questions and metric requests
 - Detects simple commands locally and loads stats automatically
-- Sends conversation and stats context to `/api/chat`
+- Sends active metric data to `/api/chat`
+- Notifies when a deeper model is consulted
 - Persists chat messages to localStorage
 - Collapsible container with reopen button; clear controls for chat and active metrics
 

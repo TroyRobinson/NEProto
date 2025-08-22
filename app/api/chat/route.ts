@@ -35,7 +35,6 @@ function parseActionQuery(input: string): string | null {
 async function runModel(
   model: string,
   convo: Message[],
-  stats: Array<{ code: string; description: string; data?: unknown }> = [],
   year: string,
   dataset: string
 ) {
@@ -71,20 +70,6 @@ async function runModel(
             label: { type: 'string', description: 'Human readable label' },
           },
           required: ['id', 'label'],
-        },
-      },
-    },
-    {
-      type: 'function',
-      function: {
-        name: 'load_stat',
-        description: 'Load a stored statistic by code.',
-        parameters: {
-          type: 'object',
-          properties: {
-            code: { type: 'string', description: 'Statistic code' },
-          },
-          required: ['code'],
         },
       },
     },
@@ -138,15 +123,6 @@ async function runModel(
         } else {
           result = { ok: false, error: 'Unknown variable id' };
         }
-      } else if (name === 'load_stat') {
-        const code = args.code as string;
-        const stat = stats.find((s) => s.code === code);
-        if (stat) {
-          result = { ok: true, stat };
-          toolInvocations.push({ name, args: { code } });
-        } else {
-          result = { ok: false, error: 'Unknown code' };
-        }
       }
       convo.push({
         role: 'tool',
@@ -176,11 +152,18 @@ export async function POST(req: NextRequest) {
 
   if (stats && stats.length) {
     const summary = stats
-      .map((s: { code: string; description: string }) => `${s.code}: ${s.description}`)
+      .map(
+        (s: { code: string; description: string; data: Record<string, number> }) => {
+          const rows = Object.entries(s.data || {})
+            .map(([z, v]) => `${z}: ${v}`)
+            .join(', ');
+          return `${s.code} (${s.description}): ${rows}`;
+        }
+      )
       .join('\n');
     messages.splice(1, 0, {
       role: 'assistant',
-      content: `Active metrics:\n${summary}`,
+      content: `Active metrics with data:\n${summary}`,
     });
   }
 
@@ -228,17 +211,28 @@ export async function POST(req: NextRequest) {
   }
 
   const convo: Message[] = [...messages];
-  const first = await runModel('openai/gpt-oss-120b:nitro', convo, stats, year, dataset);
+  const first = await runModel('openai/gpt-oss-120b:nitro', convo, year, dataset);
   toolInvocations.push(...first.toolInvocations);
-  if (first.lastSearchEmpty || !first.message?.content?.trim()) {
+  let fallbackReason = '';
+  if (first.lastSearchEmpty) {
+    fallbackReason = 'no matching variables were found';
+  } else if (!first.message?.content?.trim()) {
+    fallbackReason = 'the initial model did not produce an answer';
+  }
+  if (fallbackReason) {
     convo.push({
       role: 'assistant',
-      content: "The data we are considering is not found, I'm going to search deeper.",
+      content: `Checking a more capable model because ${fallbackReason}.`,
     });
-    const deeper = await runModel('openai/gpt-5-mini', convo, stats, year, dataset);
+    const deeper = await runModel('openai/gpt-5-mini', convo, year, dataset);
     toolInvocations.push(...deeper.toolInvocations);
-    return NextResponse.json({ message: deeper.message, toolInvocations });
+    return NextResponse.json({
+      message: deeper.message,
+      toolInvocations,
+      usedFallback: true,
+      fallbackReason,
+    });
   }
-  return NextResponse.json({ message: first.message, toolInvocations });
+  return NextResponse.json({ message: first.message, toolInvocations, usedFallback: false });
 }
 

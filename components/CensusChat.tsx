@@ -14,18 +14,17 @@ interface ChatMessage {
 
 interface CensusChatProps {
   onAddMetric: (metric: { id: string; label: string }) => void | Promise<void>;
-  onLoadStat: (stat: Stat) => void | Promise<void>;
   onClose?: () => void;
 }
 
-export default function CensusChat({ onAddMetric, onLoadStat, onClose }: CensusChatProps) {
+export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const { config } = useConfig();
   const { data: statData } = db.useQuery({ stats: {} });
-  const { clearMetrics } = useMetrics();
+  const { metrics, clearMetrics } = useMetrics();
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -79,13 +78,14 @@ export default function CensusChat({ onAddMetric, onLoadStat, onClose }: CensusC
     setLoading(true);
     const systemPrompt = `You help users find US Census statistics. Limit responses to ${config.region} using ${config.dataset} ${config.year} data for ${config.geography}. Be brief, a few sentences, plain text only.`;
     const stats = (statData?.stats || []) as Stat[];
+    const activeStats = stats.filter((s) => metrics.some((m) => m.id === s.code));
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         messages: [{ role: 'system', content: systemPrompt }, ...newMessages],
         config,
-        stats: stats.map((s) => ({
+        stats: activeStats.map((s) => ({
           code: s.code,
           description: s.description,
           data: JSON.parse(s.data),
@@ -93,18 +93,21 @@ export default function CensusChat({ onAddMetric, onLoadStat, onClose }: CensusC
       }),
     });
     const data = await res.json();
-    setMessages([...newMessages, { role: 'assistant', content: data.message.content }]);
+    const responseMessages = [...newMessages];
+    if (data.usedFallback) {
+      responseMessages.push({
+        role: 'assistant',
+        content: `Consulting a more capable model because ${data.fallbackReason}.`,
+      });
+    }
+    responseMessages.push({ role: 'assistant', content: data.message.content });
+    setMessages(responseMessages);
     setLoading(false);
 
     if (data.toolInvocations) {
       for (const inv of data.toolInvocations) {
         if (inv.name === 'add_metric') {
           await onAddMetric(inv.args);
-        } else if (inv.name === 'load_stat' && typeof inv.args.code === 'string') {
-          const stat = stats.find((s) => s.code === inv.args.code);
-          if (stat) {
-            await onLoadStat(stat);
-          }
         }
       }
     }
