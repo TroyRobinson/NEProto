@@ -23,6 +23,8 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [menuOpenIdx, setMenuOpenIdx] = useState<number | null>(null);
+  const [suggestions, setSuggestions] = useState<{ dataIdea: string; questionIdea: string } | null>(null);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const menuContainerRef = useRef<HTMLSpanElement | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const { config } = useConfig();
@@ -30,6 +32,7 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
   const { metrics, clearMetrics, selectedMetric } = useMetrics();
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  const lastAssistantRef = useRef<HTMLDivElement | null>(null);
   const runIdRef = useRef(0);
   const preTurnSnapshotRef = useRef<{ metrics: { id: string; label: string }[]; selected: string | null } | null>(null);
 
@@ -71,14 +74,17 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
     };
   }, [menuOpenIdx]);
 
-  // Auto scroll to bottom when messages update or loading state changes
+  // Auto position so the top of the chat view aligns with the latest assistant message
   useEffect(() => {
-    const el = scrollContainerRef.current;
-    if (!el) return;
+    const container = scrollContainerRef.current;
+    const target = lastAssistantRef.current;
+    if (!container || !target) return;
     requestAnimationFrame(() => {
-      el.scrollTop = el.scrollHeight;
+      const adjust = 8; // nudge to avoid cutting off top of bubble
+      const top = Math.max(0, target.offsetTop - adjust);
+      container.scrollTop = top;
     });
-  }, [messages, loading]);
+  }, [messages]);
 
   // Auto-resize input area based on content
   useEffect(() => {
@@ -92,11 +98,34 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
     setMessages([]);
     localStorage.removeItem(CHAT_STORAGE_KEY);
     clearMetrics();
+    setSuggestions(null);
   };
 
-  const sendMessage = async () => {
-    if (!input.trim()) return;
-    const userMessage = { role: 'user' as const, content: input };
+  type Mode = 'auto' | 'fast' | 'smart';
+
+  const fetchSuggestions = async (convo: ChatMessage[]) => {
+    setSuggestionsLoading(true);
+    try {
+      const res = await fetch('/api/suggestions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: convo, config, activeMetrics: metrics }),
+      });
+      const data = await res.json();
+      const di = (data?.dataIdea || '').toString().trim();
+      const qi = (data?.questionIdea || '').toString().trim();
+      if (di || qi) setSuggestions({ dataIdea: di, questionIdea: qi });
+      else setSuggestions(null);
+    } catch {
+      setSuggestions(null);
+    } finally {
+      setSuggestionsLoading(false);
+    }
+  };
+
+  const sendMessageWith = async (text: string, mode: Mode = 'auto') => {
+    if (!text.trim()) return;
+    const userMessage = { role: 'user' as const, content: text };
     const newMessages = [...messages, userMessage];
 
     // Log the user message as its own log bubble
@@ -115,11 +144,9 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
     }
 
     // Proactively notify if the query likely needs advanced reasoning
-    const needsAdvanced = /\b(why|how|explain|compare|contrast|insight|analysis|reason|think|thinking|because)\b/i.test(
-      userMessage.content
-    );
+    const needsAdvanced = /\b(why|how|explain|compare|contrast|insight|analysis|reason|think|thinking|because)\b/i.test(userMessage.content);
     let preDeferNotified = false;
-    if (needsAdvanced) {
+    if (mode === 'smart' || (mode === 'auto' && needsAdvanced)) {
       newMessages.push({
         role: 'assistant',
         content: 'Consulting a more capable model for deeper reasoning.',
@@ -130,6 +157,7 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
 
     setMessages(newMessages);
     setInput('');
+    setSuggestions(null);
 
     // Snapshot metrics state before any actions for undo capability
     preTurnSnapshotRef.current = { metrics: [...metrics], selected: selectedMetric };
@@ -148,7 +176,7 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
           description: s.description,
           data: JSON.parse(s.data),
         })),
-        mode: 'auto',
+        mode,
       }),
     });
     const data = await res.json();
@@ -159,7 +187,7 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
         content: `Consulting a more capable model because ${data.fallbackReason}.`,
       });
     }
-    responseMessages.push({ role: 'assistant', content: data.message.content, modeUsed: (data.modeUsed as 'auto'|'fast'|'smart') || 'auto' });
+    responseMessages.push({ role: 'assistant', content: data.message.content, modeUsed: (data.modeUsed as 'auto'|'fast'|'smart') || mode });
     setMessages(responseMessages);
     setLoading(false);
 
@@ -170,9 +198,14 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
         }
       }
     }
+    // Fetch follow-up suggestions unless the assistant asked a question
+    const asked = /\?|^\s*(why|how|what|which|who|where|when|do|does|did|can|could|should|would|is|are|will|may|might)\b/i.test(
+      (data?.message?.content || '')
+    );
+    if (!asked) fetchSuggestions(responseMessages);
   };
 
-  type Mode = 'auto' | 'fast' | 'smart';
+  const sendMessage = async () => sendMessageWith(input, 'auto');
 
   const restoreMetricsSnapshot = async (snapshot: { metrics: { id: string; label: string }[]; selected: string | null }) => {
     clearMetrics();
@@ -189,7 +222,6 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
   const rerunWithMode = async (mode: Mode) => {
     const lastUserIdx = [...messages].map((m) => m.role).lastIndexOf('user');
     if (lastUserIdx === -1) return;
-    const lastUser = messages[lastUserIdx].content;
     const metricsSnapshot = preTurnSnapshotRef.current || { metrics: [...metrics], selected: selectedMetric };
 
     // Trim messages to last user
@@ -198,6 +230,7 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
     setMenuOpenIdx(null);
 
     setLoading(true);
+    setSuggestions(null);
     const systemPrompt = `You help users find US Census statistics. Limit responses to ${config.region} using ${config.dataset} ${config.year} data for ${config.geography}. Be brief, a few sentences, plain text only.`;
     const stats = (statData?.stats || []) as Stat[];
     const activeStats = stats.filter((s) => metricsSnapshot.metrics.some((m) => m.id === s.code));
@@ -207,7 +240,7 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
     await restoreMetricsSnapshot(metricsSnapshot);
 
     // If forcing smart, show immediate notice
-    let pre = [...truncated];
+    const pre = [...truncated];
     if (mode === 'smart') {
       pre.push({ role: 'assistant', content: 'Consulting a more capable model for deeper reasoning.', modeUsed: 'smart' });
       setMessages(pre);
@@ -251,6 +284,11 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
         }
       }
     }
+    // Fetch suggestions unless the assistant asked a question
+    const asked = /\?|^\s*(why|how|what|which|who|where|when|do|does|did|can|could|should|would|is|are|will|may|might)\b/i.test(
+      (data?.message?.content || '')
+    );
+    if (!asked) fetchSuggestions(responseMessages);
   };
 
   return (
@@ -300,10 +338,17 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
         ref={scrollContainerRef}
         className="flex-1 overflow-y-auto mb-2 space-y-2 p-2 rounded bg-gray-100"
       >
-        {messages.map((m, idx) => {
+        {(() => {
+          const lastAssistantIdx = [...messages].map((mm) => mm.role).lastIndexOf('assistant');
+          return messages.map((m, idx) => {
           const isAssistant = m.role === 'assistant';
+          const attachRef = isAssistant && idx === lastAssistantIdx;
           return (
-            <div key={idx} className={m.role === 'user' ? 'text-right' : 'text-left'}>
+            <div
+              key={idx}
+              ref={attachRef ? lastAssistantRef : null}
+              className={m.role === 'user' ? 'text-right' : 'text-left'}
+            >
               <span
                 className={`inline-block px-2 py-1 rounded ${isAssistant ? 'bg-gray-200 text-gray-900' : 'bg-blue-100 text-blue-800'}`}
               >
@@ -352,7 +397,63 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
               )}
             </div>
           );
-        })}
+        }); })()}
+        {/* Follow-up idea buttons below the last assistant response */}
+        {(() => {
+          const last = messages[messages.length - 1];
+          if (!last || last.role !== 'assistant' || !suggestions) return null;
+          const { dataIdea, questionIdea } = suggestions;
+          if (!dataIdea && !questionIdea) return null;
+          const addText = (idea: string) => {
+            const m = idea.match(/^[A-Z]\d{5}_\d{3}E/i);
+            if (m) return idea.split(/\s*-\s*/)[0];
+            return idea;
+          };
+          return (
+            <div className="mt-2 flex flex-col gap-2">
+              {dataIdea ? (
+                <button
+                  className="w-full text-left px-3 py-2 rounded-md bg-indigo-50 text-indigo-800 hover:bg-indigo-100 transition-colors text-sm"
+                  onClick={() => {
+                    // Extract inner phrase from "Add data for X?"
+                    let phrase = dataIdea;
+                    const match = dataIdea.match(/add data for\s+(.+?)\?$/i);
+                    if (match) phrase = match[1];
+                    const byId = addText(phrase);
+                    // Ensure <= 7 words for action query heuristic
+                    const limited = byId.split(/\s+/).slice(0, 7).join(' ');
+                    sendMessageWith(`add ${limited}`, 'auto');
+                    setSuggestions(null);
+                  }}
+                >
+                  {dataIdea}
+                </button>
+              ) : null}
+              {questionIdea ? (
+                <button
+                  className="w-full text-left px-3 py-2 rounded-md bg-indigo-50 text-indigo-800 hover:bg-indigo-100 transition-colors text-sm"
+                  onClick={() => {
+                    sendMessageWith(questionIdea, 'auto');
+                    setSuggestions(null);
+                  }}
+                >
+                  {questionIdea}
+                </button>
+              ) : null}
+            </div>
+          );
+        })()}
+        {(() => {
+          const last = messages[messages.length - 1];
+          if (!last || last.role !== 'assistant' || !suggestionsLoading) return null;
+          return (
+            <div className="mt-2 flex flex-col gap-2">
+              <div className="flex-1 px-3 py-2 rounded-md bg-indigo-50 text-indigo-700 text-xs">
+                Finding ideas…
+              </div>
+            </div>
+          );
+        })()}
         {loading && <div className="text-sm text-gray-500">Thinking...</div>}
       </div>
       <div className="flex">
@@ -369,7 +470,11 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
             msOverflowStyle: 'none',
           }}
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={(e) => {
+            const v = e.target.value;
+            setInput(v);
+            if (v && suggestions) setSuggestions(null);
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();

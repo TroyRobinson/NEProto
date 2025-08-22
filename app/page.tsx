@@ -141,7 +141,7 @@ export default function Home() {
       )}
 
       {!isChatCollapsed ? (
-        <div className="fixed bottom-4 right-4 w-[30rem] h-[32rem] bg-white text-gray-900 shadow-lg p-2 border rounded-lg">
+        <div className="fixed bottom-4 right-4 w-[30rem] h-[38.4rem] bg-white text-gray-900 shadow-lg p-2 border rounded-lg">
           <CensusChat onAddMetric={addMetric} onClose={() => setIsChatCollapsed(true)} />
         </div>
       ) : (

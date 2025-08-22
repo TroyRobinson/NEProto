@@ -84,6 +84,7 @@
 - Persists chat messages to localStorage
 - Collapsible container with reopen button; clear controls for chat and active metrics
 - Appends an Approach chip on assistant messages at the bottom-right of each message row; dropdown to re-run from the last user message with Auto/Fast/Smart
+ - Follow-up ideas: after each assistant reply (unless the reply is a question), shows two compact, vertically stacked indigo buttons with next-step ideas — one to "Add data for …?" (avoids active/mentioned metrics) and one curiosity question from the user’s perspective. Clicking runs the relevant action; typing clears them.
 
 ### components/MetricContext.tsx
 - React context tracking active ZCTA metrics and geometries
@@ -178,6 +179,7 @@
 - Chat searches Census variables, overlaying metrics on map
 - `/logs` page shows a timeline: User Request bubble, then OpenRouter and US Census actions
 - Advanced queries trigger an immediate defer notice while a deeper model runs
+ - Chat auto-scroll positions the top of the view to the latest assistant reply so users read the answer first and can scroll to discover ideas at the end
 
 ## Gotchas
 - Append `_001E` to variable IDs for estimate values
