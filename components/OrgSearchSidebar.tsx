@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import type { Organization } from '../types/organization';
 import { geocode } from '../lib/geocode';
-import { addOrgFromProPublica } from '../lib/propublica';
+import { addOrgFromProPublica, getCategoryFromNtee } from '../lib/propublica';
 
 interface OrgSearchSidebarProps {
   existingOrgs: Organization[];
@@ -21,12 +21,20 @@ interface ProPublicaSearchOrg {
   name: string;
   city: string;
   state: string;
+  ntee_code?: string;
 }
 
 export default function OrgSearchSidebar({ existingOrgs, onResults, onSelect }: OrgSearchSidebarProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const OK_COUNTY_BOUNDS = {
+    north: 35.8,
+    south: 35.2,
+    east: -97.1,
+    west: -97.8,
+  };
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,13 +50,21 @@ export default function OrgSearchSidebar({ existingOrgs, onResults, onSelect }: 
           const address = `${o.city}, ${o.state}`;
           const coords = await geocode(address);
           if (!coords) return null;
+          if (
+            coords.latitude < OK_COUNTY_BOUNDS.south ||
+            coords.latitude > OK_COUNTY_BOUNDS.north ||
+            coords.longitude < OK_COUNTY_BOUNDS.west ||
+            coords.longitude > OK_COUNTY_BOUNDS.east
+          ) {
+            return null;
+          }
           return {
             ein: o.ein,
             org: {
               id: `search-${o.ein}`,
               name: o.name,
               description: '',
-              category: 'Other',
+              category: getCategoryFromNtee(o.ntee_code),
               createdAt: Date.now(),
               locations: [
                 {
@@ -114,6 +130,7 @@ export default function OrgSearchSidebar({ existingOrgs, onResults, onSelect }: 
           >
             <div className="font-medium text-gray-900">{r.org.name}</div>
             <div className="text-sm text-gray-500">{r.org.locations[0].address}</div>
+            <div className="text-xs text-gray-400">{r.org.category}</div>
           </li>
         ))}
       </ul>
