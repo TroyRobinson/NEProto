@@ -3,28 +3,12 @@ import type { PickingInfo } from '@deck.gl/core';
 import type { Organization } from '../types/organization';
 import type { ZctaFeature } from './census';
 
-function getCategoryColor(category: string): [number, number, number, number] {
-  // Using design system colors for organization categories
-  const colors: Record<string, [number, number, number, number]> = {
-    'Food Security': [184, 0, 107, 200], // var(--color-error) - #B8006B
-    'Housing & Shelter': [23, 30, 199, 200], // var(--color-primary) - #171EC7  
-    Education: [0, 169, 157, 200], // var(--color-success) - #00A99D
-    Healthcare: [184, 0, 107, 200], // var(--color-error) - #B8006B
-    'Youth Development': [215, 168, 0, 200], // var(--color-warning) - #D7A800
-    'Senior Services': [75, 85, 99, 200], // var(--color-gray-600)
-    Environmental: [0, 169, 157, 200], // var(--color-success) - #00A99D
-    'Arts & Culture': [129, 132, 227, 200], // var(--color-secondary) - #8184E3
-    'Community Development': [23, 30, 199, 200], // var(--color-accent) - #171EC7
-    Other: [107, 114, 128, 200], // var(--color-gray-500)
-  };
-
-  return colors[category] || colors['Other'];
-}
+const BASE_COLOR: [number, number, number, number] = [129, 132, 227, 160]; // var(--color-blue-accent-faded)
+const ACCENT_COLOR: [number, number, number, number] = [23, 30, 199, 255]; // var(--color-accent)
 
 interface OrgPoint {
   coordinates: [number, number];
   organization: Organization;
-  color: [number, number, number, number];
 }
 
 export function createOrganizationLayer(
@@ -38,7 +22,6 @@ export function createOrganizationLayer(
     org.locations.map((location) => ({
       coordinates: [location.longitude, location.latitude],
       organization: org,
-      color: getCategoryColor(org.category),
     }))
   );
 
@@ -47,26 +30,24 @@ export function createOrganizationLayer(
     data: orgData,
     getPosition: (d) => d.coordinates,
     getRadius: (d) => {
-      if (d.organization.id === selectedOrgId) return 800;
-      if (d.organization.id === hoveredOrgId) return 600;
+      if (d.organization.id === selectedOrgId) return 900;
+      if (d.organization.id === hoveredOrgId) return 700;
       return 400;
+    },
+    getElevation: (d) => {
+      if (d.organization.id === selectedOrgId) return 100;
+      if (d.organization.id === hoveredOrgId) return 50;
+      return 0;
     },
     getFillColor: (d) =>
       d.organization.id === selectedOrgId || d.organization.id === hoveredOrgId
-        ? [255, 255, 255, 255]
-        : d.color,
-    getLineColor: (d) => {
-      if (d.organization.id === selectedOrgId) return [0, 0, 0, 255];
-      if (d.organization.id === hoveredOrgId) return [0, 0, 0, 200];
-      return [0, 0, 0, 100];
-    },
-    getLineWidth: (d) => {
-      if (d.organization.id === selectedOrgId) return 6;
-      if (d.organization.id === hoveredOrgId) return 4;
-      return 2;
-    },
+        ? ACCENT_COLOR
+        : BASE_COLOR,
+    getLineColor: [0, 0, 0, 80],
+    getLineWidth: 1,
     radiusScale: 1,
-    radiusMinPixels: 8,
+    elevationScale: 1,
+    radiusMinPixels: 6,
     radiusMaxPixels: 40,
     pickable: true,
     // Deck.gl's onClick handler includes an event argument that's unused here.

@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import type { Organization } from '../types/organization';
 import { geocode } from '../lib/geocode';
 import { addOrgFromProPublica, nteeToCategory, inOkcCounty } from '../lib/propublica';
 
 interface OrgSearchSidebarProps {
   existingOrgs: Organization[];
+  onLocalResults: (orgs: Organization[]) => void;
   onRemoteResults: (orgs: Organization[]) => void;
   onSelect: (org: Organization) => void;
   onHover: (orgId: string | null) => void;
@@ -25,10 +26,24 @@ interface ProPublicaSearchOrg {
   ntee_code?: string;
 }
 
-export default function OrgSearchSidebar({ existingOrgs, onRemoteResults, onSelect, onHover }: OrgSearchSidebarProps) {
+export default function OrgSearchSidebar({ existingOrgs, onLocalResults, onRemoteResults, onSelect, onHover }: OrgSearchSidebarProps) {
   const [query, setQuery] = useState('');
   const [remoteResults, setRemoteResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setRemoteResults((prev) => {
+      const existingEins = new Set(existingOrgs.map((o) => o.ein).filter(Boolean) as number[]);
+      const existingNames = new Set(existingOrgs.map((o) => o.name.toLowerCase()));
+      const filtered = prev.filter(
+        (r) => !existingEins.has(r.ein) && !existingNames.has(r.org.name.toLowerCase())
+      );
+      if (filtered.length !== prev.length) {
+        onRemoteResults(filtered.map((r) => r.org));
+      }
+      return filtered;
+    });
+  }, [existingOrgs, onRemoteResults]);
 
   const localMatches = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -41,10 +56,15 @@ export default function OrgSearchSidebar({ existingOrgs, onRemoteResults, onSele
     );
   }, [query, existingOrgs]);
 
+  useEffect(() => {
+    onLocalResults(localMatches);
+  }, [localMatches, onLocalResults]);
+
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim()) {
       setRemoteResults([]);
+      onLocalResults([]);
       onRemoteResults([]);
       return;
     }
@@ -83,7 +103,14 @@ export default function OrgSearchSidebar({ existingOrgs, onRemoteResults, onSele
         })
       );
 
-      const items = geocoded.filter((r): r is SearchResult => r !== null);
+      const existingEins = new Set(existingOrgs.map((o) => o.ein).filter(Boolean) as number[]);
+      const existingNames = new Set(existingOrgs.map((o) => o.name.toLowerCase()));
+      const items = geocoded.filter(
+        (r): r is SearchResult =>
+          r !== null &&
+          !existingEins.has(r.ein) &&
+          !existingNames.has(r.org.name.toLowerCase())
+      );
       setRemoteResults(items);
       onRemoteResults(items.map((i) => i.org));
     } catch (err) {
@@ -122,6 +149,7 @@ export default function OrgSearchSidebar({ existingOrgs, onRemoteResults, onSele
             setQuery(e.target.value);
             if (e.target.value.trim() === '') {
               setRemoteResults([]);
+              onLocalResults([]);
               onRemoteResults([]);
             }
           }}

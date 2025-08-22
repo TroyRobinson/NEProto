@@ -23,6 +23,7 @@ export default function Home() {
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
   const [isChatCollapsed, setIsChatCollapsed] = useState(false);
   const [remoteResults, setRemoteResults] = useState<Organization[]>([]);
+  const [localResults, setLocalResults] = useState<Organization[]>([]);
   const [addedOrgs, setAddedOrgs] = useState<Organization[]>([]);
   const [hoveredOrgId, setHoveredOrgId] = useState<string | null>(null);
   const { metrics, selectedMetric, selectMetric, clearMetrics, zctaFeatures, addMetric, loadStatMetric } = useMetrics();
@@ -54,16 +55,26 @@ export default function Home() {
     return [...dbOrgs, ...addedOrgs.filter((o) => !ids.has(o.id))];
   }, [dbOrgs, addedOrgs]);
 
-  const allOrganizations = useMemo(() => {
-    const existingNames = new Set(organizations.map((o) => o.name.toLowerCase()));
-    const existingEins = new Set(organizations.map((o) => o.ein).filter(Boolean) as number[]);
-    return [
-      ...organizations,
-      ...remoteResults.filter(
-        (o) => (!o.ein || !existingEins.has(o.ein)) && !existingNames.has(o.name.toLowerCase())
-      ),
-    ];
-  }, [organizations, remoteResults]);
+  const defaultOrganizations = useMemo(() => {
+    return organizations.slice(0, 20);
+  }, [organizations]);
+
+  const searchActive = localResults.length > 0 || remoteResults.length > 0;
+
+  const displayOrganizations = useMemo(() => {
+    if (searchActive) {
+      const ids = new Set();
+      const combined: Organization[] = [];
+      for (const org of [...localResults, ...remoteResults]) {
+        if (!ids.has(org.id)) {
+          ids.add(org.id);
+          combined.push(org);
+        }
+      }
+      return combined;
+    }
+    return defaultOrganizations;
+  }, [searchActive, localResults, remoteResults, defaultOrganizations]);
 
   const handleOrganizationClick = async (org: Organization) => {
     if (org.id.startsWith('search-')) {
@@ -104,6 +115,7 @@ export default function Home() {
       <div className="flex flex-1 overflow-hidden">
         <OrgSearchSidebar
           existingOrgs={organizations}
+          onLocalResults={setLocalResults}
           onRemoteResults={setRemoteResults}
           onSelect={handleOrganizationClick}
           onHover={setHoveredOrgId}
@@ -118,7 +130,7 @@ export default function Home() {
 
         <div className="flex-1 relative">
           <OKCMap
-            organizations={allOrganizations}
+            organizations={displayOrganizations}
             onOrganizationClick={handleOrganizationClick}
             zctaFeatures={zctaFeatures}
             selectedOrgId={selectedOrg?.id || null}
