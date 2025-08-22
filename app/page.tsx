@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import db from '../lib/db';
 import AddOrganizationForm from '../components/AddOrganizationForm';
@@ -9,6 +9,8 @@ import NavBar from '../components/NavBar';
 import MetricDropdown from '../components/MetricDropdown';
 import { useMetrics } from '../components/MetricContext';
 import OrganizationDetails from '../components/OrganizationDetails';
+import OrgSearchSidebar from '../components/OrgSearchSidebar';
+import { addOrgFromProPublica } from '../lib/propublica';
 import type { Organization } from '../types/organization';
 
 const OKCMap = dynamic(() => import('../components/OKCMap'), {
@@ -19,6 +21,9 @@ const OKCMap = dynamic(() => import('../components/OKCMap'), {
 export default function Home() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
+  const [searchResults, setSearchResults] = useState<Organization[]>([]);
+  const [addedOrgs, setAddedOrgs] = useState<Organization[]>([]);
+  const [hoveredOrgId, setHoveredOrgId] = useState<string | null>(null);
   const [isChatCollapsed, setIsChatCollapsed] = useState(false);
   const { metrics, selectedMetric, selectMetric, clearMetrics, zctaFeatures, addMetric, loadStatMetric } = useMetrics();
 
@@ -38,9 +43,27 @@ export default function Home() {
     organizations: {
       locations: {},
       logo: {},
-      photos: {}
-    }
+      photos: {},
+    },
   });
+
+  const dbOrgs = useMemo(() => data?.organizations || [], [data]);
+
+  const organizations = useMemo(() => {
+    const ids = new Set(dbOrgs.map((o) => o.id));
+    return [...dbOrgs, ...addedOrgs.filter((o) => !ids.has(o.id))];
+  }, [dbOrgs, addedOrgs]);
+
+  const allOrganizations = useMemo(() => {
+    const existingNames = new Set(organizations.map((o) => o.name.toLowerCase()));
+    const existingEins = new Set(organizations.map((o) => o.ein).filter(Boolean) as number[]);
+    return [
+      ...organizations,
+      ...searchResults.filter(
+        (o) => (!o.ein || !existingEins.has(o.ein)) && !existingNames.has(o.name.toLowerCase())
+      ),
+    ];
+  }, [organizations, searchResults]);
 
   if (isLoading) {
     return (
@@ -58,13 +81,34 @@ export default function Home() {
     );
   }
 
-  const organizations = data?.organizations || [];
+  const handleOrganizationClick = async (org: Organization) => {
+    if (org.id.startsWith('search-')) {
+      const ein = org.ein || parseInt(org.id.replace('search-', ''), 10);
+      const saved = await addOrgFromProPublica(ein);
+      if (saved) {
+        setAddedOrgs((prev) => [...prev, saved]);
+        setSelectedOrg(saved);
+        setSearchResults((prev) => prev.filter((o) => o.id !== org.id));
+        return;
+      }
+    } else if (!organizations.find((o) => o.id === org.id) && !addedOrgs.find((o) => o.id === org.id)) {
+      setAddedOrgs((prev) => [...prev, org]);
+    }
+    setSelectedOrg(org);
+  };
 
   return (
     <div className="h-screen bg-gray-100 flex flex-col overflow-hidden">
       <NavBar onAddOrganization={() => setShowAddForm(true)} />
 
       <div className="flex flex-1 overflow-hidden">
+        <OrgSearchSidebar
+          existingOrgs={organizations}
+          onResults={setSearchResults}
+          onSelect={handleOrganizationClick}
+          onHover={setHoveredOrgId}
+        />
+
         {selectedOrg && (
           <OrganizationDetails
             organization={selectedOrg}
@@ -74,9 +118,12 @@ export default function Home() {
 
         <div className="flex-1 relative">
           <OKCMap
-            organizations={organizations}
-            onOrganizationClick={setSelectedOrg}
+            organizations={allOrganizations}
+            onOrganizationClick={handleOrganizationClick}
             zctaFeatures={zctaFeatures}
+            selectedOrgId={selectedOrg?.id || null}
+            hoveredOrgId={hoveredOrgId}
+            onOrganizationHover={setHoveredOrgId}
           />
 
           {/* Overlay metrics glass bar over the map */}
@@ -93,7 +140,7 @@ export default function Home() {
                   borderColor: 'rgba(255, 255, 255, 0.25)',
                   backgroundColor: 'rgba(255, 255, 255, 0.10)',
                   backdropFilter: 'blur(16px) saturate(1.25)',
-                  WebkitBackdropFilter: 'blur(16px) saturate(1.25)'
+                  WebkitBackdropFilter: 'blur(16px) saturate(1.25)',
                 }}
               >
                 <MetricDropdown metrics={metrics} selected={selectedMetric} onSelect={selectMetric} />
@@ -109,7 +156,7 @@ export default function Home() {
                     fontSize: 'var(--font-size-l)',
                     color: 'var(--color-error)',
                     borderColor: 'var(--color-error)',
-                    backgroundColor: 'var(--color-base-100)'
+                    backgroundColor: 'var(--color-base-100)',
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.backgroundColor = 'var(--color-error-50)';
