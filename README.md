@@ -31,6 +31,7 @@
 - Embeds active metric data so models can answer locally
 - Heuristically adds metrics for plain ID lists or short action commands
 - Falls back to a smarter model only when needed and reports when it does
+- Advanced heuristic triggers on: why, how, explain, compare, contrast, insight, analysis, reason, think, thinking, because
 
 ### app/api/insight/route.ts
 - POST handler for free-form statistical analysis
@@ -43,6 +44,8 @@
 ### app/logs/page.tsx
 - Client page that polls `api/logs` for latest entries
 - Independent of main map flow
+- Renders a distinct "User Request" bubble (time + plain text) before related actions
+- Hides duplicate "last user" context on adjacent entries to keep timeline concise
 
 ### app/stats/page.tsx
 - Management interface for stored statistics
@@ -76,7 +79,7 @@
 - Single chat interface for questions and metric requests
 - Detects simple commands locally and loads stats automatically
 - Sends active metric data to `/api/chat`
-- Notifies when a deeper model is consulted
+- Shows an immediate notice when deferring to a deeper model (so users know to wait)
 - Persists chat messages to localStorage
 - Collapsible container with reopen button; clear controls for chat and active metrics
 
@@ -84,6 +87,8 @@
 - React context tracking active ZCTA metrics and geometries
 - API: `addMetric`, `selectMetric`, `metrics`, `clearMetrics`
 - Persists active metrics and selected metric to localStorage
+- Prefers InstantDB stats (by code, then dataset/year) before fetching from US Census
+- Logs an "InstantDB fulfilled <code>" note in the `/logs` timeline on cache hits
 
 ### components/ConfigContext.tsx
 - Stores dataset/year/region selections
@@ -118,6 +123,7 @@
 ### lib/censusTools.ts
 - Loads Census variable metadata and caches results
 - `searchCensus` and `validateVariableId` helpers
+- When provided an `origin`, posts log entries to `/api/logs` for visibility across server modules
 
 ### lib/mapLayers.ts
 - `createOrganizationLayer` for point markers
@@ -126,10 +132,12 @@
 
 ### lib/openRouter.ts
 - `callOpenRouter` wrapper centralizing headers and error handling
+- Posts request/response logs to `/api/logs` when `origin` is provided (ensures Logs page sees server events)
 
 ### lib/logStore.ts
 - In-memory array with `addLog` and `getLogs` APIs
 - Server-only utility used by log route
+- Summarizes `User request` and `InstantDB fulfilled <code>` entries for a readable timeline
 
 ### lib/censusVariables.ts
 - Curated list of ACS variable IDs and descriptions
@@ -156,6 +164,7 @@
 - `OKCMap` layers come from `mapLayers.ts`
 - `CensusChat` requests `/api/chat`; results update `MetricContext`
 - `MetricContext` supplies metric data to `OKCMap` for display
+- For metrics: prefer InstantDB stats; otherwise fetch from US Census and persist
 
 ## External Services
 - US Census API for ACS statistics
@@ -165,13 +174,15 @@
 ## Processes
 - Users pan/zoom map, click markers, view organization info
 - Chat searches Census variables, overlaying metrics on map
-- `/logs` page polls log API for debugging
+- `/logs` page shows a timeline: User Request bubble, then OpenRouter and US Census actions
+- Advanced queries trigger an immediate defer notice while a deeper model runs
 
 ## Gotchas
 - Append `_001E` to variable IDs for estimate values
 - Census uses large negative numbers for missing data; treat as `null`
 - deck.gl `onClick` handlers receive an unused event parameter
 - Boundary data is cached; call `prefetchZctaBoundaries` early
+- `stats.code` is unique in InstantDB; metric adds prefer existing stats and ignore duplicate writes created by concurrent tabs
 
 ## Development
 - `npm run dev` – start dev server
