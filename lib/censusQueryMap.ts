@@ -1,5 +1,5 @@
-import type { CensusVariableInfo } from './censusVariables';
-import { CURATED_VARIABLES } from './censusVariables';
+import type { CensusVariableInfo } from './censusVariables.ts';
+import { CURATED_VARIABLES } from './censusVariables.ts';
 
 function find(id: string): CensusVariableInfo {
   const variable = CURATED_VARIABLES.find((v) => v.id === id);
@@ -12,7 +12,11 @@ function find(id: string): CensusVariableInfo {
 export const COMMON_QUERY_MAP: Record<string, CensusVariableInfo> = {
   'median household income': find('B19013_001E'),
   'median income': find('B19013_001E'),
+  'median age': find('B01002_001E'),
   'total population': find('B01003_001E'),
   population: find('B01003_001E'),
   'per capita income': find('B19301_001E'),
+  'latino population': find('B03003_003E'),
+  'hispanic population': find('B03003_003E'),
+  'hispanic or latino population': find('B03003_003E'),
 };
