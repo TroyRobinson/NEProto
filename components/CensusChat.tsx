@@ -22,7 +22,7 @@ export default function CensusChat({ onAddMetric, onLoadStat, onClose }: CensusC
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState<'user' | 'admin'>('user');
+  const [mode, setMode] = useState<'user' | 'admin' | 'fast-admin'>('user');
   const { config } = useConfig();
   const { data: statData } = db.useQuery({ stats: {} });
   const { metrics, clearMetrics } = useMetrics();
@@ -42,7 +42,7 @@ export default function CensusChat({ onAddMetric, onLoadStat, onClose }: CensusC
       }
     }
     const storedMode = localStorage.getItem(MODE_STORAGE_KEY);
-    if (storedMode === 'user' || storedMode === 'admin') {
+    if (storedMode === 'user' || storedMode === 'admin' || storedMode === 'fast-admin') {
       setMode(storedMode);
     }
   }, []);
@@ -86,16 +86,18 @@ export default function CensusChat({ onAddMetric, onLoadStat, onClose }: CensusC
       setMessages(newMessages);
       setInput('');
 
-      if (mode === 'admin') {
+      if (mode === 'admin' || mode === 'fast-admin') {
         setLoading(true);
         const systemPrompt = `You help users find US Census statistics. Limit responses to ${config.region} using ${config.dataset} ${config.year} data for ${config.geography}.`;
+        const body: Record<string, unknown> = {
+          messages: [{ role: 'system', content: systemPrompt }, ...newMessages],
+          config,
+        };
+        if (mode === 'fast-admin') body.mode = 'fast-admin';
         const res = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            messages: [{ role: 'system', content: systemPrompt }, ...newMessages],
-            config,
-          }),
+          body: JSON.stringify(body),
         });
         const data = await res.json();
         setMessages([...newMessages, { role: 'assistant', content: data.message.content }]);
@@ -196,12 +198,13 @@ export default function CensusChat({ onAddMetric, onLoadStat, onClose }: CensusC
                   WebkitAppearance: 'none',
                   MozAppearance: 'none',
                 }}
-                value={mode}
-                onChange={e => setMode(e.target.value as 'user' | 'admin')}
-              >
-                <option value="user">User Mode</option>
-                <option value="admin">Admin Mode</option>
-              </select>
+                  value={mode}
+                  onChange={e => setMode(e.target.value as 'user' | 'admin' | 'fast-admin')}
+                >
+                  <option value="user">User Mode</option>
+                  <option value="admin">Admin Mode</option>
+                  <option value="fast-admin">Fast Admin Mode</option>
+                </select>
               {/* Down chevron icon, with right padding */}
               <span
                 className="pointer-events-none absolute inset-y-0 right-0 flex items-center"
@@ -238,7 +241,7 @@ export default function CensusChat({ onAddMetric, onLoadStat, onClose }: CensusC
             </button>
           )}
         </div>
-        {mode === 'admin' && <ConfigControls />}
+          {mode !== 'user' && <ConfigControls />}
         <div
           ref={scrollContainerRef}
           className="flex-1 overflow-y-auto mb-2 space-y-2 p-2 rounded bg-gray-100"
@@ -275,7 +278,7 @@ export default function CensusChat({ onAddMetric, onLoadStat, onClose }: CensusC
                 sendMessage();
               }
             }}
-            placeholder={mode === 'admin' ? 'Ask about US Census stats... (Shift+Enter for newline)' : 'Search stored stats...'}
+              placeholder={mode !== 'user' ? 'Ask about US Census stats... (Shift+Enter for newline)' : 'Search stored stats...'}
           />
           {/* Hide scrollbar for Webkit browsers */}
           <style jsx>{`
