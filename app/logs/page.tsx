@@ -10,6 +10,7 @@ interface LogEntry {
   direction: 'request' | 'response';
   message: unknown;
   summary: string;
+  last?: string;
 }
 
 export default function LogsPage() {
@@ -46,24 +47,27 @@ export default function LogsPage() {
         </div>
         {logs.map((log) => (
           <div key={log.id} className="flex justify-center">
-            <div
-              className={`max-w-xl px-3 py-2 rounded ${
-                log.direction === 'request'
-                  ? 'bg-gray-200 text-gray-900 mr-8'
-                  : 'bg-blue-100 text-blue-800 ml-8'
-              }`}
-            >
-              <div className="text-xs font-medium mb-1">{log.summary}</div>
-              <div className="text-xs text-gray-500 mb-1">
-                {log.service} {log.direction}{' '}
-                {new Date(log.timestamp).toLocaleTimeString()}
+              <div
+                className={`max-w-xl px-3 py-2 rounded ${
+                  log.direction === 'request'
+                    ? 'bg-gray-200 text-gray-900 mr-8'
+                    : 'bg-blue-100 text-blue-800 ml-8'
+                }`}
+              >
+                <div className="text-xs font-medium mb-1">{log.summary}</div>
+                {log.last && (
+                  <div className="text-xs text-gray-700 mb-1">{log.last}</div>
+                )}
+                <div className="text-xs text-gray-500 mb-1">
+                  {log.service} {log.direction}{' '}
+                  {new Date(log.timestamp).toLocaleTimeString()}
+                </div>
+                <pre className="whitespace-pre-wrap text-xs">
+                  {JSON.stringify(log.message, null, 2)}
+                </pre>
               </div>
-              <pre className="whitespace-pre-wrap text-xs">
-                {JSON.stringify(log.message, null, 2)}
-              </pre>
             </div>
-          </div>
-        ))}
+          ))}
       </main>
     </div>
   );

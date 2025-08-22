@@ -211,6 +211,24 @@ export async function POST(req: NextRequest) {
   }
 
   const convo: Message[] = [...messages];
+  const needsAdvanced = /\b(why|explain|compare|contrast|insight|analysis|reason)\b/i.test(
+    lastUser
+  );
+  if (needsAdvanced) {
+    convo.push({
+      role: 'assistant',
+      content: 'Consulting a more capable model for deeper reasoning.',
+    });
+    const deeper = await runModel('openai/gpt-5-mini', convo, year, dataset);
+    toolInvocations.push(...deeper.toolInvocations);
+    return NextResponse.json({
+      message: deeper.message,
+      toolInvocations,
+      usedFallback: true,
+      fallbackReason: 'advanced reasoning requested',
+    });
+  }
+
   const first = await runModel('openai/gpt-oss-120b:nitro', convo, year, dataset);
   toolInvocations.push(...first.toolInvocations);
   let fallbackReason = '';

@@ -5,12 +5,13 @@ export interface LogEntry {
   direction: 'request' | 'response';
   message: unknown;
   summary: string;
+  last?: string;
 }
 
 const logs: LogEntry[] = [];
 let nextId = 1;
 
-function summarize(entry: Omit<LogEntry, 'id' | 'timestamp' | 'summary'>): string {
+function summarize(entry: Omit<LogEntry, 'id' | 'timestamp' | 'summary' | 'last'>): string {
   const { service, direction, message } = entry as {
     service: string;
     direction: 'request' | 'response';
