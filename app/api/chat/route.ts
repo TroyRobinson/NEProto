@@ -143,7 +143,8 @@ async function runModel(
 }
 
 export async function POST(req: NextRequest) {
-  const { messages: incoming, config, stats } = await req.json();
+  const { messages: incoming, config, stats, mode: incomingMode } = await req.json();
+  const mode = (incomingMode as 'auto' | 'fast' | 'smart' | undefined) || 'auto';
   const {
     year = '2023',
     dataset = 'acs/acs5',
@@ -183,7 +184,7 @@ export async function POST(req: NextRequest) {
   const toolInvocations: { name: string; args: Record<string, unknown> }[] = [];
 
   const ids = parseMetricIds(lastUser);
-  if (ids.length) {
+  if (mode === 'auto' && ids.length) {
     const added: string[] = [];
     for (const id of ids) {
       if (await validateVariableId(id, year, dataset)) {
@@ -205,7 +206,7 @@ export async function POST(req: NextRequest) {
   const action = parseActionQuery(lastUser);
   const origin = new URL(req.url).origin;
 
-  if (action) {
+  if (mode === 'auto' && action) {
     const results = await searchCensus(action, year, dataset, { last: lastUser, origin });
     if (results.length) {
       const best = results[0];
@@ -216,6 +217,7 @@ export async function POST(req: NextRequest) {
           content: `Added "${best.label}" to your metrics list.`,
         },
         toolInvocations,
+        modeUsed: 'auto',
       });
     }
     // fall through to full chat if not found
@@ -225,7 +227,7 @@ export async function POST(req: NextRequest) {
   const needsAdvanced = /\b(why|how|explain|compare|contrast|insight|analysis|reason|think|thinking|because)\b/i.test(
     lastUser
   );
-  if (needsAdvanced) {
+  if (mode === 'smart' || (mode === 'auto' && needsAdvanced)) {
     convo.push({
       role: 'assistant',
       content: 'Consulting a more capable model for deeper reasoning.',
@@ -235,8 +237,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       message: deeper.message,
       toolInvocations,
-      usedFallback: true,
-      fallbackReason: 'advanced reasoning requested',
+      usedFallback: mode === 'auto',
+      fallbackReason: mode === 'auto' ? 'advanced reasoning requested' : '',
+      modeUsed: 'smart',
     });
   }
 
@@ -248,7 +251,7 @@ export async function POST(req: NextRequest) {
   } else if (!first.message?.content?.trim()) {
     fallbackReason = 'the initial model did not produce an answer';
   }
-  if (fallbackReason) {
+  if (mode !== 'fast' && fallbackReason) {
     convo.push({
       role: 'assistant',
       content: `Checking a more capable model because ${fallbackReason}.`,
@@ -260,7 +263,8 @@ export async function POST(req: NextRequest) {
       toolInvocations,
       usedFallback: true,
       fallbackReason,
+      modeUsed: 'smart',
     });
   }
-  return NextResponse.json({ message: first.message, toolInvocations, usedFallback: false });
+  return NextResponse.json({ message: first.message, toolInvocations, usedFallback: false, modeUsed: mode === 'fast' ? 'fast' : 'auto' });
 }

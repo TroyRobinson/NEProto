@@ -32,6 +32,7 @@
 - Heuristically adds metrics for plain ID lists or short action commands
 - Falls back to a smarter model only when needed and reports when it does
 - Advanced heuristic triggers on: why, how, explain, compare, contrast, insight, analysis, reason, think, thinking, because
+- Supports mode override via request body `mode`: 'auto' (default), 'fast' (no fallback), 'smart' (force advanced)
 
 ### app/api/insight/route.ts
 - POST handler for free-form statistical analysis
@@ -82,6 +83,7 @@
 - Shows an immediate notice when deferring to a deeper model (so users know to wait)
 - Persists chat messages to localStorage
 - Collapsible container with reopen button; clear controls for chat and active metrics
+- Appends an Approach chip on assistant messages at the bottom-right of each message row; dropdown to re-run from the last user message with Auto/Fast/Smart
 
 ### components/MetricContext.tsx
 - React context tracking active ZCTA metrics and geometries
