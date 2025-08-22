@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "seed": "node scripts/seed.js"
+    "seed": "node scripts/seed.js",
+    "test": "TS_NODE_COMPILER_OPTIONS=\"{\\\"module\\\":\\\"commonjs\\\"}\" node --test -r ts-node/register tests/chat.test.ts"
   },
   "dependencies": {
     "@deck.gl/core": "^9.1.14",
@@ -32,6 +33,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9.33.0",
     "eslint-config-next": "^15.4.6",
+    "ts-node": "^10.9.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

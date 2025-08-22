@@ -15,4 +15,8 @@ export const COMMON_QUERY_MAP: Record<string, CensusVariableInfo> = {
   'total population': find('B01003_001E'),
   population: find('B01003_001E'),
   'per capita income': find('B19301_001E'),
+  'median age': find('B01002_001E'),
+  'latino population': find('B03003_003E'),
+  'hispanic population': find('B03003_003E'),
+  'hispanic or latino population': find('B03003_003E'),
 };
