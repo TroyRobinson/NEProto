@@ -65,7 +65,7 @@
 ## Components
 ### components/OKCMap.tsx
 - Composes MapLibre map and deck.gl overlay
-- Builds layers via `createOrganizationLayer` and `createZctaMetricLayer`
+- Builds layers via `createOrganizationLayers` and `createZctaMetricLayer`
 - Emits `onOrganizationClick` callback
 
 ### components/OrganizationDetails.tsx
@@ -120,7 +120,7 @@
 - `searchCensus` and `validateVariableId` helpers
 
 ### lib/mapLayers.ts
-- `createOrganizationLayer` for point markers
+- `createOrganizationLayers` for point markers and highlighted pins
 - `createZctaMetricLayer` for choropleth metrics
 - Pure functions returning deck.gl layers
 

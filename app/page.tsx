@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import db from '../lib/db';
 import AddOrganizationForm from '../components/AddOrganizationForm';
@@ -9,6 +9,8 @@ import NavBar from '../components/NavBar';
 import MetricDropdown from '../components/MetricDropdown';
 import { useMetrics } from '../components/MetricContext';
 import OrganizationDetails from '../components/OrganizationDetails';
+import OrgSearchSidebar from '../components/OrgSearchSidebar';
+import { addOrgFromProPublica } from '../lib/propublica';
 import type { Organization } from '../types/organization';
 
 const OKCMap = dynamic(() => import('../components/OKCMap'), {
@@ -20,6 +22,9 @@ export default function Home() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
   const [isChatCollapsed, setIsChatCollapsed] = useState(false);
+  const [searchResults, setSearchResults] = useState<Organization[] | null>(null);
+  const [addedOrgs, setAddedOrgs] = useState<Organization[]>([]);
+  const [hoveredOrgId, setHoveredOrgId] = useState<string | null>(null);
   const { metrics, selectedMetric, selectMetric, clearMetrics, zctaFeatures, addMetric, loadStatMetric } = useMetrics();
 
   // Close Add Organization modal on Escape key
@@ -42,6 +47,37 @@ export default function Home() {
     }
   });
 
+  const dbOrgs = useMemo(() => data?.organizations || [], [data]);
+
+  const organizations = useMemo(() => {
+    const ids = new Set(dbOrgs.map((o) => o.id));
+    return [...dbOrgs, ...addedOrgs.filter((o) => !ids.has(o.id))];
+  }, [dbOrgs, addedOrgs]);
+
+  const defaultOrganizations = useMemo(() => organizations.slice(0, 20), [organizations]);
+  const displayedOrganizations = searchResults ?? defaultOrganizations;
+
+  const handleOrganizationClick = async (org: Organization) => {
+    if (org.id.startsWith('search-')) {
+      const ein = org.ein || parseInt(org.id.replace('search-', ''), 10);
+      const loc = org.locations[0];
+      const saved = await addOrgFromProPublica(ein, loc ? {
+        address: loc.address,
+        latitude: loc.latitude,
+        longitude: loc.longitude,
+      } : undefined);
+      if (saved) {
+        setAddedOrgs((prev) => [...prev, saved]);
+        setSelectedOrg(saved);
+        setSearchResults((prev) => prev?.filter((o) => o.id !== org.id) || null);
+        return;
+      }
+    } else if (!organizations.find((o) => o.id === org.id) && !addedOrgs.find((o) => o.id === org.id)) {
+      setAddedOrgs((prev) => [...prev, org]);
+    }
+    setSelectedOrg(org);
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
@@ -58,13 +94,18 @@ export default function Home() {
     );
   }
 
-  const organizations = data?.organizations || [];
-
   return (
     <div className="h-screen bg-gray-100 flex flex-col overflow-hidden">
       <NavBar onAddOrganization={() => setShowAddForm(true)} />
 
       <div className="flex flex-1 overflow-hidden">
+        <OrgSearchSidebar
+          existingOrgs={organizations}
+          onResults={setSearchResults}
+          onSelect={handleOrganizationClick}
+          onHover={setHoveredOrgId}
+        />
+
         {selectedOrg && (
           <OrganizationDetails
             organization={selectedOrg}
@@ -74,12 +115,14 @@ export default function Home() {
 
         <div className="flex-1 relative">
           <OKCMap
-            organizations={organizations}
-            onOrganizationClick={setSelectedOrg}
+            organizations={displayedOrganizations}
+            onOrganizationClick={handleOrganizationClick}
             zctaFeatures={zctaFeatures}
+            selectedOrgId={selectedOrg?.id || null}
+            hoveredOrgId={hoveredOrgId}
+            onOrganizationHover={setHoveredOrgId}
           />
 
-          {/* Overlay metrics glass bar over the map */}
           {metrics.length > 0 && (
             <div className="absolute inset-x-0 top-2 z-30 flex justify-start">
               <div
