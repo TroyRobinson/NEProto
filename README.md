@@ -27,7 +27,8 @@
 - Collapsible `CensusChat` container anchored bottom-right
 
 ### app/api/chat/route.ts
-- POST handler forwarding prompts to OpenRouter
+- Smart chat handler that detects simple add commands and variable ids
+- Falls back to OpenRouter with tool calls for deeper questions
 - Uses `censusTools` helpers for variable search/validation
 - Called by `CensusChat`
 
@@ -73,11 +74,11 @@
 - Populated from map click events
 
 ### components/CensusChat.tsx
-- Chat UI with user/admin mode toggle
-- **User mode**: Searches stored stats, provides insights via `/api/insight`
-- **Admin mode**: Live Census API queries, adds new metrics via `/api/chat`
+- Chat UI that automatically routes requests via `/api/chat`
+- Detects direct variable ids and short add commands for instant metric loading
+- Falls back to OpenRouter for answering questions and fetching new stats
 - Dispatches metrics to `MetricContext`
-- Persists chat messages and mode selection to localStorage
+- Persists chat messages to localStorage
 - Collapsible container with reopen button; clear controls for chat and active metrics
 
 ### components/MetricContext.tsx
@@ -117,7 +118,7 @@
 
 ### lib/censusTools.ts
 - Loads Census variable metadata and caches results
-- `searchCensus` and `validateVariableId` helpers
+- `searchCensus` and `validateVariableId` helpers with tokenized search for loose queries
 
 ### lib/mapLayers.ts
 - `createOrganizationLayer` for point markers
