@@ -25,6 +25,7 @@ export default function CensusChat({ onAddMetric, onLoadStat, onClose }: CensusC
   const { config } = useConfig();
   const { data: statData } = db.useQuery({ stats: {} });
   const { clearMetrics } = useMetrics();
+  const [showSettings, setShowSettings] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -77,7 +78,7 @@ export default function CensusChat({ onAddMetric, onLoadStat, onClose }: CensusC
       setInput('');
 
       setLoading(true);
-      const systemPrompt = `You help users find US Census statistics. Limit responses to ${config.region} using ${config.dataset} ${config.year} data for ${config.geography}.`;
+      const systemPrompt = `You help users find US Census statistics. Limit responses to ${config.region} using ${config.dataset} ${config.year} data for ${config.geography}. Respond in plain text, no markdown, and be very concise.`;
       const stats = (statData?.stats || []) as Stat[];
       const res = await fetch('/api/chat', {
         method: 'POST',
@@ -130,6 +131,12 @@ export default function CensusChat({ onAddMetric, onLoadStat, onClose }: CensusC
             >
               Clear
             </button>
+            <button
+              onClick={() => setShowSettings((s) => !s)}
+              className="text-xs text-blue-600"
+            >
+              {showSettings ? 'Hide settings' : 'Show settings'}
+            </button>
           </div>
           {onClose && (
             <button
@@ -143,7 +150,7 @@ export default function CensusChat({ onAddMetric, onLoadStat, onClose }: CensusC
             </button>
           )}
         </div>
-          <ConfigControls />
+        {showSettings && <ConfigControls />}
         <div
           ref={scrollContainerRef}
           className="flex-1 overflow-y-auto mb-2 space-y-2 p-2 rounded bg-gray-100"

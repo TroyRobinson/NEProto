@@ -102,7 +102,7 @@ async function runModel(
       tool_choice: 'auto',
       reasoning: { effort: 'low' },
       text: { verbosity: 'low' },
-      max_output_tokens: 100,
+      max_output_tokens: 60,
     });
 
     const message = response.choices?.[0]?.message;
@@ -112,6 +112,13 @@ async function runModel(
     if (!toolCalls.length) {
       if (message && 'reasoning' in (message as Record<string, unknown>)) {
         delete (message as Record<string, unknown>).reasoning;
+      }
+      if (message?.content) {
+        message.content = message.content
+          .replace(/[\*`_]/g, '')
+          .replace(/\s+\n/g, ' ')
+          .replace(/\n+/g, ' ') // collapse newlines
+          .trim();
       }
       return { message, toolInvocations, lastSearchEmpty };
     }
@@ -139,11 +146,17 @@ async function runModel(
           result = { ok: false, error: 'Unknown variable id' };
         }
       } else if (name === 'load_stat') {
-        const code = args.code as string;
-        const stat = stats.find((s) => s.code === code);
+        const code = (args.code as string) || '';
+        let stat = stats.find((s) => s.code === code);
+        if (!stat) {
+          const match = code.match(/[A-Z]\d{5}_\d{3}E/);
+          if (match) {
+            stat = stats.find((s) => s.code === match[0]);
+          }
+        }
         if (stat) {
           result = { ok: true, stat };
-          toolInvocations.push({ name, args: { code } });
+          toolInvocations.push({ name, args: { code: stat.code } });
         } else {
           result = { ok: false, error: 'Unknown code' };
         }

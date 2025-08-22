@@ -37,6 +37,7 @@
 
 ### app/api/logs/route.ts
 - In-memory log store for external request debugging
+- Generates a short summary for each entry
 - Consumed by `/logs` page
 
 ### app/logs/page.tsx
