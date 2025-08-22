@@ -1,6 +1,8 @@
-import { addLog } from './logStore';
-import { CURATED_VARIABLES } from './censusVariables';
-import { COMMON_QUERY_MAP } from './censusQueryMap';
+import { addLog } from './logStore.ts';
+import { CURATED_VARIABLES } from './censusVariables.ts';
+import { COMMON_QUERY_MAP } from './censusQueryMap.ts';
+
+const STOP_WORDS = new Set(['and', 'or', 'of', 'the', 'in', 'for', 'population']);
 
 export interface CensusVariable {
   id: string;
@@ -40,6 +42,18 @@ export async function validateVariableId(id: string, year: string, dataset: stri
   return vars.some(([vid]) => vid === id);
 }
 
+export async function getVariableById(
+  id: string,
+  year: string,
+  dataset: string
+): Promise<CensusVariable | null> {
+  const vars = await loadVariables(year, dataset);
+  const match = vars.find(([vid]) => vid === id);
+  if (!match) return null;
+  const [, info] = match;
+  return { id, label: info.label, concept: info.concept };
+}
+
 export async function searchCensus(
   query: string,
   year: string,
@@ -56,7 +70,9 @@ export async function searchCensus(
     return result;
   }
 
-  const tokens = q.split(/\s+/);
+  const tokens = q
+    .split(/\s+/)
+    .filter((t) => t && !STOP_WORDS.has(t));
   const curated = CURATED_VARIABLES.filter((v) =>
     tokens.every(
       (t) =>
@@ -77,7 +93,9 @@ export async function searchCensus(
     message: { type: 'search', query, year, dataset },
   });
   const results = vars
-    .filter(([, info]) => info.label.toLowerCase().includes(q))
+    .filter(([, info]) =>
+      tokens.every((t) => info.label.toLowerCase().includes(t))
+    )
     .slice(0, 5)
     .map(([id, info]) => ({ id, label: info.label, concept: info.concept }));
   searchCache.set(cacheKey, results);
