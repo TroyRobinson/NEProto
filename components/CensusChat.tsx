@@ -334,6 +334,30 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
         )}
       </div>
       {showSettings && <ConfigControls />}
+
+      {/* Default starter ideas when chat is empty - shown above messages */}
+      {messages.length === 0 && !loading && !input.trim() && (
+        <div className="mb-2 flex flex-col gap-2">
+          <button
+            className="w-full text-left px-3 py-2 rounded-md bg-indigo-50 text-indigo-800 hover:bg-indigo-100 transition-colors text-sm"
+            onClick={() => {
+              sendMessageWith('Add median hh income', 'auto');
+              setSuggestions(null);
+            }}
+          >
+            Add median hh income
+          </button>
+          <button
+            className="w-full text-left px-3 py-2 rounded-md bg-indigo-50 text-indigo-800 hover:bg-indigo-100 transition-colors text-sm"
+            onClick={() => {
+              sendMessageWith('Add total population', 'auto');
+              setSuggestions(null);
+            }}
+          >
+            Add total population
+          </button>
+        </div>
+      )}
       <div
         ref={scrollContainerRef}
         className="flex-1 overflow-y-auto mb-2 space-y-2 p-2 rounded bg-gray-100"
