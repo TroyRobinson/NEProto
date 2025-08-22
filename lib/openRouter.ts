@@ -1,7 +1,17 @@
 import { addLog } from './logStore';
 
 export async function callOpenRouter(payload: Record<string, unknown>) {
-  addLog({ service: 'OpenRouter', direction: 'request', message: payload });
+  const last = Array.isArray(payload.messages)
+    ? (payload.messages as any[]).slice(-1)[0]
+    : undefined;
+  addLog({
+    service: 'OpenRouter',
+    direction: 'request',
+    message: {
+      model: payload.model,
+      lastUser: last?.content,
+    },
+  });
   const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -14,11 +24,13 @@ export async function callOpenRouter(payload: Record<string, unknown>) {
     throw new Error(`OpenRouter error: ${res.status}`);
   }
   const json = await res.json();
-  const cleaned = JSON.parse(
-    JSON.stringify(json, (key, value) =>
-      key === 'reasoning' || key === 'reasoning_details' ? undefined : value
-    )
-  );
-  addLog({ service: 'OpenRouter', direction: 'response', message: cleaned });
+  addLog({
+    service: 'OpenRouter',
+    direction: 'response',
+    message: {
+      model: payload.model,
+      finish_reason: json.choices?.[0]?.finish_reason,
+    },
+  });
   return json;
 }
