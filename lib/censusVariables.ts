@@ -25,6 +25,12 @@ export const CURATED_VARIABLES: CensusVariableInfo[] = [
     keywords: ['per', 'capita', 'income'],
   },
   {
+    id: 'B01002_001E',
+    label: 'Median Age',
+    concept: 'Median Age -- Total',
+    keywords: ['median', 'age'],
+  },
+  {
     id: 'B03003_003E',
     label: 'Hispanic or Latino population',
     concept: 'Hispanic or Latino Origin',

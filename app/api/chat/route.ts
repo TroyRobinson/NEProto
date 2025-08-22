@@ -220,7 +220,7 @@ export async function POST(req: NextRequest) {
   const convo: Message[] = [...messages];
   const first = await runModel('openai/gpt-oss-120b:nitro', convo, stats, year, dataset);
   toolInvocations.push(...first.toolInvocations);
-  if (first.lastSearchEmpty) {
+  if (first.lastSearchEmpty || !first.message?.content?.trim()) {
     convo.push({
       role: 'assistant',
       content: "The data we are considering is not found, I'm going to search deeper.",
