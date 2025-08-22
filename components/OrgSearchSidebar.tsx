@@ -9,6 +9,7 @@ interface OrgSearchSidebarProps {
   existingOrgs: Organization[];
   onResults: (orgs: Organization[]) => void;
   onSelect: (org: Organization) => void;
+  onHover: (orgId: string | null) => void;
 }
 
 interface SearchResult {
@@ -24,7 +25,7 @@ interface ProPublicaSearchOrg {
   ntee_code?: string;
 }
 
-export default function OrgSearchSidebar({ existingOrgs, onResults, onSelect }: OrgSearchSidebarProps) {
+export default function OrgSearchSidebar({ existingOrgs, onResults, onSelect, onHover }: OrgSearchSidebarProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -113,6 +114,8 @@ export default function OrgSearchSidebar({ existingOrgs, onResults, onSelect }: 
             key={r.ein}
             className="mb-2 cursor-pointer"
             onClick={() => handleSelect(r)}
+            onMouseEnter={() => onHover(r.org.id)}
+            onMouseLeave={() => onHover(null)}
           >
             <div className="font-medium text-gray-900">{r.org.name}</div>
             <div className="text-sm text-gray-500">{r.org.locations[0].address}</div>

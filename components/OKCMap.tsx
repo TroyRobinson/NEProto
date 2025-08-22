@@ -14,6 +14,8 @@ interface OKCMapProps {
   organizations: Organization[];
   onOrganizationClick?: (org: Organization) => void;
   zctaFeatures?: ZctaFeature[];
+  selectedOrgId?: string | null;
+  hoveredOrgId?: string | null;
 }
 
 const OKC_CENTER = {
@@ -21,7 +23,7 @@ const OKC_CENTER = {
   latitude: 35.4676
 };
 
-export default function OKCMap({ organizations, onOrganizationClick, zctaFeatures }: OKCMapProps) {
+export default function OKCMap({ organizations, onOrganizationClick, zctaFeatures, selectedOrgId, hoveredOrgId }: OKCMapProps) {
   const [viewState, setViewState] = useState({
     longitude: OKC_CENTER.longitude,
     latitude: OKC_CENTER.latitude,
@@ -64,13 +66,13 @@ export default function OKCMap({ organizations, onOrganizationClick, zctaFeature
   }, [organizations]);
 
   const layers = useMemo(() => {
-    const layers: any[] = [createOrganizationLayer(organizations, onOrganizationClick)];
+    const layers: any[] = [createOrganizationLayer(organizations, onOrganizationClick, selectedOrgId, hoveredOrgId)];
     const zctaLayer = createZctaMetricLayer(zctaFeatures);
     if (zctaLayer) {
       layers.unshift(zctaLayer);
     }
     return layers;
-  }, [organizations, onOrganizationClick, zctaFeatures]);
+  }, [organizations, onOrganizationClick, zctaFeatures, selectedOrgId, hoveredOrgId]);
 
   return (
     <div className="w-full h-full relative" ref={containerRef}>
