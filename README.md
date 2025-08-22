@@ -27,14 +27,13 @@
 - Collapsible `CensusChat` container anchored bottom-right
 
 ### app/api/chat/route.ts
-- POST handler forwarding prompts to OpenRouter
-- Uses `censusTools` helpers for variable search/validation
-- Called by `CensusChat`
+- POST handler orchestrating chat responses and Census lookups
+- Heuristically adds metrics for plain ID lists or short action commands
+- Falls back to OpenRouter models for reasoning and deeper searches
 
 ### app/api/insight/route.ts
 - POST handler for free-form statistical analysis
 - Processes stat data through OpenRouter for insights
-- Called by `CensusChat` in insight mode
 
 ### app/api/logs/route.ts
 - In-memory log store for external request debugging
@@ -73,12 +72,10 @@
 - Populated from map click events
 
 ### components/CensusChat.tsx
-- Chat UI with user/admin/fast-admin mode toggle
-- **User mode**: Searches stored stats, provides insights via `/api/insight`
-- **Admin mode**: Live Census API queries, adds new metrics via `/api/chat`
-- **Fast admin mode**: Uses `openai/gpt-oss-120b:nitro` with guardrails for quick metric additions
-- Dispatches metrics to `MetricContext`
-- Persists chat messages and mode selection to localStorage
+- Single chat interface for questions and metric requests
+- Detects simple commands locally and loads stats automatically
+- Sends conversation and stats context to `/api/chat`
+- Persists chat messages to localStorage
 - Collapsible container with reopen button; clear controls for chat and active metrics
 
 ### components/MetricContext.tsx

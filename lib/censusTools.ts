@@ -42,6 +42,18 @@ export async function validateVariableId(id: string, year: string, dataset: stri
   return vars.some(([vid]) => vid === id);
 }
 
+export async function getVariableById(
+  id: string,
+  year: string,
+  dataset: string
+): Promise<CensusVariable | null> {
+  const vars = await loadVariables(year, dataset);
+  const match = vars.find(([vid]) => vid === id);
+  if (!match) return null;
+  const [, info] = match;
+  return { id, label: info.label, concept: info.concept };
+}
+
 export async function searchCensus(
   query: string,
   year: string,
