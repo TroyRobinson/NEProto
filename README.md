@@ -16,10 +16,15 @@
 - OpenRouter-powered chat searches Census variables and adds layers
 
 ## App Files
+### app/layout.tsx
+- Provides `ConfigProvider` and `MetricsProvider` to all pages
+- Sets global fonts and styles
+
 ### app/page.tsx
-- Entry page wrapping children in `ConfigContext` and `MetricContext`
+- Main map view with `NavBar`, `OKCMap`, and `OrganizationDetails`
 - Fetches organizations from InstantDB and passes them to `OKCMap`
-- Hosts `CensusChat` and `OrganizationDetails` panel
+- Overlay metrics bar with `MetricDropdown` and a clear button when metrics exist
+- Collapsible `CensusChat` container anchored bottom-right
 
 ### app/api/chat/route.ts
 - POST handler forwarding prompts to OpenRouter
@@ -44,6 +49,19 @@
 - Allows editing, deleting, and refreshing stat data
 - Connected to InstantDB stats entity
 
+### app/data/page.tsx
+- Table view of the currently selected metric by ZCTA
+- Uses `MetricContext`; shows data when a metric is selected
+
+### app/about/page.tsx
+- Simple project description page
+
+### app/orgs/page.tsx
+- Placeholder for organization management
+
+### app/debug/page.tsx
+- Debug page to validate InstantDB data loading
+
 ## Components
 ### components/OKCMap.tsx
 - Composes MapLibre map and deck.gl overlay
@@ -60,7 +78,7 @@
 - **Admin mode**: Live Census API queries, adds new metrics via `/api/chat`
 - Dispatches metrics to `MetricContext`
 - Persists chat messages and mode selection to localStorage
-- Clear button to reset chat and active metrics
+- Collapsible container with reopen button; clear controls for chat and active metrics
 
 ### components/MetricContext.tsx
 - React context tracking active ZCTA metrics and geometries
@@ -75,9 +93,19 @@
 - Form to insert organization records into InstantDB
 - Separate from map display
 
-### components/TopNav.tsx
-- Minimal navigation bar housing `AddOrganizationForm`
-- Clear button (×) to reset active metrics when metrics are loaded
+### components/NavBar.tsx
+- Responsive top navigation (Map, Data, Stats, Logs, Orgs, About)
+- "Add Organization" action (via prop) opens `AddOrganizationForm` modal
+- Mobile drawer with overlay/Escape to close; highlights active route
+
+### components/MetricDropdown.tsx
+- Selector for active metric when multiple metrics are loaded
+
+### components/MetricsTable.tsx
+- Simple table to list metrics and labels (used in data/map contexts)
+
+### components/ConfigControls.tsx
+- Dropdown controls for region, year, dataset, geography (provided via `ConfigContext`)
 
 ## Library Modules
 ### lib/db.ts
