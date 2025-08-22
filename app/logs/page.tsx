@@ -9,6 +9,7 @@ interface LogEntry {
   service: string;
   direction: 'request' | 'response';
   message: unknown;
+  summary: string;
 }
 
 export default function LogsPage() {
@@ -52,8 +53,10 @@ export default function LogsPage() {
                   : 'bg-blue-100 text-blue-800 ml-8'
               }`}
             >
+              <div className="text-xs font-medium mb-1">{log.summary}</div>
               <div className="text-xs text-gray-500 mb-1">
-                {log.service} {log.direction} {new Date(log.timestamp).toLocaleTimeString()}
+                {log.service} {log.direction}{' '}
+                {new Date(log.timestamp).toLocaleTimeString()}
               </div>
               <pre className="whitespace-pre-wrap text-xs">
                 {JSON.stringify(log.message, null, 2)}
