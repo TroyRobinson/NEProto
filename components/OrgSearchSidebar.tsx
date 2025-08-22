@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import type { Organization } from '../types/organization';
 import { geocode } from '../lib/geocode';
-import { addOrgFromProPublica, nteeToCategory, inOkcCounty } from '../lib/propublica';
+import { nteeToCategory, inOkcCounty } from '../lib/propublica';
 
 interface OrgSearchSidebarProps {
   existingOrgs: Organization[];
@@ -109,23 +109,11 @@ export default function OrgSearchSidebar({ existingOrgs, onResults, onSelect, on
     }
   };
 
-  const handleSelectRemote = async (item: SearchResult) => {
-    const existing = existingOrgs.find(
-      (o) => o.ein === item.ein || o.name.toLowerCase() === item.org.name.toLowerCase()
-    );
-    if (existing) {
-      onSelect(existing);
-      return;
-    }
-    const saved = await addOrgFromProPublica(item.ein);
-    if (saved) {
-      onSelect(saved);
-      const filtered = remoteResults.filter((r) => r.ein !== item.ein);
-      setRemoteResults(filtered);
-      onResults([...localMatches, ...filtered.map((r) => r.org)]);
-    } else {
-      onSelect(item.org);
-    }
+  const handleSelectRemote = (item: SearchResult) => {
+    onSelect(item.org);
+    const filtered = remoteResults.filter((r) => r.ein !== item.ein);
+    setRemoteResults(filtered);
+    onResults([...localMatches, ...filtered.map((r) => r.org)]);
   };
 
   return (

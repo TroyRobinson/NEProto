@@ -62,58 +62,66 @@ export function inOkcCounty(lat: number, lng: number) {
 }
 
 export async function addOrgFromProPublica(ein: number): Promise<Organization | null> {
-  const res = await fetch(`/api/propublica/organizations/${ein}`);
-  if (!res.ok) {
-    return null;
-  }
-  const data = await res.json();
-  const orgData = data.organization;
-  if (!orgData) {
-    return null;
-  }
-  const addressParts = [orgData.address, orgData.city, orgData.state, orgData.zipcode].filter(Boolean);
-  const fullAddress = addressParts.join(', ');
-  const coords = await geocode(fullAddress);
-  if (!coords || !inOkcCounty(coords.latitude, coords.longitude)) {
-    return null;
-  }
-  const orgId = id();
-  const locId = id();
-  const tx = [
-    db.tx.organizations[orgId].update({
+  try {
+    const res = await fetch(`/api/propublica/organizations/${ein}`);
+    if (!res.ok) {
+      return null;
+    }
+    const data = await res.json();
+    const orgData = data.organization;
+    if (!orgData) {
+      return null;
+    }
+    const addressParts = [orgData.address, orgData.city, orgData.state, orgData.zipcode].filter(Boolean);
+    const fullAddress = addressParts.join(', ');
+    let coords = await geocode(fullAddress);
+    if (!coords) {
+      coords = await geocode(`${orgData.city}, ${orgData.state}`);
+    }
+    if (!coords || !inOkcCounty(coords.latitude, coords.longitude)) {
+      return null;
+    }
+    const orgId = id();
+    const locId = id();
+    const tx = [
+      db.tx.organizations[orgId].update({
+        name: orgData.name,
+        description: `NTEE ${orgData.ntee_code || 'Unknown'}`,
+        category: nteeToCategory(orgData.ntee_code),
+        ein: orgData.ein,
+        createdAt: Date.now(),
+      }),
+      db.tx.locations[locId]
+        .update({
+          address: fullAddress,
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+          isPrimary: true,
+        })
+        .link({ organization: orgId }),
+    ];
+    await log({ service: 'InstantDB', direction: 'request', message: tx });
+    await db.transact(tx);
+    await log({ service: 'InstantDB', direction: 'response', message: { organization: orgId } });
+    return {
+      id: orgId,
       name: orgData.name,
       description: `NTEE ${orgData.ntee_code || 'Unknown'}`,
       category: nteeToCategory(orgData.ntee_code),
       ein: orgData.ein,
       createdAt: Date.now(),
-    }),
-    db.tx.locations[locId]
-      .update({
-        address: fullAddress,
-        latitude: coords.latitude,
-        longitude: coords.longitude,
-        isPrimary: true,
-      })
-      .link({ organization: orgId }),
-  ];
-  await log({ service: 'InstantDB', direction: 'request', message: tx });
-  await db.transact(tx);
-  await log({ service: 'InstantDB', direction: 'response', message: { organization: orgId } });
-  return {
-    id: orgId,
-    name: orgData.name,
-    description: `NTEE ${orgData.ntee_code || 'Unknown'}`,
-    category: nteeToCategory(orgData.ntee_code),
-    ein: orgData.ein,
-    createdAt: Date.now(),
-    locations: [
-      {
-        id: locId,
-        address: fullAddress,
-        latitude: coords.latitude,
-        longitude: coords.longitude,
-        isPrimary: true,
-      },
-    ],
-  };
+      locations: [
+        {
+          id: locId,
+          address: fullAddress,
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+          isPrimary: true,
+        },
+      ],
+    };
+  } catch (err) {
+    console.error('Failed to add organization from ProPublica', err);
+    return null;
+  }
 }
