@@ -45,8 +45,24 @@ export default function LogsPage() {
             Clear logs
           </button>
         </div>
-        {logs.map((log) => (
-          <div key={log.id} className="flex justify-center">
+        {logs.map((log, idx) => {
+          const time = new Date(log.timestamp).toLocaleTimeString();
+          if (log.service === 'User') {
+            const content = (log.message as { content?: string })?.content || '';
+            return (
+              <div key={log.id} className="flex justify-center">
+                <div className={`max-w-xl px-3 py-2 rounded bg-blue-100 text-blue-800 ml-8`}>
+                  <div className="text-xs font-medium mb-1">User Request</div>
+                  <div className="text-xs text-gray-500 mb-1">{time}</div>
+                  <div className="text-sm">{content}</div>
+                </div>
+              </div>
+            );
+          }
+          const prev = logs[idx - 1];
+          const hasRecentUser = prev && prev.service === 'User' && Math.abs(prev.timestamp - log.timestamp) < 5000;
+          return (
+            <div key={log.id} className="flex justify-center">
               <div
                 className={`max-w-xl px-3 py-2 rounded ${
                   log.direction === 'request'
@@ -55,19 +71,19 @@ export default function LogsPage() {
                 }`}
               >
                 <div className="text-xs font-medium mb-1">{log.summary}</div>
-                {log.last && (
+                {log.last && !hasRecentUser && (
                   <div className="text-xs text-gray-700 mb-1">{log.last}</div>
                 )}
                 <div className="text-xs text-gray-500 mb-1">
-                  {log.service} {log.direction}{' '}
-                  {new Date(log.timestamp).toLocaleTimeString()}
+                  {log.service} {log.direction} {time}
                 </div>
                 <pre className="whitespace-pre-wrap text-xs">
                   {JSON.stringify(log.message, null, 2)}
                 </pre>
               </div>
             </div>
-          ))}
+          );
+        })}
       </main>
     </div>
   );

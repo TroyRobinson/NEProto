@@ -19,7 +19,9 @@ function summarize(entry: Omit<LogEntry, 'id' | 'timestamp' | 'summary' | 'last'
   };
 
   try {
-    if (service === 'US Census') {
+    if (service === 'User') {
+      return 'User request';
+    } else if (service === 'US Census') {
       const msg = message as { type?: string; query?: string; variable?: string };
       if (msg.type === 'search' && msg.query) {
         return `Census search "${msg.query}"`;
@@ -27,6 +29,12 @@ function summarize(entry: Omit<LogEntry, 'id' | 'timestamp' | 'summary' | 'last'
       if (msg.type === 'metric' && msg.variable) {
         return `Census metric ${msg.variable}`;
       }
+    } else if (service === 'InstantDB') {
+      const msg = message as { type?: string; code?: string };
+      if (msg.type === 'stat_hit' && msg.code) {
+        return `InstantDB fulfilled ${msg.code}`;
+      }
+      return 'InstantDB response';
     } else if (service === 'OpenRouter') {
       const msg = message as {
         model?: string;

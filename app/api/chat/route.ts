@@ -36,7 +36,8 @@ async function runModel(
   model: string,
   convo: Message[],
   year: string,
-  dataset: string
+  dataset: string,
+  origin?: string
 ) {
   const tools = [
     {
@@ -88,7 +89,7 @@ async function runModel(
       reasoning: { effort: 'low' },
       text: { verbosity: 'low' },
       max_output_tokens: 100,
-    });
+    }, origin);
 
     const message = response.choices?.[0]?.message;
     const toolCalls = message?.tool_calls ?? [];
@@ -106,7 +107,15 @@ async function runModel(
       const args = JSON.parse(call.function.arguments || '{}') as Record<string, unknown>;
       let result: unknown;
       if (name === 'search_census') {
-        const searchResults = await searchCensus(args.query as string, year, dataset);
+        const lastFromConvo = [...convo]
+          .reverse()
+          .find((m) => m.role === 'user')?.content as string | undefined;
+        const searchResults = await searchCensus(
+          args.query as string,
+          year,
+          dataset,
+          { last: lastFromConvo, origin }
+        );
         lastSearch = searchResults;
         lastSearchEmpty = searchResults.length === 0;
         result = searchResults;
@@ -194,8 +203,10 @@ export async function POST(req: NextRequest) {
   }
 
   const action = parseActionQuery(lastUser);
+  const origin = new URL(req.url).origin;
+
   if (action) {
-    const results = await searchCensus(action, year, dataset);
+    const results = await searchCensus(action, year, dataset, { last: lastUser, origin });
     if (results.length) {
       const best = results[0];
       toolInvocations.push({ name: 'add_metric', args: { id: best.id, label: best.label } });
@@ -211,7 +222,7 @@ export async function POST(req: NextRequest) {
   }
 
   const convo: Message[] = [...messages];
-  const needsAdvanced = /\b(why|explain|compare|contrast|insight|analysis|reason)\b/i.test(
+  const needsAdvanced = /\b(why|how|explain|compare|contrast|insight|analysis|reason|think|thinking|because)\b/i.test(
     lastUser
   );
   if (needsAdvanced) {
@@ -219,7 +230,7 @@ export async function POST(req: NextRequest) {
       role: 'assistant',
       content: 'Consulting a more capable model for deeper reasoning.',
     });
-    const deeper = await runModel('openai/gpt-5-mini', convo, year, dataset);
+    const deeper = await runModel('openai/gpt-5-mini', convo, year, dataset, origin);
     toolInvocations.push(...deeper.toolInvocations);
     return NextResponse.json({
       message: deeper.message,
@@ -229,7 +240,7 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const first = await runModel('openai/gpt-oss-120b:nitro', convo, year, dataset);
+  const first = await runModel('openai/gpt-oss-120b:nitro', convo, year, dataset, origin);
   toolInvocations.push(...first.toolInvocations);
   let fallbackReason = '';
   if (first.lastSearchEmpty) {
@@ -242,7 +253,7 @@ export async function POST(req: NextRequest) {
       role: 'assistant',
       content: `Checking a more capable model because ${fallbackReason}.`,
     });
-    const deeper = await runModel('openai/gpt-5-mini', convo, year, dataset);
+    const deeper = await runModel('openai/gpt-5-mini', convo, year, dataset, origin);
     toolInvocations.push(...deeper.toolInvocations);
     return NextResponse.json({
       message: deeper.message,
@@ -253,4 +264,3 @@ export async function POST(req: NextRequest) {
   }
   return NextResponse.json({ message: first.message, toolInvocations, usedFallback: false });
 }
-

@@ -72,6 +72,35 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
     if (!input.trim()) return;
     const userMessage = { role: 'user' as const, content: input };
     const newMessages = [...messages, userMessage];
+
+    // Log the user message as its own log bubble
+    try {
+      await fetch('/api/logs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          service: 'User',
+          direction: 'request',
+          message: { content: userMessage.content },
+        }),
+      });
+    } catch {
+      // ignore log errors
+    }
+
+    // Proactively notify if the query likely needs advanced reasoning
+    const needsAdvanced = /\b(why|how|explain|compare|contrast|insight|analysis|reason|think|thinking|because)\b/i.test(
+      userMessage.content
+    );
+    let preDeferNotified = false;
+    if (needsAdvanced) {
+      newMessages.push({
+        role: 'assistant',
+        content: 'Consulting a more capable model for deeper reasoning.',
+      });
+      preDeferNotified = true;
+    }
+
     setMessages(newMessages);
     setInput('');
 
@@ -94,7 +123,7 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
     });
     const data = await res.json();
     const responseMessages = [...newMessages];
-    if (data.usedFallback) {
+    if (data.usedFallback && !preDeferNotified) {
       responseMessages.push({
         role: 'assistant',
         content: `Consulting a more capable model because ${data.fallbackReason}.`,
@@ -213,4 +242,3 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
     </div>
   );
 }
-

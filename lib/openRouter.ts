@@ -1,6 +1,18 @@
 import { addLog } from './logStore';
 
-export async function callOpenRouter(payload: Record<string, unknown>) {
+async function logViaApi(origin: string, entry: { service: string; direction: 'request' | 'response'; message: unknown; last?: string }) {
+  try {
+    await fetch(`${origin}/api/logs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(entry),
+    });
+  } catch {
+    // swallow logging errors
+  }
+}
+
+export async function callOpenRouter(payload: Record<string, unknown>, origin?: string) {
   const msgs = Array.isArray((payload as { messages?: unknown[] }).messages)
     ? ((payload as { messages?: { content?: string }[] }).messages as { content?: string }[])
     : [];
@@ -11,12 +23,13 @@ export async function callOpenRouter(payload: Record<string, unknown>) {
       ? (payload as { tools?: unknown[] }).tools!.length
       : undefined,
   };
-  addLog({
+  const requestEntry = {
     service: 'OpenRouter',
-    direction: 'request',
+    direction: 'request' as const,
     message: logPayload,
     last: msgs[msgs.length - 1]?.content,
-  });
+  };
+  if (origin) await logViaApi(origin, requestEntry); else addLog(requestEntry);
   const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -40,11 +53,12 @@ export async function callOpenRouter(payload: Record<string, unknown>) {
       finish_reason: c.finish_reason,
     })),
   };
-  addLog({
+  const responseEntry = {
     service: 'OpenRouter',
-    direction: 'response',
+    direction: 'response' as const,
     message: logResponse,
     last: cleaned.choices?.[0]?.message?.content,
-  });
+  };
+  if (origin) await logViaApi(origin, responseEntry); else addLog(responseEntry);
   return json;
 }

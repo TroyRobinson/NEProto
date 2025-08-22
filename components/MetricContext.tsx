@@ -32,6 +32,7 @@ export function MetricsProvider({ children }: { children: React.ReactNode }) {
   const [zctaFeatures, setZctaFeatures] = useState<ZctaFeature[] | undefined>();
   const [metricFeatures, setMetricFeatures] = useState<Record<string, ZctaFeature[]>>({});
   const { config } = useConfig();
+  const { data: statData } = db.useQuery({ stats: {} });
 
   useEffect(() => {
     prefetchZctaBoundaries();
@@ -39,26 +40,65 @@ export function MetricsProvider({ children }: { children: React.ReactNode }) {
 
   const addMetric = async (m: Metric) => {
     setMetrics(prev => (prev.find(p => p.id === m.id) ? prev : [...prev, m]));
-    await selectMetric(m.id);
+
+    // Prefer existing stat from InstantDB if available
+    const allStats = (statData?.stats || []) as Stat[];
+    const matching = allStats.filter(s => s.code === m.id);
+    const preferred = matching.find(s => s.dataset === config.dataset && String(s.year) === String(config.year)) || matching[0];
+    if (preferred) {
+      // Log that InstantDB fulfilled this request
+      try {
+        await fetch('/api/logs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            service: 'InstantDB',
+            direction: 'response',
+            message: {
+              type: 'stat_hit',
+              code: preferred.code,
+              dataset: preferred.dataset,
+              year: preferred.year,
+            },
+          }),
+        });
+      } catch {
+        // ignore log errors
+      }
+      await loadStatMetric(preferred);
+      return;
+    }
+
+    // Otherwise fetch from US Census and persist
     const varId = m.id.includes('_') ? m.id : m.id + '_001E';
     const features = await fetchZctaMetric(varId, { year: config.year, dataset: config.dataset });
     if (features) {
+      // Update local selection immediately
+      const key = `${config.dataset}-${config.year}-${m.id}`;
+      setSelectedMetric(m.id);
+      setMetricFeatures(prev => ({ ...prev, [key]: features }));
+      setZctaFeatures(features);
+
       const statId = id();
       const zctaMap: Record<string, number | null> = {};
       features.forEach(f => {
         zctaMap[f.properties.ZCTA5CE10] = f.properties.value ?? null;
       });
-      await db.transact([
-        db.tx.stats[statId].update({
-          code: m.id,
-          description: m.label,
-          category: 'General',
-          dataset: config.dataset,
-          source: 'US Census',
-          year: Number(config.year),
-          data: JSON.stringify(zctaMap),
-        }),
-      ]);
+      try {
+        await db.transact([
+          db.tx.stats[statId].update({
+            code: m.id,
+            description: m.label,
+            category: 'General',
+            dataset: config.dataset,
+            source: 'US Census',
+            year: Number(config.year),
+            data: JSON.stringify(zctaMap),
+          }),
+        ]);
+      } catch {
+        // Ignore unique constraint errors if another tab created it
+      }
     }
   };
 
@@ -142,4 +182,3 @@ export function useMetrics() {
   }
   return ctx;
 }
-

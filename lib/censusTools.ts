@@ -54,10 +54,23 @@ export async function getVariableById(
   return { id, label: info.label, concept: info.concept };
 }
 
+async function logViaApi(origin: string, entry: { service: string; direction: 'request' | 'response'; message: unknown; last?: string }) {
+  try {
+    await fetch(`${origin}/api/logs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(entry),
+    });
+  } catch {
+    /* ignore */
+  }
+}
+
 export async function searchCensus(
   query: string,
   year: string,
-  dataset: string
+  dataset: string,
+  opts?: { last?: string; origin?: string }
 ): Promise<CensusVariable[]> {
   const q = query.toLowerCase().trim();
   const cacheKey = `${dataset}-${year}-${q}`;
@@ -87,11 +100,13 @@ export async function searchCensus(
   }
 
   const vars = await loadVariables(year, dataset);
-  addLog({
+  const reqEntry = {
     service: 'US Census',
-    direction: 'request',
+    direction: 'request' as const,
     message: { type: 'search', query, year, dataset },
-  });
+    last: opts?.last,
+  };
+  if (opts?.origin) await logViaApi(opts.origin, reqEntry); else addLog(reqEntry);
   const results = vars
     .filter(([, info]) =>
       tokens.every((t) => info.label.toLowerCase().includes(t))
@@ -99,10 +114,11 @@ export async function searchCensus(
     .slice(0, 5)
     .map(([id, info]) => ({ id, label: info.label, concept: info.concept }));
   searchCache.set(cacheKey, results);
-  addLog({
+  const respEntry = {
     service: 'US Census',
-    direction: 'response',
+    direction: 'response' as const,
     message: results,
-  });
+  };
+  if (opts?.origin) await logViaApi(opts.origin, respEntry); else addLog(respEntry);
   return results;
 }
