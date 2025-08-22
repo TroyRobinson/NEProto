@@ -28,7 +28,9 @@ interface OrgPoint {
 
 export function createOrganizationLayer(
   organizations: Organization[],
-  onOrganizationClick?: (org: Organization) => void
+  onOrganizationClick?: (org: Organization) => void,
+  activeOrgId?: string | null,
+  hoveredOrgId?: string | null
 ) {
   const orgData: OrgPoint[] = organizations.flatMap((org) =>
     org.locations.map((location) => ({
@@ -42,14 +44,37 @@ export function createOrganizationLayer(
     id: 'organizations',
     data: orgData,
     getPosition: (d) => d.coordinates,
-    getRadius: 200,
-    getFillColor: (d) => d.color,
-    getLineColor: [0, 0, 0, 100],
-    getLineWidth: 2,
+    getRadius: (d) => {
+      if (d.organization.id === activeOrgId) return 300;
+      if (d.organization.id === hoveredOrgId) return 260;
+      return 200;
+    },
+    getFillColor: (d) => {
+      const [r, g, b] = d.color;
+      if (d.organization.id === activeOrgId) return [r, g, b, 255];
+      if (d.organization.id === hoveredOrgId) return [r, g, b, 230];
+      return d.color;
+    },
+    getLineColor: (d) => {
+      if (d.organization.id === activeOrgId) return [255, 255, 255, 255];
+      if (d.organization.id === hoveredOrgId) return [0, 0, 0, 200];
+      return [0, 0, 0, 100];
+    },
+    getLineWidth: (d) => {
+      if (d.organization.id === activeOrgId) return 4;
+      if (d.organization.id === hoveredOrgId) return 3;
+      return 2;
+    },
     radiusScale: 1,
     radiusMinPixels: 8,
     radiusMaxPixels: 20,
     pickable: true,
+    updateTriggers: {
+      getRadius: [activeOrgId, hoveredOrgId],
+      getFillColor: [activeOrgId, hoveredOrgId],
+      getLineColor: [activeOrgId, hoveredOrgId],
+      getLineWidth: [activeOrgId, hoveredOrgId],
+    },
     // Deck.gl's onClick handler includes an event argument that's unused here.
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     onClick: ((info: PickingInfo<OrgPoint>, _event: unknown) => {
