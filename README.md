@@ -83,6 +83,7 @@
 - Shows an immediate notice when deferring to a deeper model (so users know to wait)
 - Persists chat messages to localStorage
 - Collapsible container with reopen button; clear controls for chat and active metrics
+ - ZIP codes mentioned in chat or referenced in responses highlight on the map and center the view
 - Appends an Approach chip on assistant messages at the bottom-right of each message row; dropdown to re-run from the last user message with Auto/Fast/Smart
  - Follow-up ideas: after each assistant reply (unless the reply is a question), shows two compact, vertically stacked indigo buttons with next-step ideas — one to "Add data for …?" (avoids active/mentioned metrics) and one curiosity question from the user’s perspective. Clicking runs the relevant action; typing clears them.
 

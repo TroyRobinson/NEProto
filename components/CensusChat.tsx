@@ -16,9 +16,10 @@ interface ChatMessage {
 interface CensusChatProps {
   onAddMetric: (metric: { id: string; label: string }) => void | Promise<void>;
   onClose?: () => void;
+  onHighlightZips?: (zips: string[]) => void;
 }
 
-export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
+export default function CensusChat({ onAddMetric, onClose, onHighlightZips }: CensusChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -128,6 +129,11 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
     const userMessage = { role: 'user' as const, content: text };
     const newMessages = [...messages, userMessage];
 
+    const zips = text.match(/\b\d{5}\b/g);
+    if (onHighlightZips) {
+      onHighlightZips(zips ? zips : []);
+    }
+
     // Log the user message as its own log bubble
     try {
       await fetch('/api/logs', {
@@ -190,6 +196,11 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
     responseMessages.push({ role: 'assistant', content: data.message.content, modeUsed: (data.modeUsed as 'auto'|'fast'|'smart') || mode });
     setMessages(responseMessages);
     setLoading(false);
+
+    const assistantZips = data?.message?.content?.match(/\b\d{5}\b/g);
+    if (assistantZips && onHighlightZips) {
+      onHighlightZips(assistantZips);
+    }
 
     if (data.toolInvocations) {
       for (const inv of data.toolInvocations) {
@@ -276,6 +287,11 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
     responseMessages.push({ role: 'assistant', content: data.message.content, modeUsed: (data.modeUsed as 'auto'|'fast'|'smart') || mode });
     setMessages(responseMessages);
     setLoading(false);
+
+    const assistantZips = data?.message?.content?.match(/\b\d{5}\b/g);
+    if (assistantZips && onHighlightZips) {
+      onHighlightZips(assistantZips);
+    }
 
     if (data.toolInvocations) {
       for (const inv of data.toolInvocations) {
