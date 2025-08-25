@@ -68,15 +68,17 @@ export default function OKCMap({ organizations, onOrganizationClick, zctaFeature
           width: window.innerWidth,
           height: window.innerHeight,
         });
+        const padding = feats.length === 1 ? 200 : 40;
         const { longitude, latitude, zoom } = viewport.fitBounds(
           [ [minLng, minLat], [maxLng, maxLat] ],
-          { padding: 40 }
+          { padding }
         );
+        const targetZoom = feats.length === 1 ? Math.min(12, Math.max(11, zoom)) : zoom;
         setViewState((vs) => ({
           ...vs,
           longitude,
           latitude,
-          zoom,
+          zoom: targetZoom,
           transitionDuration: 1000,
           transitionInterpolator: new FlyToInterpolator(),
         }));
@@ -86,22 +88,22 @@ export default function OKCMap({ organizations, onOrganizationClick, zctaFeature
   }, [highlightedZips]);
 
   const layers = useMemo(() => {
-    const layers: any[] = [createOrganizationLayer(organizations, onOrganizationClick)];
+    const layers: any[] = [];
     const zctaLayer = createZctaMetricLayer(zctaFeatures);
-    if (zctaLayer) {
-      layers.unshift(zctaLayer);
-    }
+    if (zctaLayer) layers.push(zctaLayer);
+    layers.push(createOrganizationLayer(organizations, onOrganizationClick));
     if (highlightFeatures.length > 0) {
-      layers.unshift(new GeoJsonLayer({
+      layers.push(new GeoJsonLayer({
         id: 'highlight-zips',
         data: highlightFeatures,
         stroked: true,
         filled: false,
-        getLineColor: [255, 215, 0, 200],
+        getLineColor: [255, 215, 0, 255],
         lineWidthUnits: 'meters',
         getLineWidth: () => 200,
         lineWidthMinPixels: 2,
         pickable: false,
+        parameters: { depthTest: false },
       }));
     }
     return layers;

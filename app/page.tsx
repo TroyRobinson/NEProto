@@ -22,6 +22,7 @@ export default function Home() {
   const [isChatCollapsed, setIsChatCollapsed] = useState(false);
   const { metrics, selectedMetric, selectMetric, clearMetrics, zctaFeatures, addMetric } = useMetrics();
   const [highlightedZips, setHighlightedZips] = useState<string[]>([]);
+  const clearAllMetrics = () => { clearMetrics(); setHighlightedZips([]); };
 
   // Close Add Organization modal on Escape key
   useEffect(() => {
@@ -100,7 +101,7 @@ export default function Home() {
               >
                 <MetricDropdown metrics={metrics} selected={selectedMetric} onSelect={selectMetric} />
                 <button
-                  onClick={clearMetrics}
+                  onClick={clearAllMetrics}
                   className="border transition-colors"
                   style={{
                     paddingLeft: 'var(--spacing-3)',

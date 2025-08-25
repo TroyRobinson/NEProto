@@ -100,6 +100,7 @@ export default function CensusChat({ onAddMetric, onClose, onHighlightZips }: Ce
     localStorage.removeItem(CHAT_STORAGE_KEY);
     clearMetrics();
     setSuggestions(null);
+    if (onHighlightZips) onHighlightZips([]);
   };
 
   type Mode = 'auto' | 'fast' | 'smart';
