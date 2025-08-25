@@ -29,7 +29,7 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
   const [showSettings, setShowSettings] = useState(false);
   const { config } = useConfig();
   const { data: statData } = db.useQuery({ stats: {} });
-  const { metrics, clearMetrics, selectedMetric } = useMetrics();
+  const { metrics, clearMetrics, selectedMetric, highlightZctas, clearHighlight } = useMetrics();
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const lastAssistantRef = useRef<HTMLDivElement | null>(null);
@@ -127,6 +127,13 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
     if (!text.trim()) return;
     const userMessage = { role: 'user' as const, content: text };
     const newMessages = [...messages, userMessage];
+
+    const zips = Array.from(new Set(text.match(/\b\d{5}\b/g) || []));
+    if (zips.length > 0) {
+      void highlightZctas(zips);
+    } else {
+      clearHighlight();
+    }
 
     // Log the user message as its own log bubble
     try {
