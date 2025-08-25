@@ -16,9 +16,10 @@ interface ChatMessage {
 interface CensusChatProps {
   onAddMetric: (metric: { id: string; label: string }) => void | Promise<void>;
   onClose?: () => void;
+  onHighlightZips?: (zips: string[]) => void;
 }
 
-export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
+export default function CensusChat({ onAddMetric, onClose, onHighlightZips }: CensusChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -127,6 +128,11 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
     if (!text.trim()) return;
     const userMessage = { role: 'user' as const, content: text };
     const newMessages = [...messages, userMessage];
+
+    const zips = text.match(/\b\d{5}\b/g);
+    if (onHighlightZips) {
+      onHighlightZips(zips ? zips : []);
+    }
 
     // Log the user message as its own log bubble
     try {
