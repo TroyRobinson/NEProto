@@ -10,6 +10,8 @@ import MetricDropdown from '../components/MetricDropdown';
 import { useMetrics } from '../components/MetricContext';
 import OrganizationDetails from '../components/OrganizationDetails';
 import type { Organization } from '../types/organization';
+import type { ZctaFeature } from '../lib/census';
+import { featuresFromZctaMap } from '../lib/census';
 
 const OKCMap = dynamic(() => import('../components/OKCMap'), {
   ssr: false,
@@ -21,6 +23,7 @@ export default function Home() {
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
   const [isChatCollapsed, setIsChatCollapsed] = useState(false);
   const { metrics, selectedMetric, selectMetric, clearMetrics, zctaFeatures, addMetric } = useMetrics();
+  const [highlightFeatures, setHighlightFeatures] = useState<ZctaFeature[] | undefined>();
 
   // Close Add Organization modal on Escape key
   useEffect(() => {
@@ -77,6 +80,7 @@ export default function Home() {
             organizations={organizations}
             onOrganizationClick={setSelectedOrg}
             zctaFeatures={zctaFeatures}
+            highlightFeatures={highlightFeatures}
           />
 
           {/* Overlay metrics glass bar over the map */}
@@ -142,7 +146,18 @@ export default function Home() {
 
       {!isChatCollapsed ? (
         <div className="fixed bottom-4 right-4 w-[30rem] h-[38.4rem] bg-white text-gray-900 shadow-lg p-2 border rounded-lg">
-          <CensusChat onAddMetric={addMetric} onClose={() => setIsChatCollapsed(true)} />
+          <CensusChat
+            onAddMetric={addMetric}
+            onClose={() => setIsChatCollapsed(true)}
+            onHighlightZctas={async (zips) => {
+              const map: Record<string, number | null> = {};
+              zips.forEach((z) => {
+                map[z] = null;
+              });
+              const feats = await featuresFromZctaMap(map);
+              setHighlightFeatures(feats);
+            }}
+          />
         </div>
       ) : (
         <button

@@ -16,9 +16,10 @@ interface ChatMessage {
 interface CensusChatProps {
   onAddMetric: (metric: { id: string; label: string }) => void | Promise<void>;
   onClose?: () => void;
+  onHighlightZctas?: (zips: string[]) => void | Promise<void>;
 }
 
-export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
+export default function CensusChat({ onAddMetric, onClose, onHighlightZctas }: CensusChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -126,6 +127,10 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
   const sendMessageWith = async (text: string, mode: Mode = 'auto') => {
     if (!text.trim()) return;
     const userMessage = { role: 'user' as const, content: text };
+    const zips = text.match(/\b\d{5}\b/g);
+    if (zips && onHighlightZctas) {
+      await onHighlightZctas(Array.from(new Set(zips)));
+    }
     const newMessages = [...messages, userMessage];
 
     // Log the user message as its own log bubble
