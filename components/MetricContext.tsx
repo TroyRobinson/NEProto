@@ -20,6 +20,9 @@ interface MetricsContextValue {
   loadStatMetric: (stat: Stat) => Promise<void>;
   selectMetric: (id: string) => Promise<void>;
   clearMetrics: () => void;
+  highlightZctas: (zctas: string[]) => Promise<void>;
+  highlightedZctas: ZctaFeature[] | undefined;
+  clearHighlight: () => void;
 }
 
 const MetricsContext = createContext<MetricsContextValue | undefined>(undefined);
@@ -30,6 +33,7 @@ export function MetricsProvider({ children }: { children: React.ReactNode }) {
   const [metrics, setMetrics] = useState<Metric[]>([]);
   const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
   const [zctaFeatures, setZctaFeatures] = useState<ZctaFeature[] | undefined>();
+  const [highlightedZctas, setHighlightedZctas] = useState<ZctaFeature[] | undefined>();
   const [metricFeatures, setMetricFeatures] = useState<Record<string, ZctaFeature[]>>({});
   const { config } = useConfig();
   const { data: statData } = db.useQuery({ stats: {} });
@@ -135,6 +139,23 @@ export function MetricsProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem(STORAGE_KEY);
   };
 
+  const highlightZctas = async (zctas: string[]) => {
+    if (!zctas || zctas.length === 0) {
+      setHighlightedZctas(undefined);
+      return;
+    }
+    const zctaMap: Record<string, null> = {};
+    zctas.forEach((z) => {
+      zctaMap[z] = null;
+    });
+    const features = await featuresFromZctaMap(zctaMap);
+    setHighlightedZctas(features);
+  };
+
+  const clearHighlight = () => {
+    setHighlightedZctas(undefined);
+  };
+
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
@@ -168,6 +189,9 @@ export function MetricsProvider({ children }: { children: React.ReactNode }) {
     loadStatMetric,
     selectMetric,
     clearMetrics,
+    highlightZctas,
+    highlightedZctas,
+    clearHighlight,
   };
 
   return (

@@ -20,7 +20,7 @@ export default function Home() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
   const [isChatCollapsed, setIsChatCollapsed] = useState(false);
-  const { metrics, selectedMetric, selectMetric, clearMetrics, zctaFeatures, addMetric } = useMetrics();
+  const { metrics, selectedMetric, selectMetric, clearMetrics, zctaFeatures, addMetric, highlightedZctas } = useMetrics();
 
   // Close Add Organization modal on Escape key
   useEffect(() => {
@@ -77,6 +77,7 @@ export default function Home() {
             organizations={organizations}
             onOrganizationClick={setSelectedOrg}
             zctaFeatures={zctaFeatures}
+            highlightedZctas={highlightedZctas}
           />
 
           {/* Overlay metrics glass bar over the map */}
