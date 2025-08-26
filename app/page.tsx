@@ -21,6 +21,8 @@ export default function Home() {
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
   const [isChatCollapsed, setIsChatCollapsed] = useState(false);
   const { metrics, selectedMetric, selectMetric, clearMetrics, zctaFeatures, addMetric } = useMetrics();
+  const [highlightedZips, setHighlightedZips] = useState<string[]>([]);
+  const clearAllMetrics = () => { clearMetrics(); setHighlightedZips([]); };
 
   // Close Add Organization modal on Escape key
   useEffect(() => {
@@ -77,6 +79,7 @@ export default function Home() {
             organizations={organizations}
             onOrganizationClick={setSelectedOrg}
             zctaFeatures={zctaFeatures}
+            highlightedZips={highlightedZips}
           />
 
           {/* Overlay metrics glass bar over the map */}
@@ -98,7 +101,7 @@ export default function Home() {
               >
                 <MetricDropdown metrics={metrics} selected={selectedMetric} onSelect={selectMetric} />
                 <button
-                  onClick={clearMetrics}
+                  onClick={clearAllMetrics}
                   className="border transition-colors"
                   style={{
                     paddingLeft: 'var(--spacing-3)',
@@ -142,7 +145,11 @@ export default function Home() {
 
       {!isChatCollapsed ? (
         <div className="fixed bottom-4 right-4 w-[30rem] h-[38.4rem] bg-white text-gray-900 shadow-lg p-2 border rounded-lg">
-          <CensusChat onAddMetric={addMetric} onClose={() => setIsChatCollapsed(true)} />
+          <CensusChat
+            onAddMetric={addMetric}
+            onClose={() => setIsChatCollapsed(true)}
+            onHighlightZips={setHighlightedZips}
+          />
         </div>
       ) : (
         <button
