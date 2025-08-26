@@ -195,6 +195,13 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
       for (const inv of data.toolInvocations) {
         if (inv.name === 'add_metric') {
           await onAddMetric(inv.args);
+        } else if (inv.name === 'add_calculated_metric') {
+          const { numerator, denominator, label } = inv.args as {
+            numerator: string;
+            denominator: string;
+            label: string;
+          };
+          await onAddMetric({ id: `${numerator}/${denominator}`, label });
         }
       }
     }
