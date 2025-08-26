@@ -16,9 +16,10 @@ interface ChatMessage {
 interface CensusChatProps {
   onAddMetric: (metric: { id: string; label: string }) => void | Promise<void>;
   onClose?: () => void;
+  onHighlightZips?: (zips: string[]) => void;
 }
 
-export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
+export default function CensusChat({ onAddMetric, onClose, onHighlightZips }: CensusChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -99,6 +100,7 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
     localStorage.removeItem(CHAT_STORAGE_KEY);
     clearMetrics();
     setSuggestions(null);
+    onHighlightZips?.([]);
   };
 
   type Mode = 'auto' | 'fast' | 'smart';
@@ -190,6 +192,11 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
     responseMessages.push({ role: 'assistant', content: data.message.content, modeUsed: (data.modeUsed as 'auto'|'fast'|'smart') || mode });
     setMessages(responseMessages);
     setLoading(false);
+
+    if (onHighlightZips) {
+      const zips = Array.from(new Set((data.message.content.match(/\b\d{5}\b/g) || [])));
+      onHighlightZips(zips);
+    }
 
     if (data.toolInvocations) {
       for (const inv of data.toolInvocations) {
