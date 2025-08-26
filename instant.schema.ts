@@ -30,6 +30,7 @@ const _schema = i.schema({
       description: i.string(),
       category: i.string(),
       dataset: i.string(),
+      geography: i.string(),
       source: i.string(),
       year: i.number(),
       data: i.string(),

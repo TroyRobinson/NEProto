@@ -3,7 +3,13 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { id } from '@instantdb/react';
 import db from '../lib/db';
-import { fetchZctaMetric, type ZctaFeature, prefetchZctaBoundaries, featuresFromZctaMap } from '../lib/census';
+import {
+  fetchMetric,
+  type GeoFeature,
+  prefetchZctaBoundaries,
+  prefetchCountyBoundaries,
+  featuresFromMap,
+} from '../lib/census';
 import { useConfig } from './ConfigContext';
 import type { Stat } from '../types/stat';
 
@@ -15,7 +21,7 @@ interface Metric {
 interface MetricsContextValue {
   metrics: Metric[];
   selectedMetric: string | null;
-  zctaFeatures: ZctaFeature[] | undefined;
+  features: GeoFeature[] | undefined;
   addMetric: (metric: Metric) => Promise<void>;
   loadStatMetric: (stat: Stat) => Promise<void>;
   selectMetric: (id: string) => Promise<void>;
@@ -29,14 +35,18 @@ const STORAGE_KEY = 'activeMetrics';
 export function MetricsProvider({ children }: { children: React.ReactNode }) {
   const [metrics, setMetrics] = useState<Metric[]>([]);
   const [selectedMetric, setSelectedMetric] = useState<string | null>(null);
-  const [zctaFeatures, setZctaFeatures] = useState<ZctaFeature[] | undefined>();
-  const [metricFeatures, setMetricFeatures] = useState<Record<string, ZctaFeature[]>>({});
+  const [features, setFeatures] = useState<GeoFeature[] | undefined>();
+  const [metricFeatures, setMetricFeatures] = useState<Record<string, GeoFeature[]>>({});
   const { config } = useConfig();
   const { data: statData } = db.useQuery({ stats: {} });
 
   useEffect(() => {
-    prefetchZctaBoundaries();
-  }, []);
+    if (config.geography === 'county') {
+      prefetchCountyBoundaries();
+    } else {
+      prefetchZctaBoundaries();
+    }
+  }, [config.geography]);
 
   const addMetric = async (m: Metric) => {
     setMetrics(prev => (prev.find(p => p.id === m.id) ? prev : [...prev, m]));
@@ -71,18 +81,22 @@ export function MetricsProvider({ children }: { children: React.ReactNode }) {
 
     // Otherwise fetch from US Census and persist
     const varId = m.id.includes('_') ? m.id : m.id + '_001E';
-    const features = await fetchZctaMetric(varId, { year: config.year, dataset: config.dataset });
-    if (features) {
+    const feats = await fetchMetric(varId, {
+      year: config.year,
+      dataset: config.dataset,
+      geography: config.geography,
+    });
+    if (feats) {
       // Update local selection immediately
-      const key = `${config.dataset}-${config.year}-${m.id}`;
+      const key = `${config.dataset}-${config.year}-${config.geography}-${m.id}`;
       setSelectedMetric(m.id);
-      setMetricFeatures(prev => ({ ...prev, [key]: features }));
-      setZctaFeatures(features);
+      setMetricFeatures(prev => ({ ...prev, [key]: feats }));
+      setFeatures(feats);
 
       const statId = id();
-      const zctaMap: Record<string, number | null> = {};
-      features.forEach(f => {
-        zctaMap[f.properties.ZCTA5CE10] = f.properties.value ?? null;
+      const geoMap: Record<string, number | null> = {};
+      feats.forEach(f => {
+        geoMap[f.properties.id] = f.properties.value ?? null;
       });
       try {
         await db.transact([
@@ -91,9 +105,10 @@ export function MetricsProvider({ children }: { children: React.ReactNode }) {
             description: m.label,
             category: 'General',
             dataset: config.dataset,
+            geography: config.geography,
             source: 'US Census',
             year: Number(config.year),
-            data: JSON.stringify(zctaMap),
+            data: JSON.stringify(geoMap),
           }),
         ]);
       } catch {
@@ -105,33 +120,38 @@ export function MetricsProvider({ children }: { children: React.ReactNode }) {
   const loadStatMetric = async (stat: Stat) => {
     const m = { id: stat.code, label: stat.description };
     setMetrics(prev => (prev.find(p => p.id === m.id) ? prev : [...prev, m]));
-    const key = `${stat.dataset}-${stat.year}-${m.id}`;
-    let features = metricFeatures[key];
-    if (!features) {
-      const zctaMap: Record<string, number | null> = JSON.parse(stat.data);
-      features = await featuresFromZctaMap(zctaMap);
-      setMetricFeatures(prev => ({ ...prev, [key]: features }));
+    const geography = (stat.geography || 'zip code tabulation area') as 'zip code tabulation area' | 'county';
+    const key = `${stat.dataset}-${stat.year}-${geography}-${m.id}`;
+    let feats = metricFeatures[key];
+    if (!feats) {
+      const geoMap: Record<string, number | null> = JSON.parse(stat.data);
+      feats = await featuresFromMap(geoMap, geography);
+      setMetricFeatures(prev => ({ ...prev, [key]: feats }));
     }
     setSelectedMetric(m.id);
-    setZctaFeatures(features);
+    setFeatures(feats);
   };
 
   const selectMetric = async (id: string) => {
       setSelectedMetric(id);
-      const key = `${config.dataset}-${config.year}-${id}`;
-      let features = metricFeatures[key];
-      if (!features) {
+      const key = `${config.dataset}-${config.year}-${config.geography}-${id}`;
+      let feats = metricFeatures[key];
+      if (!feats) {
         const varId = id.includes('_') ? id : id + '_001E';
-        features = await fetchZctaMetric(varId, { year: config.year, dataset: config.dataset });
-        setMetricFeatures(prev => ({ ...prev, [key]: features! }));
+        feats = await fetchMetric(varId, {
+          year: config.year,
+          dataset: config.dataset,
+          geography: config.geography,
+        });
+        setMetricFeatures(prev => ({ ...prev, [key]: feats! }));
       }
-      setZctaFeatures(features);
+      setFeatures(feats);
     };
 
   const clearMetrics = () => {
     setMetrics([]);
     setSelectedMetric(null);
-    setZctaFeatures(undefined);
+    setFeatures(undefined);
     localStorage.removeItem(STORAGE_KEY);
   };
 
@@ -163,7 +183,7 @@ export function MetricsProvider({ children }: { children: React.ReactNode }) {
   const value: MetricsContextValue = {
     metrics,
     selectedMetric,
-    zctaFeatures,
+    features,
     addMetric,
     loadStatMetric,
     selectMetric,

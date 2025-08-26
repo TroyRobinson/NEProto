@@ -2,7 +2,7 @@
 
 import NavBar from '../../components/NavBar';
 import db from '../../lib/db';
-import { fetchZctaMetric, type ZctaFeature } from '../../lib/census';
+import { fetchMetric, type GeoFeature } from '../../lib/census';
 import type { Stat } from '../../types/stat';
 
 export default function StatsPage() {
@@ -21,12 +21,16 @@ export default function StatsPage() {
 
   const handleRefresh = async (stat: Stat) => {
     const varId = stat.code.includes('_') ? stat.code : stat.code + '_001E';
-    const features = await fetchZctaMetric(varId, { year: String(stat.year), dataset: stat.dataset });
-    const zctaMap: Record<string, number | null> = {};
-    features?.forEach((f: ZctaFeature) => {
-      zctaMap[f.properties.ZCTA5CE10] = f.properties.value ?? null;
+    const features = await fetchMetric(varId, {
+      year: String(stat.year),
+      dataset: stat.dataset,
+      geography: (stat.geography || 'zip code tabulation area') as 'zip code tabulation area' | 'county',
     });
-    await db.transact([db.tx.stats[stat.id].update({ data: JSON.stringify(zctaMap) })]);
+    const geoMap: Record<string, number | null> = {};
+    features?.forEach((f: GeoFeature) => {
+      geoMap[f.properties.id] = f.properties.value ?? null;
+    });
+    await db.transact([db.tx.stats[stat.id].update({ data: JSON.stringify(geoMap) })]);
   };
 
   return (
@@ -44,6 +48,7 @@ export default function StatsPage() {
                 <th className="border px-2 py-1 text-left">Description</th>
                 <th className="border px-2 py-1 text-left">Category</th>
                 <th className="border px-2 py-1 text-left">Dataset</th>
+                <th className="border px-2 py-1 text-left">Geography</th>
                 <th className="border px-2 py-1 text-left">Source</th>
                 <th className="border px-2 py-1 text-left">Year</th>
                 <th className="border px-2 py-1 text-left">Actions</th>
@@ -56,6 +61,7 @@ export default function StatsPage() {
                   <td className="border px-2 py-1">{stat.description}</td>
                   <td className="border px-2 py-1">{stat.category}</td>
                   <td className="border px-2 py-1">{stat.dataset}</td>
+                  <td className="border px-2 py-1">{stat.geography}</td>
                   <td className="border px-2 py-1">{stat.source}</td>
                   <td className="border px-2 py-1">{stat.year}</td>
                   <td className="border px-2 py-1 space-x-2">

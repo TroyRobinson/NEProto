@@ -1,7 +1,7 @@
 import { ScatterplotLayer, GeoJsonLayer } from '@deck.gl/layers';
 import type { PickingInfo } from '@deck.gl/core';
 import type { Organization } from '../types/organization';
-import type { ZctaFeature } from './census';
+import type { GeoFeature } from './census';
 
 function getCategoryColor(category: string): [number, number, number, number] {
   // Using design system colors for organization categories
@@ -61,10 +61,10 @@ export function createOrganizationLayer(
   });
 }
 
-export function createZctaMetricLayer(zctaFeatures?: ZctaFeature[]) {
-  if (!zctaFeatures || zctaFeatures.length === 0) return null;
+export function createMetricLayer(features?: GeoFeature[]) {
+  if (!features || features.length === 0) return null;
 
-  const vals = zctaFeatures
+  const vals = features
     .map((f) => f.properties.value)
     .filter((v): v is number => v != null && v >= 0);
   const min = Math.min(...vals);
@@ -92,9 +92,9 @@ export function createZctaMetricLayer(zctaFeatures?: ZctaFeature[]) {
     return [r, g, b, 200];
   };
 
-  return new GeoJsonLayer<ZctaFeature>({
-    id: 'zcta-metric',
-    data: zctaFeatures,
+  return new GeoJsonLayer<GeoFeature>({
+    id: 'metric',
+    data: features,
     stroked: true,
     filled: true,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

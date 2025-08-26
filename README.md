@@ -11,8 +11,8 @@
 
 ## Architecture Overview
 - React contexts manage map configuration and selected metrics
-- MapLibre map overlaid with deck.gl layers for org markers and ZCTA metrics
-- InstantDB stores organization data; US Census API supplies statistics
+- MapLibre map overlaid with deck.gl layers for org markers and metric choropleths
+- InstantDB stores organization data; US Census API supplies statistics from datasets such as ACS 5-year, ACS 1-year, and the Decennial PL census
 - OpenRouter-powered chat searches Census variables and adds layers
 
 ## App Files
@@ -53,8 +53,7 @@
 - Allows editing, deleting, and refreshing stat data
 - Connected to InstantDB stats entity
 
-### app/data/page.tsx
-- Table view of the currently selected metric by ZCTA
+- Table view of the currently selected metric by geography
 - Uses `MetricContext`; shows data when a metric is selected
 
 ### app/about/page.tsx
@@ -69,7 +68,7 @@
 ## Components
 ### components/OKCMap.tsx
 - Composes MapLibre map and deck.gl overlay
-- Builds layers via `createOrganizationLayer` and `createZctaMetricLayer`
+- Builds layers via `createOrganizationLayer` and `createMetricLayer`
 - Emits `onOrganizationClick` callback
 
 ### components/OrganizationDetails.tsx
@@ -86,8 +85,7 @@
 - Appends an Approach chip on assistant messages at the bottom-right of each message row; dropdown to re-run from the last user message with Auto/Fast/Smart
  - Follow-up ideas: after each assistant reply (unless the reply is a question), shows two compact, vertically stacked indigo buttons with next-step ideas — one to "Add data for …?" (avoids active/mentioned metrics) and one curiosity question from the user’s perspective. Clicking runs the relevant action; typing clears them.
 
-### components/MetricContext.tsx
-- React context tracking active ZCTA metrics and geometries
+- React context tracking active metrics and geometries across geographies
 - API: `addMetric`, `selectMetric`, `metrics`, `clearMetrics`
 - Persists active metrics and selected metric to localStorage
 - Prefers InstantDB stats (by code, then dataset/year) before fetching from US Census
@@ -120,8 +118,8 @@
 - Instantiates and exports a configured InstantDB client
 
 ### lib/census.ts
-- `fetchZctaMetric` retrieves ACS data for a ZCTA/variable
-- `prefetchZctaBoundaries` loads and caches GeoJSON polygons
+- `fetchMetric` retrieves Census data for a geography/variable
+- `prefetchZctaBoundaries` and `prefetchCountyBoundaries` load and cache GeoJSON polygons
 
 ### lib/censusTools.ts
 - Loads Census variable metadata and caches results
@@ -130,7 +128,7 @@
 
 ### lib/mapLayers.ts
 - `createOrganizationLayer` for point markers
-- `createZctaMetricLayer` for choropleth metrics
+- `createMetricLayer` for choropleth metrics
 - Pure functions returning deck.gl layers
 
 ### lib/openRouter.ts

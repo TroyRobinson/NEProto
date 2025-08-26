@@ -20,7 +20,7 @@ export default function Home() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
   const [isChatCollapsed, setIsChatCollapsed] = useState(false);
-  const { metrics, selectedMetric, selectMetric, clearMetrics, zctaFeatures, addMetric } = useMetrics();
+  const { metrics, selectedMetric, selectMetric, clearMetrics, features, addMetric } = useMetrics();
 
   // Close Add Organization modal on Escape key
   useEffect(() => {
@@ -76,7 +76,7 @@ export default function Home() {
           <OKCMap
             organizations={organizations}
             onOrganizationClick={setSelectedOrg}
-            zctaFeatures={zctaFeatures}
+            features={features}
           />
 
           {/* Overlay metrics glass bar over the map */}
