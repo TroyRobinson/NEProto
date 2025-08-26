@@ -1,18 +1,21 @@
 'use client';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Map from 'react-map-gl/maplibre';
 import DeckGL from '@deck.gl/react';
+import { GeoJsonLayer } from '@deck.gl/layers';
+import { FlyToInterpolator, WebMercatorViewport } from '@deck.gl/core';
 import type { Organization } from '../types/organization';
 
-import type { ZctaFeature } from '../lib/census';
+import { featuresFromZctaMap, type ZctaFeature } from '../lib/census';
 import { createOrganizationLayer, createZctaMetricLayer } from '../lib/mapLayers';
 
 interface OKCMapProps {
   organizations: Organization[];
   onOrganizationClick?: (org: Organization) => void;
   zctaFeatures?: ZctaFeature[];
+  highlightedZips?: string[];
 }
 
 const OKC_CENTER = {
@@ -20,7 +23,7 @@ const OKC_CENTER = {
   latitude: 35.4676
 };
 
-export default function OKCMap({ organizations, onOrganizationClick, zctaFeatures }: OKCMapProps) {
+export default function OKCMap({ organizations, onOrganizationClick, zctaFeatures, highlightedZips }: OKCMapProps) {
   const [viewState, setViewState] = useState({
     longitude: OKC_CENTER.longitude,
     latitude: OKC_CENTER.latitude,
@@ -29,14 +32,84 @@ export default function OKCMap({ organizations, onOrganizationClick, zctaFeature
     bearing: 0
   });
 
+  const [highlightFeatures, setHighlightFeatures] = useState<ZctaFeature[]>([]);
+
+  useEffect(() => {
+    async function load() {
+      if (!highlightedZips || highlightedZips.length === 0) {
+        setHighlightFeatures([]);
+        return;
+      }
+      const zctaMap: Record<string, null> = {};
+      highlightedZips.forEach((z) => { zctaMap[z] = null; });
+      const feats = await featuresFromZctaMap(zctaMap);
+      setHighlightFeatures(feats);
+
+      // Compute bounds to focus view
+      let minLng = Infinity, minLat = Infinity, maxLng = -Infinity, maxLat = -Infinity;
+      feats.forEach((f) => {
+        const geom: any = f.geometry;
+        const coords = geom.type === 'Polygon'
+          ? [geom.coordinates]
+          : geom.coordinates;
+        coords.forEach((poly: any) => {
+          poly.forEach((ring: any) => {
+            ring.forEach(([x, y]: [number, number]) => {
+              if (x < minLng) minLng = x;
+              if (x > maxLng) maxLng = x;
+              if (y < minLat) minLat = y;
+              if (y > maxLat) maxLat = y;
+            });
+          });
+        });
+      });
+      if (isFinite(minLng) && isFinite(minLat) && isFinite(maxLng) && isFinite(maxLat)) {
+        const viewport = new WebMercatorViewport({
+          width: window.innerWidth,
+          height: window.innerHeight,
+        });
+        const single = highlightedZips.length === 1;
+        const { longitude, latitude, zoom: fitZoom } = viewport.fitBounds(
+          [ [minLng, minLat], [maxLng, maxLat] ],
+          { padding: single ? 200 : 40 }
+        );
+        setViewState((vs) => ({
+          ...vs,
+          longitude,
+          latitude,
+          zoom: single ? Math.min(Math.max(vs.zoom, fitZoom), 12) : fitZoom,
+          transitionDuration: 1000,
+          transitionInterpolator: new FlyToInterpolator(),
+        }));
+      }
+    }
+    load();
+  }, [highlightedZips]);
+
   const layers = useMemo(() => {
-    const layers: any[] = [createOrganizationLayer(organizations, onOrganizationClick)];
+    const layers: any[] = [];
     const zctaLayer = createZctaMetricLayer(zctaFeatures);
     if (zctaLayer) {
-      layers.unshift(zctaLayer);
+      layers.push(zctaLayer);
+    }
+    layers.push(createOrganizationLayer(organizations, onOrganizationClick));
+    if (highlightFeatures.length > 0) {
+      layers.push(new GeoJsonLayer({
+        id: 'highlight-zips',
+        data: highlightFeatures,
+        stroked: true,
+        filled: false,
+        getLineColor: [255, 215, 0, 200],
+        lineWidthUnits: 'meters',
+        getLineWidth: () => 200,
+        lineWidthMinPixels: 2,
+        pickable: false,
+        parameters: { depthTest: false },
+        zIndex: 1000,
+      }));
     }
     return layers;
-  }, [organizations, onOrganizationClick, zctaFeatures]);
+  }, [organizations, onOrganizationClick, zctaFeatures, highlightFeatures]);
 
   return (
     <div className="w-full h-full relative">

@@ -16,9 +16,10 @@ interface ChatMessage {
 interface CensusChatProps {
   onAddMetric: (metric: { id: string; label: string }) => void | Promise<void>;
   onClose?: () => void;
+  onHighlightZips?: (zips: string[]) => void;
 }
 
-export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
+export default function CensusChat({ onAddMetric, onClose, onHighlightZips }: CensusChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -99,6 +100,7 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
     localStorage.removeItem(CHAT_STORAGE_KEY);
     clearMetrics();
     setSuggestions(null);
+    if (onHighlightZips) onHighlightZips([]);
   };
 
   type Mode = 'auto' | 'fast' | 'smart';
@@ -127,6 +129,11 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
     if (!text.trim()) return;
     const userMessage = { role: 'user' as const, content: text };
     const newMessages = [...messages, userMessage];
+
+    const zips = text.match(/\b\d{5}\b/g);
+    if (onHighlightZips) {
+      onHighlightZips(zips ? zips : []);
+    }
 
     // Log the user message as its own log bubble
     try {
@@ -162,7 +169,7 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
     // Snapshot metrics state before any actions for undo capability
     preTurnSnapshotRef.current = { metrics: [...metrics], selected: selectedMetric };
     setLoading(true);
-    const systemPrompt = `You help users find US Census statistics. Limit responses to ${config.region} using ${config.dataset} ${config.year} data for ${config.geography}. Be brief, a few sentences, plain text only.`;
+    const systemPrompt = `You help users find US Census statistics. Limit responses to ${config.region} using ${config.dataset} ${config.year} data for ${config.geography}. If you mention any ZIP codes in your response, call the highlight_zips tool with those codes.`;
     const stats = (statData?.stats || []) as Stat[];
     const activeStats = stats.filter((s) => metrics.some((m) => m.id === s.code));
     const res = await fetch('/api/chat', {
@@ -191,12 +198,24 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
     setMessages(responseMessages);
     setLoading(false);
 
+    let highlighted = false;
     if (data.toolInvocations) {
       for (const inv of data.toolInvocations) {
         if (inv.name === 'add_metric') {
           await onAddMetric(inv.args);
+        } else if (inv.name === 'highlight_zips' && onHighlightZips) {
+          const argObj = inv.args as Record<string, unknown>;
+          const zArg = Array.isArray(argObj.zips)
+            ? (argObj.zips as unknown[]).map((zip) => String(zip))
+            : [];
+          onHighlightZips(zArg);
+          highlighted = true;
         }
       }
+    }
+    if (!highlighted && onHighlightZips) {
+      const respZips = data?.message?.content?.match(/\b\d{5}\b/g);
+      if (respZips) onHighlightZips(respZips);
     }
     // Fetch follow-up suggestions unless the assistant asked a question
     const asked = /\?|^\s*(why|how|what|which|who|where|when|do|does|did|can|could|should|would|is|are|will|may|might)\b/i.test(
@@ -231,7 +250,7 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
 
     setLoading(true);
     setSuggestions(null);
-    const systemPrompt = `You help users find US Census statistics. Limit responses to ${config.region} using ${config.dataset} ${config.year} data for ${config.geography}. Be brief, a few sentences, plain text only.`;
+    const systemPrompt = `You help users find US Census statistics. Limit responses to ${config.region} using ${config.dataset} ${config.year} data for ${config.geography}. If you mention any ZIP codes in your response, call the highlight_zips tool with those codes.`;
     const stats = (statData?.stats || []) as Stat[];
     const activeStats = stats.filter((s) => metricsSnapshot.metrics.some((m) => m.id === s.code));
     const runId = ++runIdRef.current;
@@ -277,12 +296,24 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
     setMessages(responseMessages);
     setLoading(false);
 
+    let highlighted = false;
     if (data.toolInvocations) {
       for (const inv of data.toolInvocations) {
         if (inv.name === 'add_metric') {
           await onAddMetric(inv.args);
+        } else if (inv.name === 'highlight_zips' && onHighlightZips) {
+          const argObj = inv.args as Record<string, unknown>;
+          const zArg = Array.isArray(argObj.zips)
+            ? (argObj.zips as unknown[]).map((zip) => String(zip))
+            : [];
+          onHighlightZips(zArg);
+          highlighted = true;
         }
       }
+    }
+    if (!highlighted && onHighlightZips) {
+      const respZips = data?.message?.content?.match(/\b\d{5}\b/g);
+      if (respZips) onHighlightZips(respZips);
     }
     // Fetch suggestions unless the assistant asked a question
     const asked = /\?|^\s*(why|how|what|which|who|where|when|do|does|did|can|could|should|would|is|are|will|may|might)\b/i.test(

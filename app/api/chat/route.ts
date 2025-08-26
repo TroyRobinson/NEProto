@@ -74,6 +74,25 @@ async function runModel(
         },
       },
     },
+    {
+      type: 'function',
+      function: {
+        name: 'highlight_zips',
+        description:
+          'Highlight one or more ZIP codes on the map by providing an array of five-digit codes.',
+        parameters: {
+          type: 'object',
+          properties: {
+            zips: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'ZIP codes to highlight',
+            },
+          },
+          required: ['zips'],
+        },
+      },
+    },
   ];
 
   const toolInvocations: { name: string; args: Record<string, unknown> }[] = [];
@@ -132,6 +151,13 @@ async function runModel(
         } else {
           result = { ok: false, error: 'Unknown variable id' };
         }
+      } else if (name === 'highlight_zips') {
+        const argObj = args as Record<string, unknown>;
+        const zipsArg = Array.isArray(argObj.zips)
+          ? (argObj.zips as unknown[]).map((z) => String(z))
+          : [];
+        result = { ok: true };
+        toolInvocations.push({ name, args: { zips: zipsArg } });
       }
       convo.push({
         role: 'tool',
@@ -152,7 +178,7 @@ export async function POST(req: NextRequest) {
     geography = 'zip code tabulation area',
   } = config || {};
 
-  const systemPrompt = `You help users find US Census statistics. Limit responses to ${region} using ${dataset} ${year} data for ${geography}. Be brief, a few sentences, plain text only.`;
+  const systemPrompt = `You help users find US Census statistics. Limit responses to ${region} using ${dataset} ${year} data for ${geography}. If you mention any ZIP codes in your response, call the highlight_zips tool with those codes. Be brief, a few sentences, plain text only.`;
   const messages: Message[] = incoming;
   if (!messages.length || messages[0].role !== 'system') {
     messages.unshift({ role: 'system', content: systemPrompt });
