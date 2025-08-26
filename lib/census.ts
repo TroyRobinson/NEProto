@@ -63,6 +63,17 @@ export function prefetchZctaBoundaries() {
   loadZctaBoundaries().catch(() => {});
 }
 
+export async function fetchZctaBoundaries(zctas: string[]): Promise<ZctaFeature[]> {
+  const boundaries = await loadZctaBoundaries();
+  return boundaries
+    .filter((f) => zctas.includes(String(f.properties['ZCTA5CE10'])))
+    .map((f) => ({
+      type: 'Feature',
+      geometry: f.geometry,
+      properties: { ...f.properties, value: null },
+    }));
+}
+
 export async function featuresFromZctaMap(
   zctaMap: Record<string, number | null>
 ): Promise<ZctaFeature[]> {
