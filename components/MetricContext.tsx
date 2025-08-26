@@ -70,6 +70,60 @@ export function MetricsProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Otherwise fetch from US Census and persist
+    const calcMatch = m.id.match(/^([^/]+)\/([^/]+)$/);
+    if (calcMatch) {
+      const [, numIdRaw, denIdRaw] = calcMatch;
+      const numId = numIdRaw.includes('_') ? numIdRaw : numIdRaw + '_001E';
+      const denId = denIdRaw.includes('_') ? denIdRaw : denIdRaw + '_001E';
+      const [numFeatures, denFeatures] = await Promise.all([
+        fetchZctaMetric(numId, { year: config.year, dataset: config.dataset }),
+        fetchZctaMetric(denId, { year: config.year, dataset: config.dataset }),
+      ]);
+      if (numFeatures && denFeatures) {
+        const numMap: Record<string, number | null> = {};
+        numFeatures.forEach(f => {
+          numMap[f.properties.ZCTA5CE10] = f.properties.value ?? null;
+        });
+        const denMap: Record<string, number | null> = {};
+        denFeatures.forEach(f => {
+          denMap[f.properties.ZCTA5CE10] = f.properties.value ?? null;
+        });
+        const zctaMap: Record<string, number | null> = {};
+        const allZctas = new Set([
+          ...Object.keys(numMap),
+          ...Object.keys(denMap),
+        ]);
+        allZctas.forEach(z => {
+          const n = numMap[z];
+          const d = denMap[z];
+          zctaMap[z] = n == null || d == null || d === 0 ? null : (n / d) * 100;
+        });
+        const features = await featuresFromZctaMap(zctaMap);
+        const key = `${config.dataset}-${config.year}-${m.id}`;
+        setSelectedMetric(m.id);
+        setMetricFeatures(prev => ({ ...prev, [key]: features }));
+        setZctaFeatures(features);
+
+        const statId = id();
+        try {
+          await db.transact([
+            db.tx.stats[statId].update({
+              code: m.id,
+              description: `${m.label} (100 * ${numIdRaw}/${denIdRaw})`,
+              category: 'Calculated',
+              dataset: config.dataset,
+              source: 'US Census',
+              year: Number(config.year),
+              data: JSON.stringify(zctaMap),
+            }),
+          ]);
+        } catch {
+          // Ignore unique constraint errors if another tab created it
+        }
+      }
+      return;
+    }
+
     const varId = m.id.includes('_') ? m.id : m.id + '_001E';
     const features = await fetchZctaMetric(varId, { year: config.year, dataset: config.dataset });
     if (features) {
