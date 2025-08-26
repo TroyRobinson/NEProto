@@ -15,10 +15,17 @@ interface ChatMessage {
 
 interface CensusChatProps {
   onAddMetric: (metric: { id: string; label: string }) => void | Promise<void>;
+  onAddPercentMetric: (
+    metric: { numerator: string; denominator: string; label: string }
+  ) => void | Promise<void>;
   onClose?: () => void;
 }
 
-export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
+export default function CensusChat({
+  onAddMetric,
+  onAddPercentMetric,
+  onClose,
+}: CensusChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -195,6 +202,8 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
       for (const inv of data.toolInvocations) {
         if (inv.name === 'add_metric') {
           await onAddMetric(inv.args);
+        } else if (inv.name === 'add_percentage_metric') {
+          await onAddPercentMetric(inv.args);
         }
       }
     }
@@ -281,6 +290,8 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
       for (const inv of data.toolInvocations) {
         if (inv.name === 'add_metric') {
           await onAddMetric(inv.args);
+        } else if (inv.name === 'add_percentage_metric') {
+          await onAddPercentMetric(inv.args);
         }
       }
     }

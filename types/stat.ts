@@ -7,4 +7,5 @@ export interface Stat {
   source: string;
   year: number;
   data: string;
+  details?: string;
 }

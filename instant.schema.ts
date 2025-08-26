@@ -33,6 +33,7 @@ const _schema = i.schema({
       source: i.string(),
       year: i.number(),
       data: i.string(),
+      details: i.string().optional(),
     }),
   },
   links: {
