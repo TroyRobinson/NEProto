@@ -3,6 +3,18 @@
 import { useEffect, useState } from 'react';
 import { useConfig } from './ConfigContext';
 
+const DATASET_YEARS: Record<string, string[]> = {
+  'acs/acs5': ['2023', '2022', '2021'],
+  'acs/acs1': ['2023', '2022', '2021'],
+  'dec/pl': ['2020', '2010'],
+};
+
+const DATASET_LABELS: Record<string, string> = {
+  'acs/acs5': 'ACS 5-year',
+  'acs/acs1': 'ACS 1-year',
+  'dec/pl': 'Decennial PL',
+};
+
 export default function ConfigControls() {
   const { config, updateConfig } = useConfig();
   const [notice, setNotice] = useState<string | null>(null);
@@ -20,6 +32,16 @@ export default function ConfigControls() {
     }
   }, [config.dataset, config.geography, updateConfig]);
 
+  // Adjust year when switching datasets with different availability
+  useEffect(() => {
+    const years = DATASET_YEARS[config.dataset] || [];
+    if (!years.includes(config.year)) {
+      updateConfig({ year: years[0] });
+    }
+  }, [config.dataset, config.year, updateConfig]);
+
+  const yearOptions = DATASET_YEARS[config.dataset] || [];
+
   return (
     <div className="grid grid-cols-2 gap-2 mb-2">
       <select
@@ -35,10 +57,11 @@ export default function ConfigControls() {
         value={config.year}
         onChange={(e) => updateConfig({ year: e.target.value })}
       >
-        {['2023', '2022', '2021'].map((y) => {
+        {yearOptions.map((y) => {
           const end = Number(y);
           const start = end - 4;
-          const label = config.dataset === 'acs/acs5' ? `${start}\u2013${end}` : y;
+          const label =
+            config.dataset === 'acs/acs5' ? `${start}\u2013${end}` : y;
           return (
             <option key={y} value={y}>
               {label}
@@ -51,8 +74,11 @@ export default function ConfigControls() {
         value={config.dataset}
         onChange={(e) => updateConfig({ dataset: e.target.value })}
       >
-        <option value="acs/acs5">ACS 5-year</option>
-        <option value="acs/acs1">ACS 1-year</option>
+        {Object.entries(DATASET_LABELS).map(([value, label]) => (
+          <option key={value} value={value}>
+            {label}
+          </option>
+        ))}
       </select>
       <select
         className="border border-gray-300 rounded p-1 text-sm w-full"

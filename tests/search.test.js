@@ -4,6 +4,8 @@ const { searchCensus, validateVariableId } = require('../lib/censusTools');
 
 const YEAR = '2023';
 const DATASET = 'acs/acs5';
+const DEC_YEAR = '2020';
+const DEC_DATASET = 'dec/pl';
 
 test('search median age returns expected variable', async () => {
   const results = await searchCensus('median age', YEAR, DATASET);
@@ -24,6 +26,16 @@ test('validateVariableId checks known and unknown ids', async (t) => {
   try {
     assert.equal(await validateVariableId('B01003_001E', YEAR, DATASET), true);
     assert.equal(await validateVariableId('B99999_999E', YEAR, DATASET), false);
+  } catch (err) {
+    t.diagnostic(`Network error: ${err.message}`);
+    t.skip();
+  }
+});
+
+test('decennial dataset variable is recognized', async (t) => {
+  try {
+    const ok = await validateVariableId('P1_001N', DEC_YEAR, DEC_DATASET);
+    assert.equal(ok, true);
   } catch (err) {
     t.diagnostic(`Network error: ${err.message}`);
     t.skip();

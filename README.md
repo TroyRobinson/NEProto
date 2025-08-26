@@ -114,13 +114,14 @@
 
 ### components/ConfigControls.tsx
 - Dropdown controls for region, year, dataset, geography (provided via `ConfigContext`)
+- Dataset options include ACS 5-year, ACS 1-year, and Decennial PL tables
 
 ## Library Modules
 ### lib/db.ts
 - Instantiates and exports a configured InstantDB client
 
 ### lib/census.ts
-- `fetchZctaMetric` retrieves ACS data for a ZCTA/variable
+- `fetchZctaMetric` retrieves Census data for a ZCTA/variable
 - `prefetchZctaBoundaries` loads and caches GeoJSON polygons
 
 ### lib/censusTools.ts
@@ -170,7 +171,7 @@
 - For metrics: prefer InstantDB stats; otherwise fetch from US Census and persist
 
 ## External Services
-- US Census API for ACS statistics
+- US Census API for ACS and Decennial statistics
 - OpenRouter for LLM responses
 - InstantDB for organization storage
 
