@@ -74,6 +74,29 @@ async function runModel(
         },
       },
     },
+    {
+      type: 'function',
+      function: {
+        name: 'add_percentage_metric',
+        description:
+          'Add a derived percentage metric combining two Census variables (numerator/denominator).',
+        parameters: {
+          type: 'object',
+          properties: {
+            numerator: {
+              type: 'string',
+              description: 'Numerator variable identifier',
+            },
+            denominator: {
+              type: 'string',
+              description: 'Denominator variable identifier',
+            },
+            label: { type: 'string', description: 'Human readable label' },
+          },
+          required: ['numerator', 'denominator', 'label'],
+        },
+      },
+    },
   ];
 
   const toolInvocations: { name: string; args: Record<string, unknown> }[] = [];
@@ -127,6 +150,20 @@ async function runModel(
         } else if (await validateVariableId(id, year, dataset)) {
           result = { ok: true };
           toolInvocations.push({ name, args: { id, label: match.label } });
+          lastSearch = null;
+          lastSearchEmpty = false;
+        } else {
+          result = { ok: false, error: 'Unknown variable id' };
+        }
+      } else if (name === 'add_percentage_metric') {
+        const numerator = args.numerator as string;
+        const denominator = args.denominator as string;
+        const label = args.label as string;
+        const validNum = await validateVariableId(numerator, year, dataset);
+        const validDen = await validateVariableId(denominator, year, dataset);
+        if (validNum && validDen) {
+          result = { ok: true };
+          toolInvocations.push({ name, args: { numerator, denominator, label } });
           lastSearch = null;
           lastSearchEmpty = false;
         } else {
