@@ -3,7 +3,7 @@
 import { createContext, useContext, useState } from 'react';
 
 export interface CensusConfig {
-  region: string; // e.g., "Oklahoma County ZCTAs"
+  region: string; // e.g., "Oklahoma County"
   year: string; // e.g., "2023"
   dataset: string; // e.g., "acs/acs5"
   geography: string; // e.g., "zip code tabulation area"
@@ -15,7 +15,7 @@ interface ConfigContextValue {
 }
 
 const defaultConfig: CensusConfig = {
-  region: 'Oklahoma County ZCTAs',
+  region: 'Oklahoma County',
   year: '2023',
   dataset: 'acs/acs5',
   geography: 'zip code tabulation area',

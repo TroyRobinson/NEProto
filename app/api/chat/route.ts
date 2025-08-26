@@ -148,7 +148,7 @@ export async function POST(req: NextRequest) {
   const {
     year = '2023',
     dataset = 'acs/acs5',
-    region = 'Oklahoma County ZCTAs',
+    region = 'Oklahoma County',
     geography = 'zip code tabulation area',
   } = config || {};
 

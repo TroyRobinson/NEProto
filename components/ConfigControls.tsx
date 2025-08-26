@@ -1,9 +1,24 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useConfig } from './ConfigContext';
 
 export default function ConfigControls() {
   const { config, updateConfig } = useConfig();
+  const [notice, setNotice] = useState<string | null>(null);
+
+  // Ensure compatible dataset/geography. ACS 1-year is unavailable for ZCTAs.
+  useEffect(() => {
+    if (
+      config.geography === 'zip code tabulation area' &&
+      config.dataset === 'acs/acs1'
+    ) {
+      updateConfig({ dataset: 'acs/acs5' });
+      setNotice('ACS 1-year is unavailable for ZCTAs. Switched to ACS 5-year.');
+    } else {
+      setNotice(null);
+    }
+  }, [config.dataset, config.geography, updateConfig]);
 
   return (
     <div className="grid grid-cols-2 gap-2 mb-2">
@@ -11,17 +26,25 @@ export default function ConfigControls() {
         className="border border-gray-300 rounded p-1 text-sm w-full"
         value={config.region}
         onChange={(e) => updateConfig({ region: e.target.value })}
+        title="Region: the area of interest (e.g., a county). Geography below controls the Census table level (e.g., ZCTAs)."
       >
-        <option value="Oklahoma County ZCTAs">Oklahoma County ZCTAs</option>
+        <option value="Oklahoma County">Oklahoma County</option>
       </select>
       <select
         className="border border-gray-300 rounded p-1 text-sm w-full"
         value={config.year}
         onChange={(e) => updateConfig({ year: e.target.value })}
       >
-        <option value="2023">2023</option>
-        <option value="2022">2022</option>
-        <option value="2021">2021</option>
+        {['2023', '2022', '2021'].map((y) => {
+          const end = Number(y);
+          const start = end - 4;
+          const label = config.dataset === 'acs/acs5' ? `${start}\u2013${end}` : y;
+          return (
+            <option key={y} value={y}>
+              {label}
+            </option>
+          );
+        })}
       </select>
       <select
         className="border border-gray-300 rounded p-1 text-sm w-full"
@@ -38,6 +61,24 @@ export default function ConfigControls() {
       >
         <option value="zip code tabulation area">ZIP/ZCTA</option>
       </select>
+
+      {config.dataset === 'acs/acs5' && (
+        <div className="col-span-2 text-xs text-gray-600">
+          Using 5-year period estimates for ZIPs
+          <span
+            className="ml-1 inline-block cursor-help text-gray-500"
+            title="ACS 5-year values pool 60 months of responses (e.g., 2019–2023) into one weighted estimate; not a simple average. Dollar figures are in the final year dollars."
+          >
+            (what’s this?)
+          </span>
+        </div>
+      )}
+
+      {notice && (
+        <div className="col-span-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
+          {notice}
+        </div>
+      )}
     </div>
   );
 }
