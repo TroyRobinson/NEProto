@@ -14,7 +14,9 @@ interface ChatMessage {
 }
 
 interface CensusChatProps {
-  onAddMetric: (metric: { id: string; label: string }) => void | Promise<void>;
+  onAddMetric: (
+    metric: { id: string; label: string; numerator?: string; denominator?: string }
+  ) => void | Promise<void>;
   onClose?: () => void;
 }
 
@@ -34,7 +36,9 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const lastAssistantRef = useRef<HTMLDivElement | null>(null);
   const runIdRef = useRef(0);
-  const preTurnSnapshotRef = useRef<{ metrics: { id: string; label: string }[]; selected: string | null } | null>(null);
+  const preTurnSnapshotRef = useRef<
+    { metrics: { id: string; label: string; numerator?: string; denominator?: string }[]; selected: string | null } | null
+  >(null);
 
   const CHAT_STORAGE_KEY = 'censusChatMessages';
 
@@ -195,6 +199,13 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
       for (const inv of data.toolInvocations) {
         if (inv.name === 'add_metric') {
           await onAddMetric(inv.args);
+        } else if (inv.name === 'add_percent_metric') {
+          await onAddMetric({
+            id: `${inv.args.numerator}/${inv.args.denominator}`,
+            label: inv.args.label,
+            numerator: inv.args.numerator,
+            denominator: inv.args.denominator,
+          });
         }
       }
     }
@@ -207,7 +218,12 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
 
   const sendMessage = async () => sendMessageWith(input, 'auto');
 
-  const restoreMetricsSnapshot = async (snapshot: { metrics: { id: string; label: string }[]; selected: string | null }) => {
+  const restoreMetricsSnapshot = async (
+    snapshot: {
+      metrics: { id: string; label: string; numerator?: string; denominator?: string }[];
+      selected: string | null;
+    }
+  ) => {
     clearMetrics();
     for (const m of snapshot.metrics) {
       await onAddMetric(m);
@@ -281,6 +297,13 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
       for (const inv of data.toolInvocations) {
         if (inv.name === 'add_metric') {
           await onAddMetric(inv.args);
+        } else if (inv.name === 'add_percent_metric') {
+          await onAddMetric({
+            id: `${inv.args.numerator}/${inv.args.denominator}`,
+            label: inv.args.label,
+            numerator: inv.args.numerator,
+            denominator: inv.args.denominator,
+          });
         }
       }
     }
