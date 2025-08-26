@@ -20,12 +20,30 @@ export default function StatsPage() {
   };
 
   const handleRefresh = async (stat: Stat) => {
-    const varId = stat.code.includes('_') ? stat.code : stat.code + '_001E';
-    const features = await fetchZctaMetric(varId, { year: String(stat.year), dataset: stat.dataset });
     const zctaMap: Record<string, number | null> = {};
-    features?.forEach((f: ZctaFeature) => {
-      zctaMap[f.properties.ZCTA5CE10] = f.properties.value ?? null;
-    });
+    if (stat.formula) {
+      const [num, den] = stat.formula.split('/');
+      const [numFeatures, denFeatures] = await Promise.all([
+        fetchZctaMetric(num, { year: String(stat.year), dataset: stat.dataset }),
+        fetchZctaMetric(den, { year: String(stat.year), dataset: stat.dataset }),
+      ]);
+      const denMap = new Map<string, number | null>();
+      denFeatures.forEach((f: ZctaFeature) => {
+        denMap.set(f.properties.ZCTA5CE10, f.properties.value ?? null);
+      });
+      numFeatures.forEach((f: ZctaFeature) => {
+        const d = denMap.get(f.properties.ZCTA5CE10);
+        const n = f.properties.value;
+        zctaMap[f.properties.ZCTA5CE10] =
+          n != null && d && d !== 0 ? (n / d) * 100 : null;
+      });
+    } else {
+      const varId = stat.code.includes('_') ? stat.code : stat.code + '_001E';
+      const features = await fetchZctaMetric(varId, { year: String(stat.year), dataset: stat.dataset });
+      features?.forEach((f: ZctaFeature) => {
+        zctaMap[f.properties.ZCTA5CE10] = f.properties.value ?? null;
+      });
+    }
     await db.transact([db.tx.stats[stat.id].update({ data: JSON.stringify(zctaMap) })]);
   };
 
@@ -42,6 +60,7 @@ export default function StatsPage() {
               <tr>
                 <th className="border px-2 py-1 text-left">Code</th>
                 <th className="border px-2 py-1 text-left">Description</th>
+                <th className="border px-2 py-1 text-left">Formula</th>
                 <th className="border px-2 py-1 text-left">Category</th>
                 <th className="border px-2 py-1 text-left">Dataset</th>
                 <th className="border px-2 py-1 text-left">Source</th>
@@ -54,6 +73,7 @@ export default function StatsPage() {
                 <tr key={stat.id}>
                   <td className="border px-2 py-1">{stat.code}</td>
                   <td className="border px-2 py-1">{stat.description}</td>
+                  <td className="border px-2 py-1">{stat.formula || ''}</td>
                   <td className="border px-2 py-1">{stat.category}</td>
                   <td className="border px-2 py-1">{stat.dataset}</td>
                   <td className="border px-2 py-1">{stat.source}</td>

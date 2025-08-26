@@ -74,6 +74,23 @@ async function runModel(
         },
       },
     },
+    {
+      type: 'function',
+      function: {
+        name: 'add_percent_metric',
+        description:
+          'Add a percentage metric computed as numerator divided by denominator times 100.',
+        parameters: {
+          type: 'object',
+          properties: {
+            numerator: { type: 'string', description: 'Numerator variable id' },
+            denominator: { type: 'string', description: 'Denominator variable id' },
+            label: { type: 'string', description: 'Human readable label' },
+          },
+          required: ['numerator', 'denominator', 'label'],
+        },
+      },
+    },
   ];
 
   const toolInvocations: { name: string; args: Record<string, unknown> }[] = [];
@@ -129,6 +146,21 @@ async function runModel(
           toolInvocations.push({ name, args: { id, label: match.label } });
           lastSearch = null;
           lastSearchEmpty = false;
+        } else {
+          result = { ok: false, error: 'Unknown variable id' };
+        }
+      } else if (name === 'add_percent_metric') {
+        const num = args.numerator as string;
+        const den = args.denominator as string;
+        const label = args.label as string;
+        const numValid = await validateVariableId(num, year, dataset);
+        const denValid = await validateVariableId(den, year, dataset);
+        if (numValid && denValid) {
+          result = { ok: true };
+          toolInvocations.push({
+            name,
+            args: { numerator: num, denominator: den, label },
+          });
         } else {
           result = { ok: false, error: 'Unknown variable id' };
         }
