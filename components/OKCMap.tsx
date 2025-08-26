@@ -1,18 +1,20 @@
 'use client';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Map from 'react-map-gl/maplibre';
 import DeckGL from '@deck.gl/react';
+import { WebMercatorViewport } from '@deck.gl/core';
 import type { Organization } from '../types/organization';
 
 import type { ZctaFeature } from '../lib/census';
-import { createOrganizationLayer, createZctaMetricLayer } from '../lib/mapLayers';
+import { createOrganizationLayer, createZctaMetricLayer, createZctaHighlightLayer } from '../lib/mapLayers';
 
 interface OKCMapProps {
   organizations: Organization[];
   onOrganizationClick?: (org: Organization) => void;
   zctaFeatures?: ZctaFeature[];
+  highlightedZctas?: ZctaFeature[];
 }
 
 const OKC_CENTER = {
@@ -20,7 +22,7 @@ const OKC_CENTER = {
   latitude: 35.4676
 };
 
-export default function OKCMap({ organizations, onOrganizationClick, zctaFeatures }: OKCMapProps) {
+export default function OKCMap({ organizations, onOrganizationClick, zctaFeatures, highlightedZctas }: OKCMapProps) {
   const [viewState, setViewState] = useState({
     longitude: OKC_CENTER.longitude,
     latitude: OKC_CENTER.latitude,
@@ -35,8 +37,53 @@ export default function OKCMap({ organizations, onOrganizationClick, zctaFeature
     if (zctaLayer) {
       layers.unshift(zctaLayer);
     }
+    const highlightLayer = createZctaHighlightLayer(highlightedZctas);
+    if (highlightLayer) {
+      layers.push(highlightLayer);
+    }
     return layers;
-  }, [organizations, onOrganizationClick, zctaFeatures]);
+  }, [organizations, onOrganizationClick, zctaFeatures, highlightedZctas]);
+
+  useEffect(() => {
+    if (!highlightedZctas || highlightedZctas.length === 0) return;
+    let minLng = Infinity, minLat = Infinity, maxLng = -Infinity, maxLat = -Infinity;
+    const expand = (coords: any) => {
+      for (const c of coords) {
+        if (typeof c[0] === 'number') {
+          const [lng, lat] = c;
+          if (lng < minLng) minLng = lng;
+          if (lat < minLat) minLat = lat;
+          if (lng > maxLng) maxLng = lng;
+          if (lat > maxLat) maxLat = lat;
+        } else {
+          expand(c);
+        }
+      }
+    };
+    highlightedZctas.forEach(f => {
+      if (f.geometry.type === 'Polygon' || f.geometry.type === 'MultiPolygon') {
+        // @ts-expect-error - coordinates typing
+        expand(f.geometry.coordinates);
+      }
+    });
+    setViewState(vs => {
+      const viewport = new WebMercatorViewport({
+        width: typeof window !== 'undefined' ? window.innerWidth : 800,
+        height: typeof window !== 'undefined' ? window.innerHeight : 600,
+        longitude: vs.longitude,
+        latitude: vs.latitude,
+        zoom: vs.zoom,
+      });
+      const { longitude, latitude, zoom } = viewport.fitBounds(
+        [
+          [minLng, minLat],
+          [maxLng, maxLat],
+        ],
+        { padding: 40 }
+      );
+      return { ...vs, longitude, latitude, zoom: Math.min(vs.zoom, zoom) };
+    });
+  }, [highlightedZctas]);
 
   return (
     <div className="w-full h-full relative">
