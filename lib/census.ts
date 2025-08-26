@@ -17,28 +17,31 @@ async function log(entry: {
   }
 }
 
-export interface ZctaFeature extends Feature {
+export interface GeoFeature extends Feature {
   geometry: Geometry;
   properties: {
-    ZCTA5CE10: string;
+    id: string;
+    name?: string;
     value: number | null;
     [key: string]: unknown;
   };
 }
 
-const metricCache = new Map<string, ZctaFeature[]>();
+const metricCache = new Map<string, GeoFeature[]>();
 
-interface ZctaBoundary extends Feature {
+interface BoundaryFeature extends Feature {
   geometry: Geometry;
   properties: {
-    ZCTA5CE10: string;
+    id: string;
+    name?: string;
     [key: string]: unknown;
   };
 }
 
-let zctaBoundaryPromise: Promise<ZctaBoundary[]> | null = null;
+let zctaBoundaryPromise: Promise<BoundaryFeature[]> | null = null;
+let countyBoundaryPromise: Promise<BoundaryFeature[]> | null = null;
 
-async function loadZctaBoundaries(): Promise<ZctaBoundary[]> {
+async function loadZctaBoundaries(): Promise<BoundaryFeature[]> {
   if (!zctaBoundaryPromise) {
     zctaBoundaryPromise = fetch(
       'https://raw.githubusercontent.com/OpenDataDE/State-zip-code-GeoJSON/master/ok_oklahoma_zip_codes_geo.min.json'
@@ -50,8 +53,8 @@ async function loadZctaBoundaries(): Promise<ZctaBoundary[]> {
             type: 'Feature',
             geometry: f.geometry,
             properties: {
-              ...(f.properties as Record<string, unknown>),
-              ZCTA5CE10: String(f.properties['ZCTA5CE10']),
+              id: String(f.properties['ZCTA5CE10']),
+              name: String(f.properties['ZCTA5CE10']),
             },
           }))
       );
@@ -59,22 +62,49 @@ async function loadZctaBoundaries(): Promise<ZctaBoundary[]> {
   return zctaBoundaryPromise;
 }
 
+async function loadCountyBoundaries(): Promise<BoundaryFeature[]> {
+  if (!countyBoundaryPromise) {
+    countyBoundaryPromise = fetch(
+      'https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/oklahoma-counties.geojson'
+    )
+      .then((res) => res.json())
+      .then((geoJson) =>
+        (geoJson.features as Array<{ geometry: Geometry; properties: Record<string, unknown> }>)
+          .map((f) => ({
+            type: 'Feature',
+            geometry: f.geometry,
+            properties: {
+              id: String(f.properties['county']).padStart(3, '0'),
+              name: String(f.properties['name']),
+            },
+          }))
+      );
+  }
+  return countyBoundaryPromise;
+}
+
 export function prefetchZctaBoundaries() {
   loadZctaBoundaries().catch(() => {});
 }
 
-export async function featuresFromZctaMap(
-  zctaMap: Record<string, number | null>
-): Promise<ZctaFeature[]> {
-  const boundaries = await loadZctaBoundaries();
+export function prefetchCountyBoundaries() {
+  loadCountyBoundaries().catch(() => {});
+}
+
+export async function featuresFromMap(
+  map: Record<string, number | null>,
+  geography: 'zip code tabulation area' | 'county',
+): Promise<GeoFeature[]> {
+  const boundaries =
+    geography === 'county' ? await loadCountyBoundaries() : await loadZctaBoundaries();
   return boundaries
-    .filter((f) => Object.prototype.hasOwnProperty.call(zctaMap, String(f.properties['ZCTA5CE10'])))
+    .filter((f) => Object.prototype.hasOwnProperty.call(map, f.properties.id))
     .map((f) => ({
       type: 'Feature',
       geometry: f.geometry,
       properties: {
         ...f.properties,
-        value: zctaMap[String(f.properties['ZCTA5CE10'])] ?? null,
+        value: map[f.properties.id] ?? null,
       },
     }));
 }
@@ -82,15 +112,35 @@ export async function featuresFromZctaMap(
 interface MetricOptions {
   year?: string;
   dataset?: string;
-  zctas?: string[];
+  geography?: 'zip code tabulation area' | 'county';
+  ids?: string[];
 }
 
-export async function fetchZctaMetric(
+export async function fetchMetric(
   variable: string,
-  options: MetricOptions = {}
-): Promise<ZctaFeature[]> {
-  const { year = '2023', dataset = 'acs/acs5', zctas = OKC_ZCTAS } = options;
-  const cacheKey = `${dataset}-${year}-${variable}-${zctas.join(',')}`;
+  options: MetricOptions = {},
+): Promise<GeoFeature[]> {
+  const {
+    year = '2023',
+    dataset = 'acs/acs5',
+    geography = 'zip code tabulation area',
+    ids,
+  } = options;
+
+  let geoIds = ids;
+  let query = '';
+  if (geography === 'zip code tabulation area') {
+    geoIds = geoIds ?? OKC_ZCTAS;
+    query = `for=zip%20code%20tabulation%20area:${geoIds.join(',')}`;
+  } else if (geography === 'county') {
+    const boundaries = await loadCountyBoundaries();
+    geoIds = geoIds ?? boundaries.map((b) => b.properties.id);
+    query = `for=county:${geoIds.join(',')}&in=state:40`;
+  } else {
+    throw new Error('Unsupported geography');
+  }
+
+  const cacheKey = `${dataset}-${year}-${geography}-${variable}-${geoIds.join(',')}`;
   if (metricCache.has(cacheKey)) {
     return metricCache.get(cacheKey)!;
   }
@@ -103,28 +153,27 @@ export async function fetchZctaMetric(
     message: { type: 'metric', variable, year, dataset },
   });
 
-  const res = await fetch(
-    `https://api.census.gov/data/${year}/${dataset}?get=${variable}&for=zip%20code%20tabulation%20area:${zctas.join(',')}`
-  );
+  const res = await fetch(`https://api.census.gov/data/${year}/${dataset}?get=${variable}&${query}`);
   const json = await res.json();
   for (let i = 1; i < json.length; i++) {
     const raw = Number(json[i][0]);
-    const zcta = String(json[i][1]);
+    const id = String(json[i][1]);
     // Filter out large negative sentinel values that represent missing data
     const val = isNaN(raw) || raw < -100000 ? null : raw;
-    values.set(zcta, val);
+    values.set(id, val);
   }
 
-  const boundaries = await loadZctaBoundaries();
+  const boundaries =
+    geography === 'county' ? await loadCountyBoundaries() : await loadZctaBoundaries();
 
-  const features: ZctaFeature[] = boundaries
-    .filter((f) => zctas.includes(String(f.properties['ZCTA5CE10'])))
+  const features: GeoFeature[] = boundaries
+    .filter((f) => geoIds!.includes(f.properties.id))
     .map((f) => ({
       type: 'Feature',
       geometry: f.geometry,
       properties: {
         ...f.properties,
-        value: values.get(String(f.properties['ZCTA5CE10'])) ?? null,
+        value: values.get(f.properties.id) ?? null,
       },
     }));
 

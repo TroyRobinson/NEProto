@@ -4,6 +4,7 @@ export interface Stat {
   description: string;
   category: string;
   dataset: string;
+  geography: string;
   source: string;
   year: number;
   data: string;

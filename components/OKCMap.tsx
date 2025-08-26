@@ -6,13 +6,14 @@ import Map from 'react-map-gl/maplibre';
 import DeckGL from '@deck.gl/react';
 import type { Organization } from '../types/organization';
 
-import type { ZctaFeature } from '../lib/census';
-import { createOrganizationLayer, createZctaMetricLayer } from '../lib/mapLayers';
+import type { GeoFeature } from '../lib/census';
+import { createOrganizationLayer, createMetricLayer } from '../lib/mapLayers';
+import { useConfig } from './ConfigContext';
 
 interface OKCMapProps {
   organizations: Organization[];
   onOrganizationClick?: (org: Organization) => void;
-  zctaFeatures?: ZctaFeature[];
+  features?: GeoFeature[];
 }
 
 const OKC_CENTER = {
@@ -20,7 +21,7 @@ const OKC_CENTER = {
   latitude: 35.4676
 };
 
-export default function OKCMap({ organizations, onOrganizationClick, zctaFeatures }: OKCMapProps) {
+export default function OKCMap({ organizations, onOrganizationClick, features }: OKCMapProps) {
   const [viewState, setViewState] = useState({
     longitude: OKC_CENTER.longitude,
     latitude: OKC_CENTER.latitude,
@@ -29,14 +30,15 @@ export default function OKCMap({ organizations, onOrganizationClick, zctaFeature
     bearing: 0
   });
 
+  const { config } = useConfig();
   const layers = useMemo(() => {
     const layers: any[] = [createOrganizationLayer(organizations, onOrganizationClick)];
-    const zctaLayer = createZctaMetricLayer(zctaFeatures);
-    if (zctaLayer) {
-      layers.unshift(zctaLayer);
+    const metricLayer = createMetricLayer(features);
+    if (metricLayer) {
+      layers.unshift(metricLayer);
     }
     return layers;
-  }, [organizations, onOrganizationClick, zctaFeatures]);
+  }, [organizations, onOrganizationClick, features]);
 
   return (
     <div className="w-full h-full relative">
@@ -55,9 +57,11 @@ export default function OKCMap({ organizations, onOrganizationClick, zctaFeature
             object.properties.value != null &&
             object.properties.value >= 0
           ) {
-            const zcta = (object as any).properties.ZCTA5CE10;
-            const val = (object as any).properties.value as number;
-            return { text: `ZIP ${zcta}: ${val.toLocaleString()}` };
+            const props = (object as any).properties;
+            const label = config.geography === 'county' ? props.name || props.id : props.id;
+            const val = props.value as number;
+            const prefix = config.geography === 'county' ? 'County' : 'ZIP';
+            return { text: `${prefix} ${label}: ${val.toLocaleString()}` };
           }
           return null;
         }}
