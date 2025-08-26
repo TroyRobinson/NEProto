@@ -20,6 +20,7 @@ export default function Home() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [selectedOrg, setSelectedOrg] = useState<Organization | null>(null);
   const [isChatCollapsed, setIsChatCollapsed] = useState(false);
+  const [highlightZips, setHighlightZips] = useState<string[]>([]);
   const { metrics, selectedMetric, selectMetric, clearMetrics, zctaFeatures, addMetric } = useMetrics();
 
   // Close Add Organization modal on Escape key
@@ -77,6 +78,7 @@ export default function Home() {
             organizations={organizations}
             onOrganizationClick={setSelectedOrg}
             zctaFeatures={zctaFeatures}
+            highlightedZips={highlightZips}
           />
 
           {/* Overlay metrics glass bar over the map */}
@@ -142,7 +144,7 @@ export default function Home() {
 
       {!isChatCollapsed ? (
         <div className="fixed bottom-4 right-4 w-[30rem] h-[38.4rem] bg-white text-gray-900 shadow-lg p-2 border rounded-lg">
-          <CensusChat onAddMetric={addMetric} onClose={() => setIsChatCollapsed(true)} />
+          <CensusChat onAddMetric={addMetric} onClose={() => setIsChatCollapsed(true)} onHighlightZips={setHighlightZips} />
         </div>
       ) : (
         <button
