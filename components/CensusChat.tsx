@@ -16,9 +16,10 @@ interface ChatMessage {
 interface CensusChatProps {
   onAddMetric: (metric: { id: string; label: string }) => void | Promise<void>;
   onClose?: () => void;
+  onHighlightZips?: (zips: string[]) => void;
 }
 
-export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
+export default function CensusChat({ onAddMetric, onClose, onHighlightZips }: CensusChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -99,6 +100,7 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
     localStorage.removeItem(CHAT_STORAGE_KEY);
     clearMetrics();
     setSuggestions(null);
+    onHighlightZips?.([]);
   };
 
   type Mode = 'auto' | 'fast' | 'smart';
@@ -190,14 +192,27 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
     responseMessages.push({ role: 'assistant', content: data.message.content, modeUsed: (data.modeUsed as 'auto'|'fast'|'smart') || mode });
     setMessages(responseMessages);
     setLoading(false);
-
+    let showedZips = false;
     if (data.toolInvocations) {
-      for (const inv of data.toolInvocations) {
+      for (const inv of data.toolInvocations as Array<{
+        name: string;
+        args: Record<string, unknown>;
+      }>) {
         if (inv.name === 'add_metric') {
-          await onAddMetric(inv.args);
+          await onAddMetric(inv.args as { id: string; label: string });
+        } else if (inv.name === 'highlight_zips') {
+          const zArg = Array.isArray(inv.args.zips)
+            ? (inv.args.zips as unknown[])
+            : [];
+          const zips = zArg.filter(
+            (z): z is string => typeof z === 'string'
+          );
+          onHighlightZips?.(zips);
+          showedZips = true;
         }
       }
     }
+    if (!showedZips) onHighlightZips?.([]);
     // Fetch follow-up suggestions unless the assistant asked a question
     const asked = /\?|^\s*(why|how|what|which|who|where|when|do|does|did|can|could|should|would|is|are|will|may|might)\b/i.test(
       (data?.message?.content || '')
@@ -277,13 +292,27 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
     setMessages(responseMessages);
     setLoading(false);
 
+    let showedZips = false;
     if (data.toolInvocations) {
-      for (const inv of data.toolInvocations) {
+      for (const inv of data.toolInvocations as Array<{
+        name: string;
+        args: Record<string, unknown>;
+      }>) {
         if (inv.name === 'add_metric') {
-          await onAddMetric(inv.args);
+          await onAddMetric(inv.args as { id: string; label: string });
+        } else if (inv.name === 'highlight_zips') {
+          const zArg = Array.isArray(inv.args.zips)
+            ? (inv.args.zips as unknown[])
+            : [];
+          const zips = zArg.filter(
+            (z): z is string => typeof z === 'string'
+          );
+          onHighlightZips?.(zips);
+          showedZips = true;
         }
       }
     }
+    if (!showedZips) onHighlightZips?.([]);
     // Fetch suggestions unless the assistant asked a question
     const asked = /\?|^\s*(why|how|what|which|who|where|when|do|does|did|can|could|should|would|is|are|will|may|might)\b/i.test(
       (data?.message?.content || '')

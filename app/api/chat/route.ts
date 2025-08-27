@@ -74,6 +74,24 @@ async function runModel(
         },
       },
     },
+    {
+      type: 'function',
+      function: {
+        name: 'highlight_zips',
+        description: 'Highlight the given ZIP or ZCTA codes on the map.',
+        parameters: {
+          type: 'object',
+          properties: {
+            zips: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'List of 5-digit ZIP codes',
+            },
+          },
+          required: ['zips'],
+        },
+      },
+    },
   ];
 
   const toolInvocations: { name: string; args: Record<string, unknown> }[] = [];
@@ -132,6 +150,13 @@ async function runModel(
         } else {
           result = { ok: false, error: 'Unknown variable id' };
         }
+      } else if (name === 'highlight_zips') {
+        const zArg = Array.isArray(args.zips)
+          ? (args.zips as unknown[])
+          : [];
+        const zips = zArg.filter((z): z is string => typeof z === 'string');
+        result = { ok: true };
+        toolInvocations.push({ name, args: { zips } });
       }
       convo.push({
         role: 'tool',
