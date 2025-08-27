@@ -104,3 +104,21 @@ export function createZctaMetricLayer(zctaFeatures?: ZctaFeature[]) {
     pickable: true,
   });
 }
+
+export function createZctaHighlightLayer(zctaFeatures?: ZctaFeature[]) {
+  if (!zctaFeatures || zctaFeatures.length === 0) return null;
+
+  return new GeoJsonLayer<ZctaFeature>({
+    id: 'zcta-highlight',
+    data: zctaFeatures,
+    stroked: true,
+    filled: false,
+    getLineColor: [215, 168, 0, 255],
+    lineWidthUnits: 'pixels',
+    lineWidthMinPixels: 4,
+    // Depth testing prevents borders from being obscured by fills
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    parameters: { depthTest: false } as any,
+    pickable: false,
+  });
+}
