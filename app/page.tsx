@@ -7,6 +7,7 @@ import AddOrganizationForm from '../components/AddOrganizationForm';
 import CensusChat from '../components/CensusChat';
 import NavBar from '../components/NavBar';
 import MetricDropdown from '../components/MetricDropdown';
+import CityDropdown from '../components/CityDropdown';
 import { useMetrics } from '../components/MetricContext';
 import OrganizationDetails from '../components/OrganizationDetails';
 import type { Organization } from '../types/organization';
@@ -80,52 +81,55 @@ export default function Home() {
           />
 
           {/* Overlay metrics glass bar over the map */}
-          {metrics.length > 0 && (
-            <div className="absolute inset-x-0 top-2 z-30 flex justify-start">
-              <div
-                className="border shadow-sm flex items-center gap-2 mx-10"
-                style={{
-                  paddingLeft: 'var(--spacing-3)',
-                  paddingRight: 'var(--spacing-3)',
-                  paddingTop: 'var(--spacing-2)',
-                  paddingBottom: 'var(--spacing-2)',
-                  borderRadius: 'var(--radius-box)',
-                  borderColor: 'rgba(255, 255, 255, 0.25)',
-                  backgroundColor: 'rgba(255, 255, 255, 0.10)',
-                  backdropFilter: 'blur(16px) saturate(1.25)',
-                  WebkitBackdropFilter: 'blur(16px) saturate(1.25)'
-                }}
-              >
-                <MetricDropdown metrics={metrics} selected={selectedMetric} onSelect={selectMetric} />
-                <button
-                  onClick={clearMetrics}
-                  className="border transition-colors"
-                  style={{
-                    paddingLeft: 'var(--spacing-3)',
-                    paddingRight: 'var(--spacing-3)',
-                    paddingTop: 'var(--spacing-1)',
-                    paddingBottom: 'var(--spacing-1)',
-                    borderRadius: 'var(--radius-field)',
-                    fontSize: 'var(--font-size-l)',
-                    color: 'var(--color-error)',
-                    borderColor: 'var(--color-error)',
-                    backgroundColor: 'var(--color-base-100)'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'var(--color-error-50)';
-                    e.currentTarget.style.color = 'var(--color-error)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'var(--color-base-100)';
-                    e.currentTarget.style.color = 'var(--color-error)';
-                  }}
-                  aria-label="Clear active stats"
-                >
-                  ×
-                </button>
-              </div>
+          <div className="absolute inset-x-0 top-2 z-30 flex justify-start">
+            <div
+              className="border shadow-sm flex items-center gap-2 mx-10"
+              style={{
+                paddingLeft: 'var(--spacing-3)',
+                paddingRight: 'var(--spacing-3)',
+                paddingTop: 'var(--spacing-2)',
+                paddingBottom: 'var(--spacing-2)',
+                borderRadius: 'var(--radius-box)',
+                borderColor: 'rgba(255, 255, 255, 0.25)',
+                backgroundColor: 'rgba(255, 255, 255, 0.10)',
+                backdropFilter: 'blur(16px) saturate(1.25)',
+                WebkitBackdropFilter: 'blur(16px) saturate(1.25)'
+              }}
+            >
+              <CityDropdown />
+              {metrics.length > 0 && (
+                <>
+                  <MetricDropdown metrics={metrics} selected={selectedMetric} onSelect={selectMetric} />
+                  <button
+                    onClick={clearMetrics}
+                    className="border transition-colors"
+                    style={{
+                      paddingLeft: 'var(--spacing-3)',
+                      paddingRight: 'var(--spacing-3)',
+                      paddingTop: 'var(--spacing-1)',
+                      paddingBottom: 'var(--spacing-1)',
+                      borderRadius: 'var(--radius-field)',
+                      fontSize: 'var(--font-size-l)',
+                      color: 'var(--color-error)',
+                      borderColor: 'var(--color-error)',
+                      backgroundColor: 'var(--color-base-100)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'var(--color-error-50)';
+                      e.currentTarget.style.color = 'var(--color-error)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'var(--color-base-100)';
+                      e.currentTarget.style.color = 'var(--color-error)';
+                    }}
+                    aria-label="Clear active stats"
+                  >
+                    ×
+                  </button>
+                </>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </div>
 

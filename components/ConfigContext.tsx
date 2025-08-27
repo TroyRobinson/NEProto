@@ -1,6 +1,7 @@
 'use client';
 
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
+import { normalizeRegion } from '../lib/regions';
 
 export interface CensusConfig {
   region: string; // e.g., "Oklahoma County"
@@ -27,6 +28,33 @@ export function ConfigProvider({ children }: { children: React.ReactNode }) {
   const [config, setConfig] = useState<CensusConfig>(defaultConfig);
   const updateConfig = (cfg: Partial<CensusConfig>) =>
     setConfig((prev) => ({ ...prev, ...cfg }));
+
+  const CONFIG_STORAGE_KEY = 'censusConfig';
+
+  // Load persisted config on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(CONFIG_STORAGE_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as Partial<CensusConfig>;
+      setConfig((prev) => ({
+        ...prev,
+        ...saved,
+        region: normalizeRegion(saved.region),
+      }));
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  // Persist config on change
+  useEffect(() => {
+    try {
+      localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(config));
+    } catch {
+      /* ignore */
+    }
+  }, [config]);
   return (
     <ConfigContext.Provider value={{ config, updateConfig }}>
       {children}

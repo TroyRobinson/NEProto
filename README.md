@@ -24,7 +24,7 @@
 ### app/page.tsx
 - Main map view with `NavBar`, `OKCMap`, and `OrganizationDetails`
 - Fetches organizations from InstantDB and passes them to `OKCMap`
-- Overlay metrics bar with `MetricDropdown` and a clear button when metrics exist
+- Overlay bar: always-visible `CityDropdown`; `MetricDropdown` and clear button appear when metrics exist
 - Collapsible `CensusChat` container anchored bottom-right
 
 ### app/api/chat/route.ts
@@ -73,6 +73,7 @@
 - Composes MapLibre map and deck.gl overlay
 - Builds layers via `createOrganizationLayer` and `createZctaMetricLayer`
 - Emits `onOrganizationClick` callback
+- Recenters when city/region changes via `getRegionCenter`
 
 ### components/OrganizationDetails.tsx
 - Side panel showing selected organization details
@@ -97,7 +98,7 @@
 - Logs an "InstantDB fulfilled <code>" note in the `/logs` timeline on cache hits
 
 ### components/ConfigContext.tsx
-- Stores dataset/year/region selections
+- Stores dataset/year/region selections; persists to localStorage
 - API: `config`, `setConfig`
 
 ### components/AddOrganizationForm.tsx
@@ -111,6 +112,9 @@
 
 ### components/MetricDropdown.tsx
 - Selector for active metric when multiple metrics are loaded
+
+### components/CityDropdown.tsx
+- Thin selector for focused city (OKC/Tulsa/Wichita); always visible; updates region and recenters map
 
 ### components/MetricsTable.tsx
 - Simple table to list metrics and labels (used in data/map contexts)
