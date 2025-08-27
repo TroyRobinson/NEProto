@@ -14,6 +14,7 @@
 - MapLibre map overlaid with deck.gl layers for org markers and ZCTA metrics
 - InstantDB stores organization data; US Census API supplies statistics
 - OpenRouter-powered chat searches Census variables and adds layers
+ - Supports multiple US Census datasets (ACS 1-year/5-year and 2020 Decennial PL)
 
 ## App Files
 ### app/layout.tsx
@@ -120,7 +121,7 @@
 - Instantiates and exports a configured InstantDB client
 
 ### lib/census.ts
-- `fetchZctaMetric` retrieves ACS data for a ZCTA/variable
+- `fetchZctaMetric` retrieves US Census data for a ZCTA/variable across datasets
 - `prefetchZctaBoundaries` loads and caches GeoJSON polygons
 
 ### lib/censusTools.ts
@@ -143,7 +144,7 @@
 - Summarizes `User request` and `InstantDB fulfilled <code>` entries for a readable timeline
 
 ### lib/censusVariables.ts
-- Curated list of ACS variable IDs and descriptions
+- Curated list of Census variable IDs and descriptions from multiple datasets
 - Imported by `censusTools`
 
 ### lib/censusQueryMap.ts
@@ -170,7 +171,7 @@
 - For metrics: prefer InstantDB stats; otherwise fetch from US Census and persist
 
 ## External Services
-- US Census API for ACS statistics
+- US Census API for ACS and Decennial statistics
 - OpenRouter for LLM responses
 - InstantDB for organization storage
 
