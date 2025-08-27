@@ -116,7 +116,9 @@ export function createZctaHighlightLayer(zctaFeatures?: ZctaFeature[]) {
     getLineColor: [215, 168, 0, 255],
     lineWidthUnits: 'pixels',
     lineWidthMinPixels: 4,
-    parameters: { depthTest: false },
+    // depthTest isn't in deck.gl's type defs but we want the outlines above other layers
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    parameters: { depthTest: false } as any,
     pickable: false,
   });
 }

@@ -194,7 +194,9 @@ export default function CensusChat({ onAddMetric, onClose, onHighlightZips }: Ce
     setLoading(false);
 
     if (onHighlightZips) {
-      const zips = Array.from(new Set((data.message.content.match(/\b\d{5}\b/g) || [])));
+      const zips = Array.from(
+        new Set<string>(data.message.content.match(/\b\d{5}\b/g) ?? [])
+      );
       onHighlightZips(zips);
     }
 

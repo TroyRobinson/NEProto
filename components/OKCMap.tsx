@@ -6,7 +6,6 @@ import Map from 'react-map-gl/maplibre';
 import DeckGL from '@deck.gl/react';
 import type { Organization } from '../types/organization';
 
-import type { ZctaFeature } from '../lib/census';
 import { createOrganizationLayer, createZctaMetricLayer, createZctaHighlightLayer } from '../lib/mapLayers';
 import { featuresFromZctaMap, type ZctaFeature } from '../lib/census';
 import { WebMercatorViewport } from '@deck.gl/core';
