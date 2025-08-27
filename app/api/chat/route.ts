@@ -74,6 +74,24 @@ async function runModel(
         },
       },
     },
+    {
+      type: 'function',
+      function: {
+        name: 'highlight_zips',
+        description: 'Highlight specific ZIP codes on the map for the user.',
+        parameters: {
+          type: 'object',
+          properties: {
+            zips: {
+              type: 'array',
+              items: { type: 'string', description: '5-digit ZIP code' },
+              description: 'List of ZIP codes to emphasize on the map',
+            },
+          },
+          required: ['zips'],
+        },
+      },
+    },
   ];
 
   const toolInvocations: { name: string; args: Record<string, unknown> }[] = [];
@@ -132,6 +150,12 @@ async function runModel(
         } else {
           result = { ok: false, error: 'Unknown variable id' };
         }
+      } else if (name === 'highlight_zips') {
+        const zips = Array.isArray(args.zips)
+          ? (args.zips as unknown[]).map((z) => String(z))
+          : [];
+        result = { ok: true };
+        toolInvocations.push({ name, args: { zips } });
       }
       convo.push({
         role: 'tool',

@@ -72,8 +72,8 @@ export default function OKCMap({ organizations, onOrganizationClick, zctaFeature
           zoom: viewState.zoom,
         });
         const { longitude, latitude, zoom } = viewport.fitBounds(
-          [ [bounds[0], bounds[1]], [bounds[2], bounds[3]] ],
-          { padding: 40, maxZoom: viewState.zoom }
+          [[bounds[0], bounds[1]], [bounds[2], bounds[3]]],
+          { padding: 40, maxZoom: viewState.zoom, offset: [window.innerWidth * 0.3, 0] }
         );
         setViewState((v) => ({ ...v, longitude, latitude, zoom }));
       }

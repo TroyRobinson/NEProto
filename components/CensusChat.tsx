@@ -193,17 +193,13 @@ export default function CensusChat({ onAddMetric, onClose, onHighlightZips }: Ce
     setMessages(responseMessages);
     setLoading(false);
 
-    if (onHighlightZips) {
-      const zips = Array.from(
-        new Set<string>(data.message.content.match(/\b\d{5}\b/g) ?? [])
-      );
-      onHighlightZips(zips);
-    }
-
     if (data.toolInvocations) {
       for (const inv of data.toolInvocations) {
         if (inv.name === 'add_metric') {
           await onAddMetric(inv.args);
+        } else if (inv.name === 'highlight_zips') {
+          const zips = Array.isArray(inv.args.zips) ? (inv.args.zips as string[]) : [];
+          onHighlightZips?.(zips);
         }
       }
     }
@@ -290,6 +286,9 @@ export default function CensusChat({ onAddMetric, onClose, onHighlightZips }: Ce
       for (const inv of data.toolInvocations) {
         if (inv.name === 'add_metric') {
           await onAddMetric(inv.args);
+        } else if (inv.name === 'highlight_zips') {
+          const zips = Array.isArray(inv.args.zips) ? (inv.args.zips as string[]) : [];
+          onHighlightZips?.(zips);
         }
       }
     }
