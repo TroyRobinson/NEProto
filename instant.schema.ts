@@ -26,12 +26,19 @@ const _schema = i.schema({
       isPrimary: i.boolean(),
     }),
     stats: i.entity({
-      code: i.string().unique().indexed(),
+      code: i.string().indexed(),
+      codeRaw: i.string().indexed().optional(),
       description: i.string(),
       category: i.string(),
       dataset: i.string(),
       source: i.string(),
       year: i.number(),
+      // New: region city/county label; enables per-city variants
+      region: i.string().indexed().optional(),
+      // New: geography label like 'ZIP' or full name
+      geography: i.string().optional(),
+      // New: city short label, e.g., 'OKC', 'Tulsa', 'Wichita'
+      city: i.string().indexed().optional(),
       data: i.string(),
     }),
   },

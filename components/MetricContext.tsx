@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import { id } from '@instantdb/react';
 import db from '../lib/db';
 import { fetchZctaMetric, type ZctaFeature, prefetchZctaBoundaries, featuresFromZctaMap } from '../lib/census';
+import { getZctasForRegion, normalizeRegion, cityForRegion } from '../lib/regions';
 import { useConfig } from './ConfigContext';
 import type { Stat } from '../types/stat';
 
@@ -43,8 +44,13 @@ export function MetricsProvider({ children }: { children: React.ReactNode }) {
 
     // Prefer existing stat from InstantDB if available
     const allStats = (statData?.stats || []) as Stat[];
-    const matching = allStats.filter(s => s.code === m.id);
-    const preferred = matching.find(s => s.dataset === config.dataset && String(s.year) === String(config.year)) || matching[0];
+    const matching = allStats.filter(s => (s.codeRaw || s.code) === m.id);
+    const preferred = matching.find(
+      (s) =>
+        s.dataset === config.dataset &&
+        String(s.year) === String(config.year) &&
+        normalizeRegion(s.region) === normalizeRegion(config.region)
+    );
     if (preferred) {
       // Log that InstantDB fulfilled this request
       try {
@@ -59,6 +65,7 @@ export function MetricsProvider({ children }: { children: React.ReactNode }) {
               code: preferred.code,
               dataset: preferred.dataset,
               year: preferred.year,
+              region: preferred.region,
             },
           }),
         });
@@ -71,10 +78,14 @@ export function MetricsProvider({ children }: { children: React.ReactNode }) {
 
     // Otherwise fetch from US Census and persist
     const varId = m.id.includes('_') ? m.id : m.id + '_001E';
-    const features = await fetchZctaMetric(varId, { year: config.year, dataset: config.dataset });
+    const features = await fetchZctaMetric(varId, {
+      year: config.year,
+      dataset: config.dataset,
+      zctas: getZctasForRegion(config.region),
+    });
     if (features) {
       // Update local selection immediately
-      const key = `${config.dataset}-${config.year}-${m.id}`;
+      const key = `${config.region}-${config.dataset}-${config.year}-${m.id}`;
       setSelectedMetric(m.id);
       setMetricFeatures(prev => ({ ...prev, [key]: features }));
       setZctaFeatures(features);
@@ -87,12 +98,16 @@ export function MetricsProvider({ children }: { children: React.ReactNode }) {
       try {
         await db.transact([
           db.tx.stats[statId].update({
-            code: m.id,
+            code: `${m.id}|${cityForRegion(config.region)}`,
+            codeRaw: m.id,
             description: m.label,
             category: 'General',
             dataset: config.dataset,
             source: 'US Census',
             year: Number(config.year),
+            region: normalizeRegion(config.region),
+            geography: 'ZIP',
+            city: cityForRegion(config.region),
             data: JSON.stringify(zctaMap),
           }),
         ]);
@@ -103,9 +118,9 @@ export function MetricsProvider({ children }: { children: React.ReactNode }) {
   };
 
   const loadStatMetric = async (stat: Stat) => {
-    const m = { id: stat.code, label: stat.description };
+    const m = { id: stat.codeRaw || stat.code, label: stat.description };
     setMetrics(prev => (prev.find(p => p.id === m.id) ? prev : [...prev, m]));
-    const key = `${stat.dataset}-${stat.year}-${m.id}`;
+    const key = `${config.region}-${stat.dataset}-${stat.year}-${m.id}`;
     let features = metricFeatures[key];
     if (!features) {
       const zctaMap: Record<string, number | null> = JSON.parse(stat.data);
@@ -118,11 +133,11 @@ export function MetricsProvider({ children }: { children: React.ReactNode }) {
 
   const selectMetric = async (id: string) => {
       setSelectedMetric(id);
-      const key = `${config.dataset}-${config.year}-${id}`;
+      const key = `${config.region}-${config.dataset}-${config.year}-${id}`;
       let features = metricFeatures[key];
       if (!features) {
         const varId = id.includes('_') ? id : id + '_001E';
-        features = await fetchZctaMetric(varId, { year: config.year, dataset: config.dataset });
+        features = await fetchZctaMetric(varId, { year: config.year, dataset: config.dataset, zctas: getZctasForRegion(config.region) });
         setMetricFeatures(prev => ({ ...prev, [key]: features! }));
       }
       setZctaFeatures(features);
@@ -159,6 +174,14 @@ export function MetricsProvider({ children }: { children: React.ReactNode }) {
       JSON.stringify({ metrics, selected: selectedMetric })
     );
   }, [metrics, selectedMetric]);
+
+  // Re-fetch current selection when region/dataset/year changes
+  useEffect(() => {
+    if (selectedMetric) {
+      selectMetric(selectedMetric);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [config.region, config.dataset, config.year]);
 
   const value: MetricsContextValue = {
     metrics,

@@ -29,6 +29,8 @@ export default function ConfigControls() {
         title="Region: the area of interest (e.g., a county). Geography below controls the Census table level (e.g., ZCTAs)."
       >
         <option value="Oklahoma County">Oklahoma County</option>
+        <option value="Tulsa County">Tulsa County</option>
+        <option value="Wichita">Wichita</option>
       </select>
       <select
         className="border border-gray-300 rounded p-1 text-sm w-full"

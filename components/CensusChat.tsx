@@ -164,7 +164,7 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
     setLoading(true);
     const systemPrompt = `You help users find US Census statistics. Limit responses to ${config.region} using ${config.dataset} ${config.year} data for ${config.geography}. Be brief, a few sentences, plain text only.`;
     const stats = (statData?.stats || []) as Stat[];
-    const activeStats = stats.filter((s) => metrics.some((m) => m.id === s.code));
+    const activeStats = stats.filter((s) => metrics.some((m) => m.id === (s.codeRaw || s.code)));
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -172,7 +172,7 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
         messages: [{ role: 'system', content: systemPrompt }, ...newMessages],
         config,
         stats: activeStats.map((s) => ({
-          code: s.code,
+          code: s.codeRaw || s.code,
           description: s.description,
           data: JSON.parse(s.data),
         })),
@@ -233,7 +233,7 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
     setSuggestions(null);
     const systemPrompt = `You help users find US Census statistics. Limit responses to ${config.region} using ${config.dataset} ${config.year} data for ${config.geography}. Be brief, a few sentences, plain text only.`;
     const stats = (statData?.stats || []) as Stat[];
-    const activeStats = stats.filter((s) => metricsSnapshot.metrics.some((m) => m.id === s.code));
+    const activeStats = stats.filter((s) => metricsSnapshot.metrics.some((m) => m.id === (s.codeRaw || s.code)));
     const runId = ++runIdRef.current;
 
     // Undo previous assistant's actions immediately
@@ -253,7 +253,7 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
         messages: [{ role: 'system', content: systemPrompt }, ...truncated],
         config,
         stats: activeStats.map((s) => ({
-          code: s.code,
+          code: s.codeRaw || s.code,
           description: s.description,
           data: JSON.parse(s.data),
         })),

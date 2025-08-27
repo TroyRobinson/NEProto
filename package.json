@@ -8,7 +8,10 @@
     "start": "next start",
     "lint": "next lint",
     "seed": "node scripts/seed.js",
-    "test": "TS_NODE_COMPILER_OPTIONS=\"{\\\"module\\\":\\\"commonjs\\\"}\" node --test -r ts-node/register tests/*.test.js"
+    "test": "TS_NODE_COMPILER_OPTIONS=\"{\\\"module\\\":\\\"commonjs\\\"}\" node --test -r ts-node/register tests/*.test.js",
+    "migrate:stats:region": "TS_NODE_COMPILER_OPTIONS=\"{\\\"module\\\":\\\"commonjs\\\"}\" ts-node scripts/migrate_stats_add_region.ts",
+    "migrate:stats:city": "node scripts/migrate_stats_add_city.js"
+    ,"migrate:stats:coderaw": "node scripts/migrate_stats_code_raw.js"
   },
   "dependencies": {
     "@deck.gl/core": "^9.1.14",

@@ -12,7 +12,8 @@
 ## Architecture Overview
 - React contexts manage map configuration and selected metrics
 - MapLibre map overlaid with deck.gl layers for org markers and ZCTA metrics
-- InstantDB stores organization data; US Census API supplies statistics
+- InstantDB stores organizations and per-city stats; US Census API supplies statistics
+- Region-aware: OKC, Tulsa, Wichita with ZCTA subsets and state-specific boundaries (OK/KS)
 - OpenRouter-powered chat searches Census variables and adds layers
 
 ## App Files
@@ -50,8 +51,9 @@
 
 ### app/stats/page.tsx
 - Management interface for stored statistics
+- Columns: Code, City, Description, Category, Dataset, Source, Geo, Year, Actions
+- Sorted to group rows by Code → City → Year
 - Allows editing, deleting, and refreshing stat data
-- Connected to InstantDB stats entity
 
 ### app/data/page.tsx
 - Table view of the currently selected metric by ZCTA
@@ -90,7 +92,8 @@
 - React context tracking active ZCTA metrics and geometries
 - API: `addMetric`, `selectMetric`, `metrics`, `clearMetrics`
 - Persists active metrics and selected metric to localStorage
-- Prefers InstantDB stats (by code, then dataset/year) before fetching from US Census
+- Region-aware matches (code + dataset + year + region); otherwise fetches and saves per-city
+- Saves stats per city with `city`, `region`, `geography`, and canonical `codeRaw`
 - Logs an "InstantDB fulfilled <code>" note in the `/logs` timeline on cache hits
 
 ### components/ConfigContext.tsx
@@ -122,6 +125,7 @@
 ### lib/census.ts
 - `fetchZctaMetric` retrieves ACS data for a ZCTA/variable
 - `prefetchZctaBoundaries` loads and caches GeoJSON polygons
+- Auto-loads state ZIP boundaries (OK or KS) based on requested ZCTAs
 
 ### lib/censusTools.ts
 - Loads Census variable metadata and caches results
@@ -150,16 +154,15 @@
 - Maps chat tool names to Census variable IDs
 - Used during LLM tool execution
 
-### lib/okcZctas.ts
-- Static GeoJSON of Oklahoma City ZCTAs
-- Consumed by `prefetchZctaBoundaries`
+### lib/okcZctas.ts, lib/tulsaZctas.ts, lib/wichitaZctas.ts
+- ZCTA lists per region used to scope Census queries
 
 ## Types
 ### types/organization.ts
 - `Organization` and `Location` interfaces shared across codebase
 
 ### types/stat.ts
-- `Stat` interface for stored statistical data
+- `Stat` interface for stored statistical data (see Stats Entity below)
 - Used by stats management and insight features
 
 ## Data Flow
@@ -167,7 +170,7 @@
 - `OKCMap` layers come from `mapLayers.ts`
 - `CensusChat` requests `/api/chat`; results update `MetricContext`
 - `MetricContext` supplies metric data to `OKCMap` for display
-- For metrics: prefer InstantDB stats; otherwise fetch from US Census and persist
+- For metrics: prefer InstantDB stats (region-aware); otherwise fetch from US Census and persist per city
 
 ## External Services
 - US Census API for ACS statistics
@@ -186,7 +189,11 @@
 - Census uses large negative numbers for missing data; treat as `null`
 - deck.gl `onClick` handlers receive an unused event parameter
 - Boundary data is cached; call `prefetchZctaBoundaries` early
-- `stats.code` is unique in InstantDB; metric adds prefer existing stats and ignore duplicate writes created by concurrent tabs
+- `stats.codeRaw` holds the canonical Census id; `stats.code` may be stored as `codeRaw|City` to avoid uniqueness conflicts
+
+## Stats Entity (InstantDB)
+- Fields: `code` (stored key, may be `codeRaw|City`), `codeRaw` (canonical id), `description`, `category`, `dataset`, `source`, `year`, `region`, `city`, `geography`, `data`
+- Per-city persistence: OKC, Tulsa, Wichita supported; region-aware matching and map recentering
 
 ## Development
 - `npm run dev` – start dev server

@@ -1,13 +1,15 @@
 'use client';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Map from 'react-map-gl/maplibre';
 import DeckGL from '@deck.gl/react';
 import type { Organization } from '../types/organization';
 
 import type { ZctaFeature } from '../lib/census';
 import { createOrganizationLayer, createZctaMetricLayer } from '../lib/mapLayers';
+import { useConfig } from './ConfigContext';
+import { getRegionCenter } from '../lib/regions';
 
 interface OKCMapProps {
   organizations: Organization[];
@@ -21,6 +23,7 @@ const OKC_CENTER = {
 };
 
 export default function OKCMap({ organizations, onOrganizationClick, zctaFeatures }: OKCMapProps) {
+  const { config } = useConfig();
   const [viewState, setViewState] = useState({
     longitude: OKC_CENTER.longitude,
     latitude: OKC_CENTER.latitude,
@@ -28,6 +31,12 @@ export default function OKCMap({ organizations, onOrganizationClick, zctaFeature
     pitch: 0,
     bearing: 0
   });
+
+  // Recenter when region changes
+  useEffect(() => {
+    const center = getRegionCenter(config.region);
+    setViewState((prev) => ({ ...prev, ...center }));
+  }, [config.region]);
 
   const layers = useMemo(() => {
     const layers: any[] = [createOrganizationLayer(organizations, onOrganizationClick)];

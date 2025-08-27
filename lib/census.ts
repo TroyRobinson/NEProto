@@ -36,37 +36,57 @@ interface ZctaBoundary extends Feature {
   };
 }
 
-let zctaBoundaryPromise: Promise<ZctaBoundary[]> | null = null;
+// Cache boundary loads per state
+const boundaryPromises = new Map<string, Promise<ZctaBoundary[]>>();
 
-async function loadZctaBoundaries(): Promise<ZctaBoundary[]> {
-  if (!zctaBoundaryPromise) {
-    zctaBoundaryPromise = fetch(
-      'https://raw.githubusercontent.com/OpenDataDE/State-zip-code-GeoJSON/master/ok_oklahoma_zip_codes_geo.min.json'
-    )
-      .then((res) => res.json())
-      .then((geoJson) =>
-        (geoJson.features as Array<{ geometry: Geometry; properties: Record<string, unknown> }>)
-          .map((f) => ({
-            type: 'Feature',
-            geometry: f.geometry,
-            properties: {
-              ...(f.properties as Record<string, unknown>),
-              ZCTA5CE10: String(f.properties['ZCTA5CE10']),
-            },
-          }))
-      );
+function inferStateFromZctas(zctas: string[]): 'OK' | 'KS' {
+  // Heuristic based on ZIP ranges: KS 660–679, OK 730–749
+  const sample = zctas.find(Boolean) || '';
+  const prefix = Number(sample.slice(0, 3));
+  if (!isNaN(prefix) && prefix >= 660 && prefix <= 679) return 'KS';
+  return 'OK';
+}
+
+function boundaryUrlForState(state: 'OK' | 'KS'): string {
+  const base = 'https://raw.githubusercontent.com/OpenDataDE/State-zip-code-GeoJSON/master';
+  return state === 'KS'
+    ? `${base}/ks_kansas_zip_codes_geo.min.json`
+    : `${base}/ok_oklahoma_zip_codes_geo.min.json`;
+}
+
+async function loadZctaBoundariesFor(state: 'OK' | 'KS'): Promise<ZctaBoundary[]> {
+  if (!boundaryPromises.has(state)) {
+    const url = boundaryUrlForState(state);
+    boundaryPromises.set(
+      state,
+      fetch(url)
+        .then((res) => res.json())
+        .then((geoJson) =>
+          (geoJson.features as Array<{ geometry: Geometry; properties: Record<string, unknown> }>)
+            .map((f) => ({
+              type: 'Feature',
+              geometry: f.geometry,
+              properties: {
+                ...(f.properties as Record<string, unknown>),
+                ZCTA5CE10: String(f.properties['ZCTA5CE10']),
+              },
+            }))
+        )
+    );
   }
-  return zctaBoundaryPromise;
+  return boundaryPromises.get(state)!;
 }
 
 export function prefetchZctaBoundaries() {
-  loadZctaBoundaries().catch(() => {});
+  // Prefetch OK boundaries by default
+  loadZctaBoundariesFor('OK').catch(() => {});
 }
 
 export async function featuresFromZctaMap(
   zctaMap: Record<string, number | null>
 ): Promise<ZctaFeature[]> {
-  const boundaries = await loadZctaBoundaries();
+  const state = inferStateFromZctas(Object.keys(zctaMap));
+  const boundaries = await loadZctaBoundariesFor(state);
   return boundaries
     .filter((f) => Object.prototype.hasOwnProperty.call(zctaMap, String(f.properties['ZCTA5CE10'])))
     .map((f) => ({
@@ -115,7 +135,8 @@ export async function fetchZctaMetric(
     values.set(zcta, val);
   }
 
-  const boundaries = await loadZctaBoundaries();
+  const state = inferStateFromZctas(zctas);
+  const boundaries = await loadZctaBoundariesFor(state);
 
   const features: ZctaFeature[] = boundaries
     .filter((f) => zctas.includes(String(f.properties['ZCTA5CE10'])))
