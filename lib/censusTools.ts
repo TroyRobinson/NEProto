@@ -75,9 +75,11 @@ export async function searchCensus(
   const q = query.toLowerCase().trim();
   const cacheKey = `${dataset}-${year}-${q}`;
   if (searchCache.has(cacheKey)) return searchCache.get(cacheKey)!;
+  const vars = await loadVariables(year, dataset);
 
-  if (COMMON_QUERY_MAP[q]) {
-    const { id, label, concept } = COMMON_QUERY_MAP[q];
+  const mapped = COMMON_QUERY_MAP[q];
+  if (mapped && vars.some(([vid]) => vid === mapped.id)) {
+    const { id, label, concept } = mapped;
     const result = [{ id, label, concept }];
     searchCache.set(cacheKey, result);
     return result;
@@ -91,15 +93,13 @@ export async function searchCensus(
       (t) =>
         v.label.toLowerCase().includes(t) ||
         v.keywords.some((k) => k.includes(t))
-    )
+    ) && vars.some(([vid]) => vid === v.id)
   ).map(({ id, label, concept }) => ({ id, label, concept }));
 
   if (curated.length) {
     searchCache.set(cacheKey, curated);
     return curated;
   }
-
-  const vars = await loadVariables(year, dataset);
   const reqEntry = {
     service: 'US Census',
     direction: 'request' as const,

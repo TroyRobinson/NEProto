@@ -36,4 +36,16 @@ export const CURATED_VARIABLES: CensusVariableInfo[] = [
     concept: 'Hispanic or Latino Origin',
     keywords: ['hispanic', 'latino'],
   },
+  {
+    id: 'P1_001N',
+    label: 'Total Population (Decennial)',
+    concept: 'P1: RACE -- Total population',
+    keywords: ['population', 'people', 'total', 'decennial'],
+  },
+  {
+    id: 'H1_001N',
+    label: 'Total Housing Units',
+    concept: 'H1: OCCUPANCY STATUS -- Housing units',
+    keywords: ['housing', 'units', 'total', 'decennial'],
+  },
 ];

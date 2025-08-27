@@ -9,6 +9,13 @@ import type { Stat } from '../../types/stat';
 export default function StatsPage() {
   const { data, isLoading, error } = db.useQuery({ stats: {} });
 
+  const datasetLabel = (d: string) => {
+    if (d === 'acs/acs5') return 'ACS 5-year';
+    if (d === 'acs/acs1') return 'ACS 1-year';
+    if (d === 'dec/pl') return 'Decennial 2020 PL';
+    return d;
+    };
+
   const handleEdit = async (stat: Stat) => {
     const desc = prompt('Edit description', stat.description);
     if (desc !== null) {
@@ -88,7 +95,7 @@ export default function StatsPage() {
                   <td className="border px-2 py-1">{stat.city || (stat.region === 'Tulsa County' ? 'Tulsa' : stat.region === 'Wichita' || stat.region === 'Sedgwick County' ? 'Wichita' : 'OKC')}</td>
                   <td className="border px-2 py-1">{stat.description}</td>
                   <td className="border px-2 py-1">{stat.category}</td>
-                  <td className="border px-2 py-1">{stat.dataset}</td>
+                  <td className="border px-2 py-1">{datasetLabel(stat.dataset)}</td>
                   <td className="border px-2 py-1">{stat.source}</td>
                   <td className="border px-2 py-1">{stat.geography || 'ZIP'}</td>
                   <td className="border px-2 py-1">{stat.year}</td>
