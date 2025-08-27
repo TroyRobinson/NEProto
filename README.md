@@ -34,6 +34,9 @@
 - Falls back to a smarter model only when needed and reports when it does
 - Advanced heuristic triggers on: why, how, explain, compare, contrast, insight, analysis, reason, think, thinking, because
 - Supports mode override via request body `mode`: 'auto' (default), 'fast' (no fallback), 'smart' (force advanced)
+- Tools: `search_census`, `add_metric`, and `add_calculated_metric` (validates numerator and denominator ids, then adds a `NUM/DEN` metric id that represents `100 * NUM/DEN`)
+ - Curated calculated mappings: recognizes common rates like Poverty, Unemployment, Labor Force Participation, Renter/Homeownership, Housing Vacancy, SNAP participation, Hispanic/White/Black shares, Foreign Born, Drive Alone to Work, and Female share, and immediately adds the appropriate `NUM/DEN` pair
+ - Fast-mode safeguard: even in Fast mode, if the initial model returns an empty message or no matches, the server falls back to Smart and informs the user
 
 ### app/api/insight/route.ts
 - POST handler for free-form statistical analysis
@@ -51,9 +54,10 @@
 
 ### app/stats/page.tsx
 - Management interface for stored statistics
-- Columns: Code, City, Description, Category, Dataset, Source, Geo, Year, Actions
+- Columns: Code, City, Description, Dataset, Source, Geo, Year, Actions
 - Sorted to group rows by Code → City → Year
 - Allows editing, deleting, and refreshing stat data
+- Shows a tooltip next to Code for calculated metrics (e.g., `Derived: 100 * B17001_002E/B17001_001E`)
 
 ### app/data/page.tsx
 - Table view of the currently selected metric by ZCTA
@@ -88,6 +92,7 @@
 - Collapsible container with reopen button; clear controls for chat and active metrics
 - Appends an Approach chip on assistant messages at the bottom-right of each message row; dropdown to re-run from the last user message with Auto/Fast/Smart
  - Follow-up ideas: after each assistant reply (unless the reply is a question), shows two compact, vertically stacked indigo buttons with next-step ideas — one to "Add data for …?" (avoids active/mentioned metrics) and one curiosity question from the user’s perspective. Clicking runs the relevant action; typing clears them.
+ - Heuristic: queries mentioning rate/percent/calculation default to Fast mode to bypass auto search and enable tool-based calculated metrics
 
 ### components/MetricContext.tsx
 - React context tracking active ZCTA metrics and geometries
@@ -96,6 +101,7 @@
 - Region-aware matches (code + dataset + year + region); otherwise fetches and saves per-city
 - Saves stats per city with `city`, `region`, `geography`, and canonical `codeRaw`
 - Logs an "InstantDB fulfilled <code>" note in the `/logs` timeline on cache hits
+ - Supports calculated percentage metrics via `NUM/DEN` ids (e.g., `B17001_002E/B17001_001E`); computes `100 * NUM/DEN` per ZCTA and persists a `Calculated` stat
 
 ### components/ConfigContext.tsx
 - Stores dataset/year/region selections; persists to localStorage
@@ -135,6 +141,9 @@
 - Loads Census variable metadata and caches results
 - `searchCensus` and `validateVariableId` helpers
 - When provided an `origin`, posts log entries to `/api/logs` for visibility across server modules
+
+### lib/censusCalculatedMap.ts
+- Curated mappings from common "rate/percent" phrases to Census numerator/denominator pairs used to construct calculated metrics
 
 ### lib/mapLayers.ts
 - `createOrganizationLayer` for point markers
@@ -196,7 +205,7 @@
 - `stats.codeRaw` holds the canonical Census id; `stats.code` may be stored as `codeRaw|City` to avoid uniqueness conflicts
 
 ## Stats Entity (InstantDB)
-- Fields: `code` (stored key, may be `codeRaw|City`), `codeRaw` (canonical id), `description`, `category`, `dataset`, `source`, `year`, `region`, `city`, `geography`, `data`
+- Fields: `code` (stored key, may be `codeRaw|City`), `codeRaw` (canonical id), `description`, `dataset`, `source`, `year`, `region`, `city`, `geography`, `data`
 - Per-city persistence: OKC, Tulsa, Wichita supported; region-aware matching and map recentering
 
 ## Development

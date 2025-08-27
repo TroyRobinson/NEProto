@@ -22,8 +22,30 @@ export default function StatsPage() {
 
   const handleRefresh = async (stat: Stat) => {
     const raw = stat.codeRaw || stat.code;
-    const varId = raw.includes('_') ? raw : raw + '_001E';
     const regionKey = stat.city ? regionForCity(stat.city) : normalizeRegion(stat.region || 'Oklahoma County');
+    if (raw.includes('/')) {
+      const [numRaw, denRaw] = raw.split('/');
+      const numId = numRaw.includes('_') ? numRaw : numRaw + '_001E';
+      const denId = denRaw.includes('_') ? denRaw : denRaw + '_001E';
+      const [numFeatures, denFeatures] = await Promise.all([
+        fetchZctaMetric(numId, { year: String(stat.year), dataset: stat.dataset, zctas: getZctasForRegion(regionKey) }),
+        fetchZctaMetric(denId, { year: String(stat.year), dataset: stat.dataset, zctas: getZctasForRegion(regionKey) }),
+      ]);
+      const numMap: Record<string, number | null> = {};
+      numFeatures?.forEach((f: ZctaFeature) => { numMap[f.properties.ZCTA5CE10] = f.properties.value ?? null; });
+      const denMap: Record<string, number | null> = {};
+      denFeatures?.forEach((f: ZctaFeature) => { denMap[f.properties.ZCTA5CE10] = f.properties.value ?? null; });
+      const zctaMap: Record<string, number | null> = {};
+      const allZctas = new Set([...Object.keys(numMap), ...Object.keys(denMap)]);
+      allZctas.forEach((z) => {
+        const n = numMap[z];
+        const d = denMap[z];
+        zctaMap[z] = n == null || d == null || d === 0 ? null : (n / d) * 100;
+      });
+      await db.transact([db.tx.stats[stat.id].update({ data: JSON.stringify(zctaMap) })]);
+      return;
+    }
+    const varId = raw.includes('_') ? raw : raw + '_001E';
     const features = await fetchZctaMetric(varId, {
       year: String(stat.year),
       dataset: stat.dataset,
@@ -65,7 +87,6 @@ export default function StatsPage() {
                 <th className="border px-2 py-1 text-left">Code</th>
                 <th className="border px-2 py-1 text-left">City</th>
                 <th className="border px-2 py-1 text-left">Description</th>
-                <th className="border px-2 py-1 text-left">Category</th>
                 <th className="border px-2 py-1 text-left">Dataset</th>
                 <th className="border px-2 py-1 text-left">Source</th>
                 <th className="border px-2 py-1 text-left">Geo</th>
@@ -84,10 +105,22 @@ export default function StatsPage() {
                 })
                 .map((stat: Stat) => (
                 <tr key={stat.id}>
-                  <td className="border px-2 py-1">{stat.codeRaw || stat.code}</td>
+                  <td className="border px-2 py-1">
+                    <span className="inline-flex items-center gap-1">
+                      <span>{stat.codeRaw || stat.code}</span>
+                      {String(stat.codeRaw || stat.code).includes('/') ? (
+                        <span
+                          className="text-gray-500 cursor-help"
+                          title={`Derived: 100 * ${(stat.codeRaw || stat.code)}`}
+                          aria-label={`Formula: 100 * ${(stat.codeRaw || stat.code)}`}
+                        >
+                          ℹ︎
+                        </span>
+                      ) : null}
+                    </span>
+                  </td>
                   <td className="border px-2 py-1">{stat.city || (stat.region === 'Tulsa County' ? 'Tulsa' : stat.region === 'Wichita' || stat.region === 'Sedgwick County' ? 'Wichita' : 'OKC')}</td>
                   <td className="border px-2 py-1">{stat.description}</td>
-                  <td className="border px-2 py-1">{stat.category}</td>
                   <td className="border px-2 py-1">{stat.dataset}</td>
                   <td className="border px-2 py-1">{stat.source}</td>
                   <td className="border px-2 py-1">{stat.geography || 'ZIP'}</td>

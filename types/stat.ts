@@ -3,7 +3,6 @@ export interface Stat {
   code: string;
   codeRaw?: string;
   description: string;
-  category: string;
   dataset: string;
   source: string;
   year: number;

@@ -6,6 +6,7 @@ import {
   type CensusVariable,
 } from '../../../lib/censusTools';
 import { callOpenRouter } from '../../../lib/openRouter';
+import { findCalculated } from '../../../lib/censusCalculatedMap';
 
 interface Message {
   role: 'system' | 'user' | 'assistant' | 'tool';
@@ -74,6 +75,23 @@ async function runModel(
         },
       },
     },
+    {
+      type: 'function',
+      function: {
+        name: 'add_calculated_metric',
+        description:
+          'Create a percentage metric from two Census variables. Compute numerator/denominator * 100 and add it to the metric list.',
+        parameters: {
+          type: 'object',
+          properties: {
+            numerator: { type: 'string', description: 'Variable id for the numerator' },
+            denominator: { type: 'string', description: 'Variable id for the denominator' },
+            label: { type: 'string', description: 'Human readable label for the calculated metric' },
+          },
+          required: ['numerator', 'denominator', 'label'],
+        },
+      },
+    },
   ];
 
   const toolInvocations: { name: string; args: Record<string, unknown> }[] = [];
@@ -132,6 +150,20 @@ async function runModel(
         } else {
           result = { ok: false, error: 'Unknown variable id' };
         }
+      } else if (name === 'add_calculated_metric') {
+        const numerator = String(args.numerator || '');
+        const denominator = String(args.denominator || '');
+        const label = String(args.label || '').trim();
+        const validNum = numerator && (await validateVariableId(numerator, year, dataset));
+        const validDen = denominator && (await validateVariableId(denominator, year, dataset));
+        if (validNum && validDen && label) {
+          result = { ok: true };
+          toolInvocations.push({ name, args: { numerator, denominator, label } });
+          lastSearch = null;
+          lastSearchEmpty = false;
+        } else {
+          result = { ok: false, error: 'Unknown variable id' };
+        }
       }
       convo.push({
         role: 'tool',
@@ -152,7 +184,7 @@ export async function POST(req: NextRequest) {
     geography = 'zip code tabulation area',
   } = config || {};
 
-  const systemPrompt = `You help users find US Census statistics. Limit responses to ${region} using ${dataset} ${year} data for ${geography}. Be brief, a few sentences, plain text only.`;
+  const systemPrompt = `You help users find US Census statistics. Limit responses to ${region} using ${dataset} ${year} data for ${geography}. If the user asks for a rate or percentage, construct it as 100 * numerator/denominator via the add_calculated_metric tool. Be brief, a few sentences, plain text only.`;
   const messages: Message[] = incoming;
   if (!messages.length || messages[0].role !== 'system') {
     messages.unshift({ role: 'system', content: systemPrompt });
@@ -182,6 +214,28 @@ export async function POST(req: NextRequest) {
     .find((m: Message) => m.role === 'user')?.content || '';
 
   const toolInvocations: { name: string; args: Record<string, unknown> }[] = [];
+
+  // Curated fast-path for calculated metrics (e.g., Poverty Rate)
+  const calcIntent = /\b(rate|percent|percentage|%|share|ratio|per\s+(capita|100|1,?000|million)|divide|calculated|fraction)\b/i.test(
+    lastUser
+  );
+  const curatedCalc = findCalculated(lastUser);
+  if (curatedCalc) {
+    toolInvocations.push({
+      name: 'add_calculated_metric',
+      args: {
+        numerator: curatedCalc.numerator,
+        denominator: curatedCalc.denominator,
+        label: curatedCalc.label,
+      },
+    });
+    return NextResponse.json({
+      message: { role: 'assistant', content: `Added "${curatedCalc.label}" to your metrics list.` },
+      toolInvocations,
+      usedFallback: false,
+      modeUsed: calcIntent ? 'fast' : mode,
+    });
+  }
 
   const ids = parseMetricIds(lastUser);
   if (mode === 'auto' && ids.length) {
@@ -251,7 +305,7 @@ export async function POST(req: NextRequest) {
   } else if (!first.message?.content?.trim()) {
     fallbackReason = 'the initial model did not produce an answer';
   }
-  if (mode !== 'fast' && fallbackReason) {
+  if (fallbackReason) {
     convo.push({
       role: 'assistant',
       content: `Checking a more capable model because ${fallbackReason}.`,
@@ -261,7 +315,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       message: deeper.message,
       toolInvocations,
-      usedFallback: true,
+      usedFallback: mode === 'fast' || mode === 'auto',
       fallbackReason,
       modeUsed: 'smart',
     });

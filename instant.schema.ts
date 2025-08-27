@@ -29,7 +29,6 @@ const _schema = i.schema({
       code: i.string().indexed(),
       codeRaw: i.string().indexed().optional(),
       description: i.string(),
-      category: i.string(),
       dataset: i.string(),
       source: i.string(),
       year: i.number(),

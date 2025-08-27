@@ -126,6 +126,13 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
   const sendMessageWith = async (text: string, mode: Mode = 'auto') => {
     if (!text.trim()) return;
     const userMessage = { role: 'user' as const, content: text };
+
+    // Heuristic: if the user asks for a rate/percent/calculation, prefer 'fast'
+    // to avoid local auto-search heuristics and allow tool-based calculated metrics.
+    const calcIntent = /\b(rate|percent|percentage|%|share|ratio|per\s+(capita|100|1,?000|million)|divide|calculated|fraction)\b/i.test(
+      text
+    );
+    const chosenMode: Mode = mode === 'auto' && calcIntent ? 'fast' : mode;
     const newMessages = [...messages, userMessage];
 
     // Log the user message as its own log bubble
@@ -146,7 +153,7 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
     // Proactively notify if the query likely needs advanced reasoning
     const needsAdvanced = /\b(why|how|explain|compare|contrast|insight|analysis|reason|think|thinking|because)\b/i.test(userMessage.content);
     let preDeferNotified = false;
-    if (mode === 'smart' || (mode === 'auto' && needsAdvanced)) {
+    if (chosenMode === 'smart' || (chosenMode === 'auto' && needsAdvanced)) {
       newMessages.push({
         role: 'assistant',
         content: 'Consulting a more capable model for deeper reasoning.',
@@ -176,7 +183,7 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
           description: s.description,
           data: JSON.parse(s.data),
         })),
-        mode,
+        mode: chosenMode,
       }),
     });
     const data = await res.json();
@@ -187,7 +194,7 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
         content: `Consulting a more capable model because ${data.fallbackReason}.`,
       });
     }
-    responseMessages.push({ role: 'assistant', content: data.message.content, modeUsed: (data.modeUsed as 'auto'|'fast'|'smart') || mode });
+    responseMessages.push({ role: 'assistant', content: data.message.content, modeUsed: (data.modeUsed as 'auto'|'fast'|'smart') || chosenMode });
     setMessages(responseMessages);
     setLoading(false);
 
@@ -195,6 +202,13 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
       for (const inv of data.toolInvocations) {
         if (inv.name === 'add_metric') {
           await onAddMetric(inv.args);
+        } else if (inv.name === 'add_calculated_metric') {
+          const { numerator, denominator, label } = inv.args as {
+            numerator: string;
+            denominator: string;
+            label: string;
+          };
+          await onAddMetric({ id: `${numerator}/${denominator}`, label });
         }
       }
     }
@@ -281,6 +295,13 @@ export default function CensusChat({ onAddMetric, onClose }: CensusChatProps) {
       for (const inv of data.toolInvocations) {
         if (inv.name === 'add_metric') {
           await onAddMetric(inv.args);
+        } else if (inv.name === 'add_calculated_metric') {
+          const { numerator, denominator, label } = inv.args as {
+            numerator: string;
+            denominator: string;
+            label: string;
+          };
+          await onAddMetric({ id: `${numerator}/${denominator}`, label });
         }
       }
     }
